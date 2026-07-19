@@ -46,7 +46,7 @@ The following decisions are permanent. They may not be revisited, overridden, or
 | Auth | Supabase Auth — JWT with `company_id`+`role` in `app_metadata` | DATABASE_ARCHITECTURE.md §3 |
 | Primary key format | UUID v7 via `gen_uuid_v7()` — `gen_random_uuid()` is FORBIDDEN | DATABASE_ARCHITECTURE.md P8 |
 | Tenant isolation | Triple-layer: JWT + RLS + application WHERE clause | DATABASE_ARCHITECTURE.md §2 |
-| RLS JWT claim | `(auth.jwt() -> 'app_metadata' ->> 'company_id')::uuid` via `auth.company_id()` helper | DATABASE_ARCHITECTURE.md §2 |
+| RLS JWT claim | `(auth.jwt() -> 'app_metadata' ->> 'company_id')::uuid` via `public.auth_company_id()` helper | DATABASE_ARCHITECTURE.md §2 |
 | Monetary values | Integers in cents; column names end in `_cents` | DATABASE_ARCHITECTURE.md P3 |
 | Soft deletes | `deleted_at timestamptz` on business entities | DATABASE_ARCHITECTURE.md P5 |
 | Append-only logs | `email_logs`, `ai_logs`, `activity_logs`, `domain_events` — no UPDATE except email tracking | DATABASE_ARCHITECTURE.md P6 |
@@ -502,7 +502,7 @@ Migrations are strictly append-only. Never edit an existing migration file after
 
 | Migration # | File Name Pattern | Contents |
 |-------------|------------------|----------|
-| 001 | `_bootstrap` | pgcrypto extension, `gen_uuid_v7()` function, all 21 ENUMs, `auth.company_id()` + `auth.role()` + `auth.uid()` helper functions, `update_updated_at()` trigger function |
+| 001 | `_bootstrap` | pgcrypto extension, `gen_uuid_v7()` function, all 21 ENUMs, `public.auth_company_id()` + `public.auth_user_role()` helper functions, `update_updated_at()` trigger function |
 | 002 | `_core_entities` | `companies`, `profiles` |
 | 003 | `_crm` | `customers`, `leads`, `appointments` |
 | 004 | `_workforce_fleet` | `employees`, `vehicles` |
@@ -567,7 +567,7 @@ Migrations are strictly append-only. Never edit an existing migration file after
   ↓
 017_functions_triggers (safe after all tables exist)
   ↓
-018_rls_enable (must come after all tables and functions; auth.company_id() must exist)
+018_rls_enable (must come after all tables and functions; public.auth_company_id() must exist)
   ↓
 019_custom_access_token_hook (depends on profiles table)
   ↓
@@ -651,8 +651,8 @@ Created in migration 017:
 | Object | Type | Purpose |
 |--------|------|---------|
 | `gen_uuid_v7()` | Function | UUID v7 generator — created in migration 001, used by all PRIMARY KEY DEFAULT clauses |
-| `auth.company_id()` | Function | `(auth.jwt() -> 'app_metadata' ->> 'company_id')::uuid` — used by all RLS policies |
-| `auth.role()` | Function | `(auth.jwt() -> 'app_metadata' ->> 'role')::text` — used by role-based RLS conditions |
+| `public.auth_company_id()` | Function | `(auth.jwt() -> 'app_metadata' ->> 'company_id')::uuid` — used by all RLS policies |
+| `public.auth_user_role()` | Function | `(auth.jwt() -> 'app_metadata' ->> 'role')::text` — used by role-based RLS conditions |
 | `update_updated_at()` | Trigger function | Sets `updated_at = now()` on UPDATE — applied to all tables with `updated_at` column |
 | `generate_sequence_number(company_id, sequence_type)` | Function | Atomically increments sequence counter on `companies` row and returns formatted string using LPAD |
 | `reject_snapshot_field_updates()` | Trigger function | Raises exception if any snapshot field changes on a `documents` row with `generation_status = 'generated'` |
@@ -681,20 +681,20 @@ Every company-scoped table follows this pattern:
 -- SELECT
 CREATE POLICY "{table}_select" ON {table}
   FOR SELECT USING (
-    auth.company_id() = company_id
+    public.auth_company_id() = company_id
     AND deleted_at IS NULL  -- omit on append-only logs
   );
 
 -- INSERT
 CREATE POLICY "{table}_insert" ON {table}
   FOR INSERT WITH CHECK (
-    auth.company_id() = company_id
+    public.auth_company_id() = company_id
   );
 
 -- UPDATE
 CREATE POLICY "{table}_update" ON {table}
   FOR UPDATE USING (
-    auth.company_id() = company_id
+    public.auth_company_id() = company_id
     AND deleted_at IS NULL
   );
 ```
@@ -925,7 +925,7 @@ The middleware runs at the Vercel Edge. It is the first line of defense and must
 Every tRPC procedure (and every server action) that modifies data goes through this check:
 
 ```
-1. Extract role from JWT: auth.role()
+1. Extract role from JWT: public.auth_user_role()
 2. If role === 'owner': ALLOW unconditionally
 3. If role === 'office':
    a. Resolve user's permission groups from user_permission_groups
@@ -1697,7 +1697,7 @@ Bivro V1 is **done** when:
 **Application modules:** None (infrastructure only)
 
 **Tests required:**
-- `tests/integration/db/bootstrap.test.ts` — verify ENUMs exist, verify `gen_uuid_v7()` returns valid UUIDs, verify `auth.company_id()` function exists
+- `tests/integration/db/bootstrap.test.ts` — verify ENUMs exist, verify `gen_uuid_v7()` returns valid UUIDs, verify `public.auth_company_id()` function exists
 
 **Security checks:** Verify no database credentials in committed files
 
@@ -2034,7 +2034,7 @@ Bivro V1 is **done** when:
 - `tests/e2e/documents/pdf-view.e2e.ts` — quote PDF viewable in browser
 
 **Security checks:**
-- Documents table RLS: `auth.company_id() = company_id` verified (F-006 fix confirmed)
+- Documents table RLS: `public.auth_company_id() = company_id` verified (F-006 fix confirmed)
 - Signed URLs expire correctly (1h web, 15m portal)
 - PDF Edge Function authenticates incoming request (secret header)
 - No customer PII in PDF Edge Function logs
@@ -2393,7 +2393,7 @@ None. All Critical findings from the FINAL REVIEW FAILED verdict have been resol
 | F-001: subscription_tier ENUM missing 'starter' | Resolved — DATABASE_ARCHITECTURE.md had 'starter'; PLATFORM_ADMIN.md stale notes updated |
 | F-002: 7 email tables absent from DATABASE_ARCHITECTURE.md | Resolved — §22 added with all 7 tables |
 | F-003: template_id text/uuid collision in email_logs | Resolved — text field removed; uuid field added |
-| F-006: documents table RLS using wrong JWT claim (tenant_id) | Resolved — fixed to auth.company_id() in DATABASE_ARCHITECTURE.md, PDF_ENGINE.md, ARCHITECTURE.md |
+| F-006: documents table RLS using wrong JWT claim (tenant_id) | Resolved — fixed to public.auth_company_id() in DATABASE_ARCHITECTURE.md, PDF_ENGINE.md, ARCHITECTURE.md |
 
 #### High contradictions
 

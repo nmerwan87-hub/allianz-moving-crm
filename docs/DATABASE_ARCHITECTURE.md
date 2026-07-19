@@ -2059,11 +2059,11 @@ UNIQUE CONSTRAINTS:
     -- Only one active invite per email per company at a time
 
 RLS:
-  SELECT  company_id = auth.company_id() AND role = 'owner'
+  SELECT  company_id = public.auth_company_id() AND role = 'owner'
     -- Only Owners can see the invite list for their company
-  INSERT  company_id = auth.company_id() AND auth.user_role() = 'owner'
+  INSERT  company_id = public.auth_company_id() AND public.auth_user_role() = 'owner'
     -- Only Owners can create invitations (platform admin uses service_role)
-  UPDATE  company_id = auth.company_id() AND auth.user_role() = 'owner'
+  UPDATE  company_id = public.auth_company_id() AND public.auth_user_role() = 'owner'
     -- Only Owners can revoke invitations
   -- System (service_role): used by custom_access_token_hook to mark 'accepted'
 
@@ -2244,16 +2244,22 @@ completed ──► refunded (terminal, when a refund payment row is created)
 All tenant-scoped tables use this RLS pattern:
 
 ```sql
--- Helper function (created once)
-CREATE OR REPLACE FUNCTION auth.company_id()
-RETURNS uuid AS $$
-  SELECT (auth.jwt() -> 'app_metadata' ->> 'company_id')::uuid
-$$ LANGUAGE sql STABLE;
+-- Helper functions (created once in migration 001, public schema)
+CREATE OR REPLACE FUNCTION public.auth_company_id()
+RETURNS uuid
+LANGUAGE sql STABLE SECURITY DEFINER
+SET search_path = public, pg_catalog
+AS $$
+  SELECT (auth.jwt() -> 'app_metadata' ->> 'company_id')::uuid;
+$$;
 
-CREATE OR REPLACE FUNCTION auth.user_role()
-RETURNS user_role AS $$
-  SELECT (auth.jwt() -> 'app_metadata' ->> 'role')::user_role
-$$ LANGUAGE sql STABLE;
+CREATE OR REPLACE FUNCTION public.auth_user_role()
+RETURNS text
+LANGUAGE sql STABLE SECURITY DEFINER
+SET search_path = public, pg_catalog
+AS $$
+  SELECT (auth.jwt() -> 'app_metadata' ->> 'role')::text;
+$$;
 ```
 
 ### Policy Table
@@ -2311,10 +2317,10 @@ For tables where Owner has additional permissions over Office:
 ALTER TABLE companies ENABLE ROW LEVEL SECURITY;
 
 CREATE POLICY "Owners can update company" ON companies
-  FOR UPDATE USING (auth.company_id() = id AND auth.user_role() = 'owner');
+  FOR UPDATE USING (public.auth_company_id() = id AND public.auth_user_role() = 'owner');
 
 CREATE POLICY "Office can read company" ON companies
-  FOR SELECT USING (auth.company_id() = id);
+  FOR SELECT USING (public.auth_company_id() = id);
 ```
 
 ---
@@ -2905,7 +2911,7 @@ TRIGGER: trg_documents_snapshot_immutability
   -- storage_path, storage_bucket, content_hash, template_id, template_version,
   -- renderer_version, entity_type, entity_id, document_type, version
 
-RLS: auth.company_id() = company_id
+RLS: public.auth_company_id() = company_id
      Platform support: read-only during break-glass session (PLATFORM_ADMIN.md §5)
 ```
 
@@ -3489,7 +3495,7 @@ Migration steps:
 
 ## 22. Email System Tables
 
-The following tables are required by the email system (EMAIL_SYSTEM.md §18). They extend the core schema and must be included in migration files. All tables are tenant-isolated by `company_id` and covered by RLS using `auth.company_id() = company_id`.
+The following tables are required by the email system (EMAIL_SYSTEM.md §18). They extend the core schema and must be included in migration files. All tables are tenant-isolated by `company_id` and covered by RLS using `public.auth_company_id() = company_id`.
 
 ---
 
@@ -3528,8 +3534,8 @@ INDEXES:
   UNIQUE (company_id, slug) WHERE deleted_at IS NULL
   idx_email_templates_company_active  (company_id, is_active, lifecycle_stage)
 RLS:
-  SELECT: auth.company_id() = company_id AND deleted_at IS NULL
-  INSERT/UPDATE/DELETE: auth.company_id() = company_id AND auth.role() = 'owner'
+  SELECT: public.auth_company_id() = company_id AND deleted_at IS NULL
+  INSERT/UPDATE/DELETE: public.auth_company_id() = company_id AND public.auth_user_role() = 'owner'
     (office users with communications.manage_automations may UPDATE is_active only)
 ```
 
@@ -3569,8 +3575,8 @@ INDEXES:
 CONSTRAINTS:
   UNIQUE (template_id, language, version_number)
 RLS:
-  SELECT: auth.company_id() = company_id
-  INSERT: auth.company_id() = company_id (versions are created on template save, not deleted)
+  SELECT: public.auth_company_id() = company_id
+  INSERT: public.auth_company_id() = company_id (versions are created on template save, not deleted)
   UPDATE/DELETE: forbidden (versions are immutable)
 ```
 
@@ -3620,8 +3626,8 @@ updated_at              timestamptz     NOT NULL DEFAULT now()
 INDEXES:
   idx_email_automations_company_trigger  (company_id, trigger_event) WHERE is_active = true
 RLS:
-  SELECT: auth.company_id() = company_id
-  INSERT/UPDATE/DELETE: auth.company_id() = company_id AND (auth.role() = 'owner'
+  SELECT: public.auth_company_id() = company_id
+  INSERT/UPDATE/DELETE: public.auth_company_id() = company_id AND (public.auth_user_role() = 'owner'
     OR has_permission('communications.manage_automations'))
 ```
 
@@ -3667,8 +3673,8 @@ INDEXES:
   idx_automation_runs_entity       (entity_type, entity_id) WHERE entity_id IS NOT NULL
   idx_automation_runs_pending      (company_id, status) WHERE status IN ('pending', 'approval_pending')
 RLS:
-  SELECT: auth.company_id() = company_id
-  INSERT: auth.company_id() = company_id (system-initiated only; no user INSERT via API)
+  SELECT: public.auth_company_id() = company_id
+  INSERT: public.auth_company_id() = company_id (system-initiated only; no user INSERT via API)
   UPDATE/DELETE: forbidden (append-only)
 ```
 
@@ -3713,8 +3719,8 @@ INDEXES:
 CONSTRAINTS:
   UNIQUE (company_id, email) WHERE deleted_at IS NULL
 RLS:
-  SELECT: auth.company_id() = company_id AND deleted_at IS NULL
-  INSERT/UPDATE/DELETE: auth.company_id() = company_id AND auth.role() = 'owner'
+  SELECT: public.auth_company_id() = company_id AND deleted_at IS NULL
+  INSERT/UPDATE/DELETE: public.auth_company_id() = company_id AND public.auth_user_role() = 'owner'
 ```
 
 ---
@@ -3753,8 +3759,8 @@ updated_at              timestamptz     NOT NULL DEFAULT now()
 INDEXES:
   idx_comm_prefs_deliverability  (company_id, email_deliverability)
 RLS:
-  SELECT: auth.company_id() = company_id
-  INSERT/UPDATE: auth.company_id() = company_id AND (auth.role() = 'owner'
+  SELECT: public.auth_company_id() = company_id
+  INSERT/UPDATE: public.auth_company_id() = company_id AND (public.auth_user_role() = 'owner'
     OR has_permission('communications.view'))
   DELETE: forbidden (opt-out records must be retained)
 ```
@@ -3798,9 +3804,9 @@ INDEXES:
   idx_ai_comm_memory_company_type  (company_id, scope, memory_type)
   idx_ai_comm_memory_customer      (customer_id) WHERE customer_id IS NOT NULL
 RLS:
-  SELECT: auth.company_id() = company_id
-  INSERT/UPDATE: auth.company_id() = company_id (system-initiated; no direct user INSERT)
-  DELETE: auth.company_id() = company_id AND auth.role() = 'owner'
+  SELECT: public.auth_company_id() = company_id
+  INSERT/UPDATE: public.auth_company_id() = company_id (system-initiated; no direct user INSERT)
+  DELETE: public.auth_company_id() = company_id AND public.auth_user_role() = 'owner'
 ```
 
 ---

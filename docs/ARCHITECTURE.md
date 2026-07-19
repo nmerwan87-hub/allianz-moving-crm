@@ -507,7 +507,7 @@ Supabase Auth issues JWTs that include `app_metadata`. When `company_id` is stor
 
 When a user logs in, Supabase Auth issues a JWT. The `company_id` must be present in that JWT so RLS policies can reference it without a database lookup on every query.
 
-**Mechanism:** A Supabase Auth hook (`custom_access_token_hook`) fires on every JWT issue. The hook reads the user's `company_id` and `role` from the `profiles` table and injects them into `app_metadata` in the token. The JWT refresh (every hour) keeps this current. The RLS helper function `auth.company_id()` reads `(auth.jwt() -> 'app_metadata' ->> 'company_id')::uuid` — all RLS policies use this function rather than reading the JWT claim directly.
+**Mechanism:** A Supabase Auth hook (`custom_access_token_hook`) fires on every JWT issue. The hook reads the user's `company_id` and `role` from the `profiles` table and injects them into `app_metadata` in the token. The JWT refresh (every hour) keeps this current. The RLS helper function `public.auth_company_id()` reads `(auth.jwt() -> 'app_metadata' ->> 'company_id')::uuid` — all RLS policies use this function rather than reading the JWT claim directly.
 
 ### Tenant Isolation Layers
 
@@ -516,7 +516,7 @@ When a user logs in, Supabase Auth issues a JWT. The `company_id` must be presen
 | Authentication | Supabase Auth validates JWT |
 | JWT | `company_id` and `role` embedded in `app_metadata` on every token via `custom_access_token_hook` |
 | API | tRPC middleware validates `companyId` extracted from JWT on every request |
-| Database | PostgreSQL RLS policies on all tenant-scoped tables via `auth.company_id()` helper |
+| Database | PostgreSQL RLS policies on all tenant-scoped tables via `public.auth_company_id()` helper |
 | Storage | Supabase Storage bucket paths prefixed with `{tenantId}/`; RLS on storage objects |
 | Email | Sending domain scoped per environment (white-label: Phase 2) |
 | AI | AI requests carry `tenantId`; usage tracked per tenant |
@@ -565,7 +565,7 @@ User enters email/password → Supabase Auth validates credentials
 → Supabase issues JWT with user claims + app_metadata (company_id, role)
 → JWT stored in HttpOnly cookie (Supabase client handles this)
 → Next.js middleware validates JWT on every request via Supabase server client
-→ companyId + role extracted from JWT app_metadata via auth.company_id()
+→ companyId + role extracted from JWT app_metadata via public.auth_company_id()
 → Bivro's AuthContext populated → Request proceeds
 ```
 
@@ -644,7 +644,7 @@ JWT role claim → if 'owner': grant all
 ### Two-Tier Authorization
 
 **Tier 1 — Role check (fast, JWT-based)**
-The `owner` role bypasses all permission checks. If `auth.user_role() = 'owner'`, the request is authorized without a database lookup. This is the only fast-path.
+The `owner` role bypasses all permission checks. If `public.auth_user_role() = 'owner'`, the request is authorized without a database lookup. This is the only fast-path.
 
 **Tier 2 — Permission check (database-backed, cached)**
 For `office` users, the permission set is loaded from the database (permission groups + individual overrides for that user), cached in memory for the request lifetime, and evaluated against the required permission for each tRPC procedure.

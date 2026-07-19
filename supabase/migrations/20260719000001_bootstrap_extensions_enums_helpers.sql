@@ -3,7 +3,8 @@
 -- =============================================================
 -- This migration must be applied before any other migration.
 -- Creates: pgcrypto extension, gen_uuid_v7() function, all ENUMs,
---          auth helper functions, update_updated_at trigger function.
+--          public.auth_company_id() + public.auth_user_role() helpers,
+--          update_updated_at() trigger function.
 -- No tables are created here.
 -- =============================================================
 
@@ -44,18 +45,26 @@ $$;
 
 -- ─── Auth Helper Functions ────────────────────────────────────
 -- Used by all RLS policies for tenant isolation and RBAC.
--- Created in the auth schema so they mirror the built-in auth.uid() convention.
+-- Defined in the public schema — the auth schema is owned by
+-- supabase_auth_admin and is not writable from user migrations.
+-- auth.uid() and auth.jwt() are Supabase built-ins; no need to redefine them.
+--
+-- SECURITY DEFINER + SET search_path prevents search-path injection attacks.
+-- The function body uses fully-qualified auth.jwt() so the search path
+-- setting does not affect resolution of that built-in.
 
-CREATE OR REPLACE FUNCTION auth.company_id()
+CREATE OR REPLACE FUNCTION public.auth_company_id()
 RETURNS uuid
-LANGUAGE sql STABLE
+LANGUAGE sql STABLE SECURITY DEFINER
+SET search_path = public, pg_catalog
 AS $$
   SELECT (auth.jwt() -> 'app_metadata' ->> 'company_id')::uuid;
 $$;
 
-CREATE OR REPLACE FUNCTION auth.role()
+CREATE OR REPLACE FUNCTION public.auth_user_role()
 RETURNS text
-LANGUAGE sql STABLE
+LANGUAGE sql STABLE SECURITY DEFINER
+SET search_path = public, pg_catalog
 AS $$
   SELECT (auth.jwt() -> 'app_metadata' ->> 'role')::text;
 $$;

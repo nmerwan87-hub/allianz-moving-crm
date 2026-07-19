@@ -1130,7 +1130,7 @@ When a company account is archived or closed:
 
 ### 13.1 Cross-Tenant Document Isolation
 
-**Database layer:** RLS on the `documents` table enforces `auth.company_id() = company_id` (where `auth.company_id()` reads `(auth.jwt() -> 'app_metadata' ->> 'company_id')::uuid`). A query for `documents` never returns rows from another company regardless of whether the correct entity IDs are guessed.
+**Database layer:** RLS on the `documents` table enforces `public.auth_company_id() = company_id` (where `public.auth_company_id()` reads `(auth.jwt() -> 'app_metadata' ->> 'company_id')::uuid`). A query for `documents` never returns rows from another company regardless of whether the correct entity IDs are guessed.
 
 **Storage layer:** Supabase Storage RLS policies enforce that a company's signed URL generation only succeeds for objects under `{company_id}/` prefix. A company cannot generate a signed URL for another company's path.
 
