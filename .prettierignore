@@ -1,0 +1,24 @@
+# Generated files
+pnpm-lock.yaml
+.next/
+node_modules/
+coverage/
+playwright-report/
+supabase/.temp/
+
+# Project documentation (managed separately, not auto-formatted)
+docs/
+AGENTS.md
+CLAUDE.md
+.claude/
+
+# Supabase CLI generated
+supabase/functions/.eszip
+
+# Old doc copies (pre-sync)
+ai/
+architecture/
+database/
+design/
+emails/
+pdf/

@@ -1,1 +1,1 @@
-@AGENTS.md
+# Allianz Moving CRM – Claude Project Instructions
