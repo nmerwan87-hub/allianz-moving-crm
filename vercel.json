@@ -1,8 +1,12 @@
 {
   "crons": [
     {
-      "path": "/api/cron/invitation-expiry",
+      "path": "/api/cron/expire-invitations",
       "schedule": "5 0 * * *"
+    },
+    {
+      "path": "/api/cron/cleanup-unverified",
+      "schedule": "0 1 * * *"
     },
     {
       "path": "/api/cron/ceo-brief",
