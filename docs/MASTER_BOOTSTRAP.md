@@ -868,27 +868,109 @@ Platform staff authenticate at `admin.bivro.io` only:
 
 ---
 
-## 18. Company Onboarding Flow
+## 18. Company Registration and Onboarding Flow
 
-When a new company signs up:
+> **Full specification:** `ONBOARDING_ARCHITECTURE.md` — this section is a summary of the key steps. All detailed decisions (form fields, validation, VAT handling, duplicate detection, approval workflow, provisioning steps, email templates, and sprint assignment) are in that document.
+
+When a new company joins Bivro, it passes through three distinct phases:
+
+### Phase A — Public Registration (anonymous → pending_email_verification)
 
 ```
-1. User submits signup form (company name, email, password)
-2. Supabase Auth: create auth.users record
-3. after_signup hook fires (PostgreSQL function or Edge Function)
-4. Hook creates:
-   a. companies row (name, slug, subscription_tier: 'free', subscription_status: 'trialing', trial_ends_at: NOW() + 14 days)
-   b. profiles row (id = auth.uid(), company_id, role: 'owner', first_name, last_name, email)
-   c. company_settings row (defaults)
-   d. Default permission groups (4 groups: dispatcher, estimator, office-manager, billing)
-   e. Default email templates (27 rows, is_system_default: true)
-   f. Default email automations (12 rows, is_active: false)
-   g. Default email_sender_identity (bivro_managed tier)
-5. custom_access_token_hook: sets company_id + role in app_metadata
-6. Redirect to onboarding wizard (7-step guided sequence per UI_UX_SYSTEM.md §17)
+1. User submits /register form:
+   Required: company legal name, country, owner first name, owner last name, owner email, password, T&C + Privacy Policy acceptance
+   Optional: trading name, phone, website, VAT/UID number
+
+2. Server validates:
+   a. Email not already registered in auth.users
+   b. Password meets policy (12+ chars, 1+ digit, 1+ special char)
+   c. VAT number format (regex per country; see ONBOARDING_ARCHITECTURE.md §2.4)
+   d. T&C and Privacy Policy both accepted
+
+3. Supabase Auth: createUser(email, password) → auth.users record created
+   (Supabase Auth sends email confirmation automatically — built-in flow)
+
+4. after_signup Edge Function fires:
+   a. companies row:
+      { name, legal_name, trading_name, slug (auto-generated), country, vat_number,
+        subscription_tier: 'free', subscription_status: 'trialing',
+        company_status: 'pending_email_verification',
+        terms_accepted_at, terms_version, privacy_policy_accepted_at,
+        privacy_policy_version, registration_ip }
+   b. profiles row:
+      { id: auth.uid(), company_id, role: 'owner', first_name, last_name, email, is_active: true }
+
+5. User redirected to /register/check-email
 ```
 
-**Onboarding wizard (7 steps):** Company info → Address → Service area → Pricing basics → First crew member → First vehicle → Send test quote
+### Phase B — Email Verification → Platform Admin Review (pending_email_verification → pending_review)
+
+```
+6. Owner clicks email confirmation link → app/auth/confirm/route.ts:
+   a. Token validated by Supabase Auth
+   b. companies.company_status → 'pending_review'
+   c. platform-registration-received email sent to owner (via Resend)
+   d. activity_logs: { action: 'company.email_verified' }
+   e. Owner redirected to /pending-approval (status page; no dashboard access)
+```
+
+### Phase C — Platform Admin Approval → Active (pending_review → active)
+
+```
+7. Platform Admin reviews at admin.bivro.io/registrations (tenants.review permission)
+   → Approves (tenants.approve permission):
+     a. companies.company_status  → 'active'
+     b. companies.trial_ends_at   → now() + 14 days
+     c. companies.reviewed_at/by  set
+     d. provisionCompany(companyId) via service_role:
+        — company_settings row (default rates, all zero; owner must set)
+        — 4 permission_groups (dispatcher, estimator, office-manager, billing)
+        — 19 service_catalog rows (is_system_default: true, prices zero)
+        — 27 email_templates rows (is_system_default: true)
+        — 12 email_automations rows (is_active: false)
+        — 1 email_sender_identity (tier: 'bivro_managed')
+     e. platform_audit_log: { action: 'tenant.approved' }
+     f. activity_logs: { company.approved, catalog.seeded, templates.seeded }
+     g. domain_events: { event_type: 'tenant.created' }
+     h. platform-registration-approved email → owner
+
+   → OR Rejects (tenants.reject permission):
+     a. companies.company_status → 'rejected'
+     b. companies.rejection_reason set (internal)
+     c. Owner's Supabase Auth account disabled
+     d. platform-registration-rejected email → owner
+
+8. Owner logs in → custom_access_token_hook injects {company_id, role, company_status} into JWT
+   → middleware detects first login (profiles.last_seen_at IS NULL)
+   → redirected to /onboarding (7-step wizard)
+```
+
+### Onboarding Wizard (7 steps, post-approval only)
+
+**Step 1** — Company profile (trading name, phone, website)
+**Step 2** — Company address
+**Step 3** — Brand & identity (logo, accent color)
+**Step 4** — Pricing basics (hourly rate, minimum hours, deposit %)
+**Step 5** — First service (from catalog or custom)
+**Step 6** — Bank details (name, IBAN, BIC, payee name) — optional at this stage
+**Step 7** — Test quote (optional — send a demo quote to self)
+
+### Office User Onboarding (invitation-only)
+
+Office users never self-register. Invited by Owner only. Full spec: `ONBOARDING_ARCHITECTURE.md §7`.
+
+```
+Owner: Settings → Team → Invite Member (email + permission groups)
+→ 32-byte random token generated; SHA-256(token) stored in user_invitations.token_hash
+→ Raw token NEVER stored; only in the invitation email link
+→ platform-office-invitation email sent
+→ Invitee clicks /invite/{token} → sees landing page → sets password
+→ profiles row + user_permission_groups rows created
+→ invitation.status → 'accepted'
+→ Redirected to /onboarding/welcome
+```
+
+**Invitation expiry:** 7 days. Nightly cron sets `status='expired'` for overdue pending invites.
 
 ---
 
@@ -2362,6 +2444,121 @@ Bivro V1 is **done** when:
 - [ ] `GET /admin/anything` with Host: app.bivro.io returns 403
 
 ### Sprint 1 is complete when all acceptance criteria are met and the CI workflow is green on the `main` branch.
+
+---
+
+## 47. Sprint 2 Patch — Migration 021 (Schema Additions for Registration and Onboarding)
+
+**Status:** Required before Sprint 3 begins.
+
+**Why:** The Sprint 3 IAM Module implements application code that references `company_status`, `legal_name`, `vat_number`, `bank_iban`, `company_email_domains`, and other fields added in this patch. Without migration 021, Sprint 3 code cannot compile cleanly or run correctly.
+
+**Full schema spec:** `ONBOARDING_ARCHITECTURE.md §9` and `DATABASE_ARCHITECTURE.md §5, §6.1, §6.28`.
+
+### Migration 021 Contents
+
+| Object | Change |
+|--------|--------|
+| `company_status` enum | CREATE TYPE — 6 values: pending_email_verification, pending_review, active, suspended, rejected, archived |
+| `companies.company_status` | ADD COLUMN company_status company_status NOT NULL DEFAULT 'active' |
+| `companies.legal_name` | ADD COLUMN — text, nullable |
+| `companies.trading_name` | ADD COLUMN — text, nullable |
+| `companies.registration_number` | ADD COLUMN — text, nullable |
+| `companies.vat_number` | ADD COLUMN — text, nullable |
+| `companies.bank_name` | ADD COLUMN — text, nullable |
+| `companies.bank_iban` | ADD COLUMN — text, nullable |
+| `companies.bank_bic` | ADD COLUMN — text, nullable |
+| `companies.bank_payee_name` | ADD COLUMN — text, nullable |
+| `companies.accent_color` | ADD COLUMN — text, nullable |
+| `companies.stripe_subscription_id` | ADD COLUMN — text, nullable |
+| `companies.is_demo` | ADD COLUMN — boolean NOT NULL DEFAULT false |
+| `companies.suspended_reason` | ADD COLUMN — text, nullable |
+| `companies.suspended_at` | ADD COLUMN — timestamptz, nullable |
+| `companies.suspended_by` | ADD COLUMN — text, nullable |
+| `companies.registration_ip` | ADD COLUMN — inet, nullable |
+| `companies.terms_accepted_at` | ADD COLUMN — timestamptz, nullable |
+| `companies.terms_version` | ADD COLUMN — text, nullable |
+| `companies.privacy_policy_accepted_at` | ADD COLUMN — timestamptz, nullable |
+| `companies.privacy_policy_version` | ADD COLUMN — text, nullable |
+| `companies.reviewed_at` | ADD COLUMN — timestamptz, nullable |
+| `companies.reviewed_by` | ADD COLUMN — text, nullable |
+| `companies.review_notes` | ADD COLUMN — text, nullable |
+| `companies.rejection_reason` | ADD COLUMN — text, nullable |
+| `companies.rejected_at` | ADD COLUMN — timestamptz, nullable |
+| `companies.more_info_requested_at` | ADD COLUMN — timestamptz, nullable |
+| `company_email_domains` | CREATE TABLE — full spec in DATABASE_ARCHITECTURE.md §6.28 |
+| RLS on `company_email_domains` | SELECT / INSERT / UPDATE / DELETE policies |
+| `custom_access_token_hook` | CREATE OR REPLACE — updated to inject company_status into JWT app_metadata |
+| Indexes | idx_companies_company_status, idx_companies_pending_review, idx_companies_is_demo |
+
+**Default value for `company_status` on existing rows:** `'active'` — the seed company (`alpine-moving`) and any other companies created during Sprint 2 development are treated as already approved. This is correct for the development environment.
+
+**Note on `custom_access_token_hook` update:** The hook created in migration 019 is replaced (CREATE OR REPLACE) to also read `companies.company_status` via a JOIN on `profiles`. The auth helper functions `public.auth_company_id()` and `public.auth_user_role()` from migration 001 are **never touched** — they are stable.
+
+### Migration 021 Acceptance Criteria
+
+- [ ] `supabase db reset` applies migrations 001–021 with zero errors
+- [ ] `companies` table has all 20+ new columns
+- [ ] `company_email_domains` table exists with RLS enabled
+- [ ] `SELECT company_status FROM companies` returns `active` for seed company
+- [ ] `custom_access_token_hook` returns `company_status` in JWT `app_metadata` (verified via test token)
+- [ ] `pnpm typecheck` passes (Drizzle schema must be regenerated after migration)
+
+---
+
+## 48. Sprint 3 Definition — IAM Module and Auth UI
+
+**Sprint goal:** A user can register a company, verify their email, be approved by a Platform Admin, log in, invite an Office user, and reset their password. The dashboard is inaccessible to any non-`active` company.
+
+**Prerequisites:** Migration 021 applied. Sprint 2 all green.
+
+**Full implementation spec:** `ONBOARDING_ARCHITECTURE.md §2–§8`.
+
+### Sprint 3 Deliverables
+
+| # | Deliverable | Route / File |
+|---|-------------|-------------|
+| 1 | Registration page | `app/(auth)/register/page.tsx` |
+| 2 | Registration tRPC router | `modules/iam/router/registration.ts` |
+| 3 | after_signup Edge Function | `supabase/functions/on-signup/index.ts` |
+| 4 | Email confirmation handler | `app/auth/confirm/route.ts` |
+| 5 | Check email page | `app/(auth)/register/check-email/page.tsx` |
+| 6 | Pending approval page | `app/(auth)/pending-approval/page.tsx` |
+| 7 | Suspended status page | `app/(auth)/suspended/page.tsx` |
+| 8 | Rejected status page | `app/(auth)/rejected/page.tsx` |
+| 9 | Archived status page | `app/(auth)/archived/page.tsx` |
+| 10 | Auth middleware (company_status routing) | `middleware.ts` updated |
+| 11 | Invite acceptance page | `app/(auth)/invite/[token]/page.tsx` |
+| 12 | Invite acceptance tRPC router | `modules/iam/router/invitation.ts` |
+| 13 | Office user first-login welcome | `app/(auth)/onboarding/welcome/page.tsx` |
+| 14 | Forgot password page | `app/(auth)/forgot-password/page.tsx` |
+| 15 | Reset password page | `app/(auth)/reset-password/page.tsx` |
+| 16 | Platform email templates (10 total) | `emails/platform/*.tsx` |
+| 17 | Permission loading | `modules/iam/lib/permissions.ts` |
+| 18 | tRPC auth context | `lib/trpc/context.ts` |
+| 19 | Nightly invite expiry cron | `app/api/cron/expire-invitations/route.ts` |
+| 20 | Nightly unverified cleanup cron | `app/api/cron/cleanup-unverified/route.ts` |
+
+### Sprint 3 Does NOT Include
+
+- Stripe subscription creation (Sprint 6: Payments)
+- Platform Admin approval queue UI (Sprint 4: Platform Admin)
+- Company provisioning trigger UI (Sprint 4)
+- Onboarding wizard (Sprint 5)
+- SAML SSO (V2+)
+- DNS-verified email domains (V2+)
+- VIES live VAT validation (V2+)
+
+### Sprint 3 Acceptance Criteria
+
+- [ ] Public user can register at `/register` and receive a verification email
+- [ ] Verification link transitions company_status to `pending_review`
+- [ ] Non-active company cannot access `/dashboard` (redirected to status page)
+- [ ] Invitation token is SHA-256 hashed; raw token is never in the database
+- [ ] Invitee can accept invitation and set their password
+- [ ] Password reset flow works end-to-end
+- [ ] `pnpm typecheck` and `pnpm lint` pass with zero errors
+- [ ] Integration tests cover: registration, email verification, invite acceptance, password reset
 
 ---
 

@@ -507,7 +507,7 @@ Supabase Auth issues JWTs that include `app_metadata`. When `company_id` is stor
 
 When a user logs in, Supabase Auth issues a JWT. The `company_id` must be present in that JWT so RLS policies can reference it without a database lookup on every query.
 
-**Mechanism:** A Supabase Auth hook (`custom_access_token_hook`) fires on every JWT issue. The hook reads the user's `company_id` and `role` from the `profiles` table and injects them into `app_metadata` in the token. The JWT refresh (every hour) keeps this current. The RLS helper function `public.auth_company_id()` reads `(auth.jwt() -> 'app_metadata' ->> 'company_id')::uuid` — all RLS policies use this function rather than reading the JWT claim directly.
+**Mechanism:** A Supabase Auth hook (`custom_access_token_hook`) fires on every JWT issue. The hook reads the user's `company_id`, `role`, and `company_status` from `profiles` JOIN `companies` and injects them into `app_metadata` in the token. The JWT refresh (every hour) keeps these current. The RLS helper function `public.auth_company_id()` reads `(auth.jwt() -> 'app_metadata' ->> 'company_id')::uuid` — all RLS policies use this function rather than reading the JWT claim directly. The `company_status` claim is read by Next.js middleware to route non-`active` companies to status-specific pages (pending, suspended, rejected, archived) before the dashboard is reached.
 
 ### Tenant Isolation Layers
 
@@ -569,23 +569,73 @@ User enters email/password → Supabase Auth validates credentials
 → Bivro's AuthContext populated → Request proceeds
 ```
 
-**Flow 2: Operator Signup / Tenant Provisioning**
+**Flow 2: Company Registration → Approval → Owner Activation**
 ```
-User submits signup form → Supabase Auth creates user
-→ Supabase Auth hook fires (after_signup)
-→ Hook creates: companies record, profiles record (role: owner)
-→ custom_access_token_hook sets company_id + role in app_metadata
-→ Next JWT issue includes company_id and role
-→ RLS activates for this user
+STEP 1 — Public registration (anonymous)
+  User submits /register form (legal_name, country, owner email, password, T&C acceptance)
+  → Server validates: email not already registered, password policy, VAT format
+  → Supabase Auth: createUser(email, password) → auth.users created
+  → after_signup hook fires (Edge Function):
+       creates companies row (company_status: 'pending_email_verification',
+                              subscription_tier: 'free', subscription_status: 'trialing')
+       creates profiles row (id = auth.uid(), company_id, role: 'owner')
+  → Supabase Auth sends email confirmation automatically
+  → User redirected to /register/check-email
+
+STEP 2 — Email verification
+  Owner clicks confirmation link → app/auth/confirm/route.ts
+  → Confirms token with Supabase Auth
+  → Updates companies.company_status → 'pending_review'
+  → Sends platform-registration-received email to owner
+  → Writes activity_logs (company.email_verified)
+  → Owner redirected to /pending-approval (status page, no dashboard access)
+
+STEP 3 — Platform Admin review
+  Platform Admin sees company in admin.bivro.io/registrations (company_status = 'pending_review')
+  → Platform Admin approves (tenants.approve permission):
+       companies.company_status       → 'active'
+       companies.trial_ends_at        → now() + 14 days
+       companies.reviewed_at/by       set
+       provisionCompany(companyId) runs via service_role:
+         company_settings, permission_groups, service_catalog,
+         email_templates, email_automations, platform sender_identity
+       Writes platform_audit_log, activity_logs, domain_events
+       Sends platform-registration-approved email to owner
+
+STEP 4 — Owner first login
+  Owner visits /login → Supabase Auth validates credentials
+  → custom_access_token_hook reads company_status = 'active' + company_id + role
+  → JWT issued with {company_id, role, company_status} in app_metadata
+  → Middleware detects first login (profiles.last_seen_at IS NULL)
+  → Redirected to /onboarding (7-step onboarding wizard)
+
+All transitions update company_status in JWT via custom_access_token_hook on every
+token refresh. Non-active statuses route to status-specific pages, never the dashboard.
+Full state machine and transition rules: ONBOARDING_ARCHITECTURE.md §1.
 ```
 
-**Flow 3: Team Member Invite**
+**Flow 3: Office User Invitation (invitation-only; no self-registration)**
 ```
-Owner invites user via email → Bivro generates user_invitations record
-→ Resend delivers invitation email with secure invite link
-→ Invited user clicks link → Supabase Auth creates/verifies user account
-→ custom_access_token_hook reads company_id + role from profiles → sets in app_metadata
-→ Invite marked accepted
+Owner creates invitation (Settings → Team → Invite Member):
+  Enters: invitee email, permission groups
+  → Server generates 32-byte random token; stores SHA-256(token) in user_invitations.token_hash
+    (raw token NEVER stored in database)
+  → user_invitations row: { company_id, email, role:'office', permission_group_ids (snapshot),
+                             token_hash, expires_at: now()+7d, status:'pending' }
+  → platform-office-invitation email sent via Resend with raw token in link
+
+Invitee clicks /invite/{raw_token}:
+  → Server: SHA-256(token) → look up user_invitations WHERE token_hash = hash AND status='pending'
+  → If expired: status → 'expired'; redirect /invite/expired
+  → If valid: show invitation landing page → password setup form
+  → On submit: Supabase Admin API creates auth.users; profiles row created;
+               user_permission_groups rows created from permission_group_ids snapshot
+  → user_invitations.status → 'accepted'
+  → custom_access_token_hook reads company_id + role = 'office' from profiles
+  → JWT issued → redirected to /onboarding/welcome (first-login screen)
+
+Expiry: nightly cron sets status='expired' for pending invites where expires_at < now().
+Full spec: ONBOARDING_ARCHITECTURE.md §7.
 ```
 
 **Flow 4: Crew Mobile Login**

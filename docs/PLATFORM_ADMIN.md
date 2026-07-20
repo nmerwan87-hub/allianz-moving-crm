@@ -286,6 +286,10 @@ All permissions follow the format `{resource}.{action}`. Every endpoint in the p
 | `tenants.view` | View company list and company detail pages |
 | `tenants.create` | Manually create a new company |
 | `tenants.edit_metadata` | Edit company name, slug, contact details |
+| `tenants.review` | View the registration approval queue |
+| `tenants.approve` | Approve a pending registration (triggers company provisioning) |
+| `tenants.reject` | Reject a pending registration (disables owner auth account) |
+| `tenants.request_info` | Send a request-more-information email for a pending registration |
 | `tenants.suspend` | Immediately block all logins for a company |
 | `tenants.restore` | Re-activate a suspended or archived company |
 | `tenants.archive` | Soft-delete a company (data retained, inaccessible) |
@@ -358,6 +362,10 @@ All permissions follow the format `{resource}.{action}`. Every endpoint in the p
 | `tenants.view` | ✅ | ✅ | ✅ | ✅ | — | ✅ | ✅ | ✅ |
 | `tenants.create` | ✅ | ✅ | — | — | — | ✅ | — | — |
 | `tenants.edit_metadata` | ✅ | ✅ | ✅ | — | — | — | — | — |
+| `tenants.review` | ✅ | ✅ | ✅ | — | — | — | — | — |
+| `tenants.approve` | ✅ | ✅ | — | — | — | — | — | — |
+| `tenants.reject` | ✅ | ✅ | — | — | — | — | — | — |
+| `tenants.request_info` | ✅ | ✅ | ✅ | — | — | — | — | — |
 | `tenants.suspend` | ✅ | ✅ | — | — | — | — | — | — |
 | `tenants.restore` | ✅ | ✅ | — | — | — | — | — | — |
 | `tenants.archive` | ✅ | ✅ | — | — | — | — | — | — |
@@ -487,33 +495,43 @@ Clicking any entry opens the full audit record with before/after state.
 
 ### 6.1 Company Lifecycle
 
-A company moves through the following states:
+> **Authoritative spec:** `ONBOARDING_ARCHITECTURE.md §1` — this section is a summary.
+
+The `company_status` field (DB enum: `company_status`) tracks operational lifecycle, independently of `subscription_status` (billing). Both fields exist on the `companies` table. Full state machine, transition rules, and effect on login: see `ONBOARDING_ARCHITECTURE.md §1` and `DATABASE_ARCHITECTURE.md §8`.
 
 ```
-          ┌──────────┐
-          │  trial   │ ← Created manually or via signup
-          └────┬─────┘
-               │ trial_end or subscription started
-               ▼
-          ┌──────────┐
-          │  active  │ ←─────────────────────────────┐
-          └────┬─────┘                               │
-               │                                     │ restore
-       ┌───────┼──────────┐                          │
-       ▼       ▼          ▼                          │
-  suspend  archive   (overdue)                       │
-       │       │      past_due                       │
-       │       │          │ payment fails 3× or      │
-       │       │          ▼ manual                   │
-       │       │    ┌──────────┐                     │
-       └───────┴───▶│cancelled │─────────────────────┘
-                    └────┬─────┘
-                         │ legal retention period elapsed
-                         ▼             (Platform Owner only)
-                    ┌──────────┐
-                    │ deleted  │ ← Irreversible
-                    └──────────┘
+                [User submits registration form]
+                               │
+                               ▼
+                 pending_email_verification
+                               │ Owner clicks verification email
+                               ▼
+                       pending_review ──────────────────► rejected (terminal)
+                               │ Platform Admin approves              │
+                               │ (triggers provisioning)              ▼
+                               ▼                            Owner account disabled;
+                           active ◄────────────────── suspended      rejection email sent
+                               │             restore ──────┘
+                               │ suspend
+                               │
+                               └──── archived (soft-terminal)
+                                     │ Platform Admin can
+                                     └── restore ──► active
 ```
+
+**Key difference from prior design:** There is no implicit "trial" state. The `subscription_status` enum handles billing states (`trialing`, `active`, `past_due`, `cancelled`, `paused`). `company_status` is purely operational. A company can be `company_status = 'active'` and `subscription_status = 'trialing'` simultaneously.
+
+**`pending_email_verification`** — Set at registration. Owner cannot access the dashboard. Supabase Auth sends email verification automatically.
+
+**`pending_review`** — Set when email is verified. Visible in the Platform Admin registration queue. No dashboard access.
+
+**`active`** — Set by Platform Admin approval. Full dashboard access. Provisioning runs on transition to `active` (company_settings, permission groups, service catalog, email templates, email automations).
+
+**`suspended`** — Set by Platform Admin or automatically (3 Stripe payment failures). All sessions invalidated. Owner is shown suspended status page.
+
+**`rejected`** — Terminal. Owner account disabled in Supabase Auth. Rejection email sent.
+
+**`archived`** — Soft-deleted (`deleted_at` set). All sessions invalidated. Owner can request data export.
 
 ### 6.2 Create Company
 
@@ -633,6 +651,47 @@ A company moves through the following states:
 **Effect:** A company can be given limits that differ from their subscription tier's defaults without changing the tier itself. For example, a Business tier company can be given 5,000,000 AI tokens/month instead of the default 2,000,000.
 
 Overrides are stored in `company_subscription_overrides` and take precedence over tier defaults. Each override records: the field, the override value, the reason, the authorizing staff member, and an optional expiry date.
+
+### 6.11 Registration Approval Queue
+
+> **Full specification:** `ONBOARDING_ARCHITECTURE.md §4`
+
+**Who can view:** Platform Admin with `tenants.review` permission
+**URL:** `admin.bivro.io/registrations`
+
+The queue shows all companies where `company_status = 'pending_review'`, ordered oldest first. Companies arrive here after the prospective Owner submits the registration form and confirms their email.
+
+**Queue columns:** Legal name — Trading name — Country — Owner email — VAT number — Website — Registered (how long ago) — Review action
+
+**Available actions per queue item:**
+
+#### Approve
+**Permission:** `tenants.approve`
+
+Marks the company `active`, sets `trial_ends_at = now() + 14 days`, runs the full provisioning sequence (company_settings, permission groups, service catalog, email templates, email automations, platform sender identity), and sends the `platform-registration-approved` email to the Owner. Full provisioning spec: `ONBOARDING_ARCHITECTURE.md §5`.
+
+Audit entries written: `tenant.approved` in `platform_audit_log`; `company.approved` + `catalog.seeded` + `templates.seeded` in `activity_logs`; `tenant.created` in `domain_events`.
+
+#### Reject
+**Permission:** `tenants.reject`
+
+Marks the company `rejected`, sets `rejected_at` + `rejected_by` + `rejection_reason` (internal). Disables the Owner's Supabase Auth account. Sends the `platform-registration-rejected` email with a customer-safe reason. The raw internal rejection reason is never included in the email.
+
+Rejection reason categories (dropdown, free text for "Other"):
+- Insufficient business information
+- Business does not qualify (non-moving industry)
+- Duplicate registration
+- Fraudulent or suspicious registration
+- Terms of Service violation
+- Other
+
+#### Request More Information
+**Permission:** `tenants.request_info`
+
+Does **not** change `company_status` (remains `pending_review`). Records the request in `companies.review_notes` (appended with timestamp + admin name) and sets `companies.more_info_requested_at`. Sends the `platform-registration-more-info-needed` email with the specific information request written by the Platform Admin. In V1, the Owner responds by replying to the email; support updates the registration manually.
+
+#### Subscription Assignment at Approval
+At approval time the Platform Admin may optionally override the default `subscription_tier` (default: `free`) and `trial_ends_at` (default: `now() + 14 days`) before confirming. This allows white-glove onboarding of enterprise clients directly into a paid tier. Stripe customer creation is still deferred until the Owner initiates payment.
 
 ---
 

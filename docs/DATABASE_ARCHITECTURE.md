@@ -555,6 +555,17 @@ CREATE TYPE subscription_status AS ENUM (
   'paused'
 );
 
+-- Company operational / lifecycle status (orthogonal to subscription_status)
+-- Full state machine: ONBOARDING_ARCHITECTURE.md §1
+CREATE TYPE company_status AS ENUM (
+  'pending_email_verification',  -- just registered; owner email not yet confirmed
+  'pending_review',              -- email confirmed; awaiting Platform Admin approval
+  'active',                      -- approved and operational
+  'suspended',                   -- temporarily blocked (non-payment or policy violation)
+  'rejected',                    -- registration rejected; never activated
+  'archived'                     -- churned or removed; data retained, all access blocked
+);
+
 -- Home/property size reference
 CREATE TYPE property_size AS ENUM (
   'studio',
@@ -639,12 +650,73 @@ license_number          text            -- moving company license
 usdot_number            text            -- US DOT number (US movers)
 mc_number               text            -- motor carrier number (US long-distance)
 
+-- Operational lifecycle status (independent of billing status)
+-- Full lifecycle and transition rules: ONBOARDING_ARCHITECTURE.md §1
+company_status          company_status  NOT NULL DEFAULT 'pending_email_verification'
+-- Default 'active' applied in migration 021 to existing dev/seed rows only.
+-- All new registrations start at 'pending_email_verification'.
+
+-- Legal identity
+legal_name              text
+-- Official registered company name. If NULL, 'name' is used on legal documents.
+trading_name            text
+-- "Doing business as" name. Customer-facing. If NULL, 'name' is used.
+registration_number     text
+-- Company registration number with the relevant government authority.
+vat_number              text
+-- VAT/UID/EIN/GST/ABN number. Format validated by country. See ONBOARDING_ARCHITECTURE.md §2.4.
+
+-- Banking (displayed on invoice payment instructions)
+bank_name               text
+bank_iban               text
+bank_bic                text
+-- SWIFT/BIC code
+bank_payee_name         text
+-- Name on the bank account; may differ from company name (sole traders)
+
+-- Branding
+accent_color            text
+-- Hex color code (e.g., '#1E40AF'). Used in PDF templates and email headers.
+-- NULL = Bivro default palette applies (ink-900 / #1E293B).
+
 -- Subscription (Bivro billing)
 subscription_tier       subscription_tier  NOT NULL DEFAULT 'free'
 subscription_status     subscription_status NOT NULL DEFAULT 'trialing'
 trial_ends_at           timestamptz
-stripe_customer_id      text            -- Bivro's Stripe customer ID
+-- Set at approval time (now() + 14 days), NOT at registration time.
+stripe_customer_id      text            -- Bivro's Stripe customer ID (cus_...)
+stripe_subscription_id  text            -- Stripe subscription object ID (sub_...)
 current_period_end      timestamptz
+
+-- Platform management
+is_demo                 boolean         NOT NULL DEFAULT false
+-- Demo companies excluded from revenue/usage metrics. Auto-archived after 30 days.
+suspended_reason        text
+-- Human-readable reason shown to the Owner when company_status = 'suspended'.
+suspended_at            timestamptz
+suspended_by            text
+-- platform_admin_users.id as text. No FK enforced (cross-schema reference).
+
+-- Registration / approval tracking (complete spec: ONBOARDING_ARCHITECTURE.md §2–§4)
+registration_ip         inet
+-- Client IP captured at registration form submission.
+terms_accepted_at       timestamptz
+-- When the owner accepted the Terms of Service.
+terms_version           text
+-- Version identifier of the ToS accepted (e.g., '2026-07-20').
+privacy_policy_accepted_at  timestamptz
+privacy_policy_version  text
+reviewed_at             timestamptz
+-- When Platform Admin made the approve/reject decision.
+reviewed_by             text
+-- platform_admin_users.id as text. No FK enforced.
+review_notes            text
+-- Internal Platform Admin notes. Never sent to the owner.
+rejection_reason        text
+-- Internal reason for rejection. Not sent verbatim to the owner.
+rejected_at             timestamptz
+more_info_requested_at  timestamptz
+-- When the last "request more information" action was taken.
 
 -- Counters (used to generate human-readable numbers)
 quote_sequence          integer         NOT NULL DEFAULT 0
@@ -2083,6 +2155,50 @@ AUDIT:
   activity_logs with entity_type = 'user_invitation' and entity_id = invitation.id.
 ```
 
+### 6.28 `company_email_domains`
+
+Maps email domains to companies. Used for tenant routing on login: when a user enters their email, the domain portion is looked up here to pre-select the company. Also referenced in `MASTER_BOOTSTRAP.md §17.1` for email-domain → tenant routing. Full spec: `ONBOARDING_ARCHITECTURE.md §9.3`.
+
+```
+company_email_domains
+─────────────────────────────────────────────────────────────────
+id                      uuid            PRIMARY KEY DEFAULT gen_uuid_v7()
+company_id              uuid            NOT NULL REFERENCES companies(id) ON DELETE CASCADE
+─────────────────────────────────────────────────────────────────
+domain                  text            NOT NULL
+  -- e.g., 'alpinemoving.com' — lowercase, no leading '@'
+
+is_primary              boolean         NOT NULL DEFAULT false
+  -- One primary domain per company (preferred display domain).
+
+verified_at             timestamptz
+  -- NULL = unverified (self-declared).
+  -- Non-null = verified via DNS TXT record (V2+).
+  -- V1: all domains are self-declared.
+
+created_at              timestamptz     NOT NULL DEFAULT now()
+─────────────────────────────────────────────────────────────────
+CONSTRAINTS:
+  domain: format CHECK (domain ~ '^[a-z0-9]([a-z0-9\-]*[a-z0-9])?(\.[a-z0-9]([a-z0-9\-]*[a-z0-9])?)+$')
+
+INDEXES:
+  UNIQUE idx_company_email_domains_domain ON company_email_domains(domain)
+    -- A domain may be registered to only one company at a time.
+  idx_company_email_domains_company ON company_email_domains(company_id)
+
+RLS:
+  SELECT  company_id = public.auth_company_id()
+  INSERT  company_id = public.auth_company_id() AND public.auth_user_role() = 'owner'
+  UPDATE  company_id = public.auth_company_id() AND public.auth_user_role() = 'owner'
+  DELETE  company_id = public.auth_company_id() AND public.auth_user_role() = 'owner'
+  -- Platform (service_role): unrestricted
+  -- Login page domain lookup uses service_role (no JWT available yet at login time)
+```
+
+**V1 population:** Added by the Owner in Settings → Company → Email Domains. The domain from the Owner's registration email is NOT auto-populated (to prevent silent exposure of the company's email domain to public routing). The Owner explicitly declares which domains belong to their company.
+
+**V2+ DNS verification:** A DNS TXT verification record will be required before a domain is trusted for tenant routing. V1 relies on admin oversight to prevent malicious domain claiming.
+
 ---
 
 ## 7. Entity Relationships
@@ -2167,6 +2283,38 @@ permission_definitions (system-level, no company_id)
 ---
 
 ## 8. Status State Machines
+
+### Company Status
+
+Tracks the operational lifecycle of a company (independent of `subscription_status`). Full rules: `ONBOARDING_ARCHITECTURE.md §1`.
+
+```
+[registration submitted]
+          │
+          ▼
+pending_email_verification
+          │ email confirmed
+          ▼
+   pending_review ──► rejected (terminal)
+          │ Platform Admin approves
+          ▼
+        active ◄──── suspended
+          │               ▲
+          ├── suspended ───┘ restore
+          │
+          └── archived (soft-terminal; Platform Admin can restore → active)
+```
+
+**Transition summary:**
+- `pending_email_verification → pending_review`: Owner clicks email verification link
+- `pending_review → active`: Platform Admin approves (triggers full company provisioning)
+- `pending_review → rejected`: Platform Admin rejects
+- `active → suspended`: Platform Admin action or 3 failed Stripe payment retries
+- `suspended → active`: Platform Admin restores
+- `active → archived` / `suspended → archived`: Platform Admin archives (sets `deleted_at`)
+- `archived → active`: Platform Admin restores
+
+**Effect on login:** `company_status` is injected into the JWT `app_metadata` by the `custom_access_token_hook`. Next.js middleware routes users to status-specific pages for any non-`active` status. The Supabase Auth session remains valid regardless of company_status; only access to the dashboard is blocked.
 
 ### Lead Status
 

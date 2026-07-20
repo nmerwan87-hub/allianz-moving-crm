@@ -953,6 +953,162 @@ Every screen in the Bivro platform, organized by surface area.
 
 ---
 
+### 6.0 Authentication and Registration Pages
+
+These pages are in the `(auth)` route group (`app/(auth)/`) and do not require an authenticated session. Full field specifications and flow logic: `ONBOARDING_ARCHITECTURE.md §2–§8`.
+
+#### /login
+Sign in page (Sprint 2 shell complete; Sprint 3 adds real auth logic).
+
+**Components:**
+- Two-column layout: left branding panel (ink-900 background, desktop only) + right form panel
+- Email input (`type="email"`, `autocomplete="email"`)
+- Password input (`type="password"`, `autocomplete="current-password"`)
+- "Forgot password?" link → `/forgot-password`
+- Sign in submit button
+- "Don't have an account? Register your company" link → `/register`
+- Compass design system tokens (see `UI_UX_SYSTEM.md`)
+
+**Behaviour:**
+- On submit: Supabase Auth `signInWithPassword()`
+- `custom_access_token_hook` injects `{company_id, role, company_status}` into JWT
+- Middleware reads `company_status` and routes: `active` → dashboard; all others → status page
+
+---
+
+#### /register
+Public company registration page. Accessible without authentication. No link to this page from the dashboard — it is linked from the marketing site and the login page.
+
+**Components:**
+- Company legal name (required)
+- Country selector — ISO 3166-1 alpha-2 (required; drives VAT field label and format)
+- Trading name (optional)
+- Owner first name (required)
+- Owner last name (required)
+- Owner email (required; must not be already registered)
+- Password + strength indicator (required; min 12 chars, 1 digit, 1 special char)
+- VAT / UID / EIN number — label and format changes by country (optional; see ONBOARDING_ARCHITECTURE.md §2.4)
+- Company phone (optional)
+- Company website (optional)
+- Terms of Service checkbox (required; links to /legal/terms)
+- Privacy Policy checkbox (required; links to /legal/privacy)
+- Submit button: "Create your account"
+- "Already have an account? Sign in" link → `/login`
+
+**Validation:**
+- All required fields client-validated before submit
+- Server: email uniqueness, password policy, VAT format (regex per country)
+- Duplicate company name: non-blocking warning shown, not a block
+- Duplicate email: "An account already exists for this email" (no account enumeration)
+
+**On success:** Redirect to `/register/check-email`
+
+---
+
+#### /register/check-email
+Informational page. Displayed after successful registration form submission.
+
+**Components:**
+- "Check your email" heading
+- "We sent a verification link to [email]."
+- "Resend verification email" button (rate-limited: 3 per hour)
+- "Wrong email? Start over" link → `/register`
+
+---
+
+#### /pending-approval
+Status page shown after email verification. No dashboard access from here.
+
+**Components:**
+- "Application under review" heading
+- "Your email has been verified. We're reviewing your application for [Company Name]."
+- "We review applications within 1 business day."
+- "Resend verification email" button (if somehow not yet verified)
+- Support contact link
+
+---
+
+#### /suspended
+Status page. Shown to all users of a suspended company.
+
+**Components (Owner):**
+- "Account suspended" heading
+- Suspension reason (from `companies.suspended_reason`)
+- Support contact and email
+
+**Components (Office users):**
+- "Account unavailable. Contact your administrator."
+
+---
+
+#### /rejected
+Status page. Shown to Owner of a rejected registration.
+
+**Components:**
+- "Application not approved" heading
+- Customer-safe rejection reason (see ONBOARDING_ARCHITECTURE.md §10.4 mapping)
+- Support contact
+
+---
+
+#### /archived
+Status page. Shown to all users of an archived company.
+
+**Components:**
+- "Account no longer active" heading
+- "Request data export" button (links to support form)
+- Support contact
+
+---
+
+#### /invite/[token]
+Invitation acceptance page. Linked from the office-invitation email.
+
+**Components:**
+- "You've been invited to join [Company Name]" heading
+- Invited by: "[Owner name]"
+- Role: Office
+- Invitation expiry date
+- If valid: "Accept and set up your account" CTA → password setup form
+- Password + confirm password inputs + strength indicator
+- Submit: "Create account"
+
+**If invalid/expired:** "This invitation link is no longer valid." + "Contact your administrator to request a new invitation."
+
+---
+
+#### /onboarding/welcome
+First-login welcome screen for Office users after invitation acceptance.
+
+**Components:**
+- "Welcome to [Company Name] on Bivro" heading
+- Permission groups assigned (list of group names)
+- "Your access was configured by [Owner name]."
+- "Go to dashboard" CTA
+
+---
+
+#### /forgot-password
+Forgot password page.
+
+**Components:**
+- Email input
+- Submit button: "Send reset link"
+- Always shows: "If this email is registered, you'll receive a reset link." (no account enumeration)
+- "Back to sign in" link → `/login`
+
+---
+
+#### /reset-password
+Password reset page. Reached via link in the reset email (Supabase Auth redirect).
+
+**Components:**
+- New password + confirm password inputs + strength indicator
+- Submit button: "Reset password"
+- If token invalid/expired: error state + "Request a new link" → `/forgot-password`
+
+---
+
 ### 6.1 Web Application — Operator Dashboard
 
 #### /dashboard (Home)

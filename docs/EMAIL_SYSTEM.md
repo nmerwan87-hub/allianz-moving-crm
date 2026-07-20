@@ -1989,4 +1989,75 @@ Tenant-isolated analysis of: open count, open timing, customer history, company 
 
 ---
 
+---
+
+## 22. Platform Emails (Registration and Onboarding)
+
+> **Full specification:** `ONBOARDING_ARCHITECTURE.md §10`
+
+Platform emails are sent by Bivro to prospective and existing company owners as part of the registration, approval, and account lifecycle flows. They are **not** tenant emails (not stored in the per-company `email_templates` table). They are hardcoded React Email components in `/emails/platform/` and sent from the platform sender identity (`noreply@mail.bivro.io`) via Resend.
+
+### 22.1 Platform vs. Tenant Email Distinction
+
+| Property | Platform email | Tenant email |
+|----------|---------------|-------------|
+| Sender | `noreply@mail.bivro.io` (Bivro) | Company's configured sender |
+| Template storage | Hardcoded React Email in `/emails/platform/` | `email_templates` table per company |
+| Trigger | Registration / approval lifecycle events | Customer lifecycle events (lead, quote, job, invoice) |
+| Customizable by Owner | No | Yes |
+| Company_id required | No (sent before company may be active) | Yes |
+| Uses Resend | Yes (server-side, service_role) | Yes (server-side, service_role) |
+
+### 22.2 Platform Email Catalogue
+
+| Template file | Subject | Trigger |
+|--------------|---------|---------|
+| `platform-email-verification.tsx` | "Confirm your email to complete registration" | After registration (Supabase Auth built-in confirmation — configured in Auth dashboard) |
+| `platform-registration-received.tsx` | "We've received your Bivro application" | When email verified → company_status transitions to `pending_review` |
+| `platform-registration-approved.tsx` | "Your Bivro account is ready — welcome aboard" | When Platform Admin approves |
+| `platform-registration-rejected.tsx` | "Update on your Bivro application" | When Platform Admin rejects |
+| `platform-registration-more-info-needed.tsx` | "Action required: additional information needed" | When Platform Admin requests more information |
+| `platform-account-suspended.tsx` | "Your Bivro account has been suspended" | When company suspended |
+| `platform-account-reactivated.tsx` | "Your Bivro account has been reactivated" | When suspended company restored |
+| `platform-office-invitation.tsx` | "You've been invited to join [Company] on Bivro" | When Owner invites an Office user |
+| `platform-password-reset.tsx` | "Reset your Bivro password" | Forgot password (Supabase Auth built-in — configured in Auth dashboard) |
+| `platform-password-changed.tsx` | "Your Bivro password has been changed" | After successful password change (reset or in-session) |
+
+**Note on Supabase Auth emails:** `platform-email-verification.tsx` and `platform-password-reset.tsx` are configured as custom templates in the Supabase Auth dashboard, not sent directly by Bivro via Resend. All other platform emails are sent via Resend from server-side application code.
+
+### 22.3 Rejection Email — Customer-Safe Reason Mapping
+
+The internal rejection reason (stored in `companies.rejection_reason`) is never sent to the registrant. The following mapping produces the customer-facing reason shown in the rejection email:
+
+| Internal rejection category | Customer-facing text |
+|---------------------------|---------------------|
+| Insufficient business information | "We were unable to verify the business information provided." |
+| Non-qualifying business | "At this time, Bivro serves professional moving and relocation companies. Based on the information provided, we are unable to confirm your business qualifies." |
+| Duplicate registration | "An account already exists for this business. If you believe this is an error, please contact us." |
+| Fraudulent / suspicious | *(not disclosed)* "Please contact us at support@bivro.io for more details." |
+| Terms of Service violation | "Please contact us at support@bivro.io for more details." |
+| Other | "Please contact us at support@bivro.io for more details." |
+
+### 22.4 Platform Email Variables
+
+Platform email templates use a separate variable namespace from tenant templates. Variables are populated server-side before sending:
+
+| Variable | Source |
+|----------|--------|
+| `{{company_name}}` | `companies.legal_name` OR `companies.name` |
+| `{{owner_first_name}}` | `profiles.first_name` |
+| `{{owner_email}}` | `profiles.email` |
+| `{{trial_ends_at}}` | `companies.trial_ends_at` (formatted per locale) |
+| `{{approval_date}}` | `companies.reviewed_at` |
+| `{{suspension_reason}}` | `companies.suspended_reason` |
+| `{{info_request_message}}` | Platform Admin's free-text input (§6.11) |
+| `{{invite_expires_at}}` | `user_invitations.expires_at` |
+| `{{inviter_name}}` | `profiles.first_name + last_name` of the inviting Owner |
+| `{{accept_invite_url}}` | `https://app.bivro.io/invite/{raw_token}` |
+| `{{password_reset_url}}` | Supabase Auth reset URL (injected by Supabase) |
+
+### 22.5 Sprint Assignment
+
+All 10 platform email templates are implemented in **Sprint 3 (IAM Module)**. They are simple React Email components with no AI involvement. They do not depend on any tenant-specific data beyond what is in the `companies` and `profiles` tables.
+
 **Email system architecture foundation passed.**
