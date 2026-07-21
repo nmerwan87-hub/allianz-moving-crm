@@ -112,17 +112,17 @@ export const acceptInvitation = publicProcedure
     // 3. Create or update auth user (look up existing by profile email, not admin API)
     const { data: existingProfile } = await svc
       .from("profiles")
-      .select("user_id")
+      .select("id")
       .eq("email", invitation.email as string)
       .maybeSingle()
     let authUserId: string
 
-    if (existingProfile?.user_id) {
-      await svc.auth.admin.updateUserById(existingProfile.user_id, {
+    if (existingProfile?.id) {
+      await svc.auth.admin.updateUserById(existingProfile.id, {
         password: input.password,
         email_confirm: true,
       })
-      authUserId = existingProfile.user_id
+      authUserId = existingProfile.id
     } else {
       const { data: newUser, error: createError } = await svc.auth.admin.createUser({
         email: invitation.email as string,

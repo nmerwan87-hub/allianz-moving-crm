@@ -14,15 +14,19 @@ export default async function OnboardingWelcomePage() {
 
   if (!user) redirect("/login")
 
-  const role = user.app_metadata["role"] as string | undefined
-  const companyStatus = user.app_metadata["company_status"] as string | undefined
+  // Read hook-injected claims from the JWT via session (not DB-stored app_metadata).
+  const {
+    data: { session },
+  } = await supabase.auth.getSession()
+  const role = session?.user?.app_metadata["role"] as string | undefined
+  const companyStatus = session?.user?.app_metadata["company_status"] as string | undefined
 
   if (companyStatus !== "active") redirect("/pending-approval")
 
   const { data: profile } = await supabase
     .from("profiles")
     .select("first_name, last_name, company_id")
-    .eq("user_id", user.id)
+    .eq("id", user.id)
     .maybeSingle()
 
   const firstName = profile?.first_name ?? "there"

@@ -68,7 +68,7 @@ export async function middleware(request: NextRequest) {
     },
   )
 
-  // Use getUser() not getSession() — middleware must not trust cached session data
+  // Use getUser() for auth verification (makes a server-side network call)
   const {
     data: { user },
   } = await supabase.auth.getUser()
@@ -86,8 +86,16 @@ export async function middleware(request: NextRequest) {
     return response
   }
 
+  // Read hook-injected JWT claims via session (no extra network call).
+  // getUser() already verified the token; getSession() reads from the
+  // same validated JWT payload — session.user.app_metadata includes
+  // custom claims injected by custom_access_token_hook.
+  const {
+    data: { session },
+  } = await supabase.auth.getSession()
+
   // Authenticated user
-  const companyStatus = user.app_metadata["company_status"] as string | undefined
+  const companyStatus = session?.user?.app_metadata["company_status"] as string | undefined
 
   // Non-active company: gate to their status page
   if (companyStatus !== undefined && companyStatus !== "active") {
