@@ -1,5 +1,6 @@
 import { redirect } from "next/navigation"
 import { createClient } from "@/lib/supabase/server"
+import { getJwtAppMetadata } from "@/lib/supabase/jwt"
 
 export default async function DashboardPage() {
   const supabase = await createClient()
@@ -9,11 +10,14 @@ export default async function DashboardPage() {
 
   if (!user) redirect("/login")
 
-  // Read hook-injected claims from the JWT via session (not DB-stored app_metadata).
+  // Decode the JWT from the access_token to read hook-injected claims.
+  // session.user.app_metadata is the GoTrue response body (no hook injections).
+  // The hook claims (company_status, role, company_id) live in the JWT payload only.
   const {
     data: { session },
   } = await supabase.auth.getSession()
-  const companyStatus = session?.user?.app_metadata["company_status"] as string | undefined
+  const jwtMeta = getJwtAppMetadata(session?.access_token)
+  const companyStatus = jwtMeta["company_status"] as string | undefined
   if (companyStatus !== "active") redirect("/pending-approval")
 
   const { data: profile } = await supabase

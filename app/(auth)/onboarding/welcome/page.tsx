@@ -1,6 +1,7 @@
 import type { Metadata } from "next"
 import { redirect } from "next/navigation"
 import { createClient } from "@/lib/supabase/server"
+import { getJwtAppMetadata } from "@/lib/supabase/jwt"
 
 export const metadata: Metadata = {
   title: "Welcome to Bivro",
@@ -14,12 +15,14 @@ export default async function OnboardingWelcomePage() {
 
   if (!user) redirect("/login")
 
-  // Read hook-injected claims from the JWT via session (not DB-stored app_metadata).
+  // Decode the JWT from the access_token to read hook-injected claims.
+  // session.user.app_metadata is the GoTrue response body (no hook injections).
   const {
     data: { session },
   } = await supabase.auth.getSession()
-  const role = session?.user?.app_metadata["role"] as string | undefined
-  const companyStatus = session?.user?.app_metadata["company_status"] as string | undefined
+  const jwtMeta = getJwtAppMetadata(session?.access_token)
+  const role = jwtMeta["role"] as string | undefined
+  const companyStatus = jwtMeta["company_status"] as string | undefined
 
   if (companyStatus !== "active") redirect("/pending-approval")
 

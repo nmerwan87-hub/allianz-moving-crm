@@ -1,5 +1,6 @@
 import { createServerClient, type CookieOptions } from "@supabase/ssr"
 import { type NextRequest, NextResponse } from "next/server"
+import { getJwtAppMetadata } from "@/lib/supabase/jwt"
 
 const AUTH_ROUTES = new Set([
   "/login",
@@ -86,16 +87,17 @@ export async function middleware(request: NextRequest) {
     return response
   }
 
-  // Read hook-injected JWT claims via session (no extra network call).
-  // getUser() already verified the token; getSession() reads from the
-  // same validated JWT payload — session.user.app_metadata includes
-  // custom claims injected by custom_access_token_hook.
+  // Read hook-injected claims from the JWT payload (not session.user.app_metadata).
+  // getUser() above verified the token; now get the access_token from the cookie via
+  // getSession() (no extra network call), then decode the JWT to extract hook claims.
+  // session.user.app_metadata comes from GoTrue's response body (raw_app_meta_data —
+  // no hook injections). The hook claims live only in the JWT payload itself.
   const {
     data: { session },
   } = await supabase.auth.getSession()
 
-  // Authenticated user
-  const companyStatus = session?.user?.app_metadata["company_status"] as string | undefined
+  const jwtMeta = getJwtAppMetadata(session?.access_token)
+  const companyStatus = jwtMeta["company_status"] as string | undefined
 
   // Non-active company: gate to their status page
   if (companyStatus !== undefined && companyStatus !== "active") {
