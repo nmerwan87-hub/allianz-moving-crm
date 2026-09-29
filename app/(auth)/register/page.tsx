@@ -62,7 +62,10 @@ export default function RegisterPage() {
   })
 
   const registerMutation = trpc.iam.register.useMutation({
-    onSuccess: () => {
+    onSuccess: (data) => {
+      if (typeof window !== "undefined" && data.email) {
+        sessionStorage.setItem("registration_email", data.email)
+      }
       router.push("/register/check-email")
     },
     onError: (err) => {
