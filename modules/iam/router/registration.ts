@@ -217,11 +217,11 @@ export const resendVerification = publicProcedure
 
     const { data: profile } = await svc
       .from("profiles")
-      .select("user_id")
+      .select("id")
       .eq("email", input.email)
       .maybeSingle()
 
-    if (!profile?.user_id) {
+    if (!profile?.id) {
       // Don't reveal whether email exists
       return { success: true }
     }
