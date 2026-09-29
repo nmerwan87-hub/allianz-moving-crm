@@ -88,7 +88,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
               document.body,
             )}
             {createPortal(
-              <div className="fixed top-0 left-0 z-50 h-full lg:hidden">
+              <div className="fixed top-0 left-0 z-50 h-full shadow-[var(--shadow-elevation-4)] lg:hidden">
                 <Sidebar
                   permissionKeys={permSet}
                   isOwner={role === "owner"}

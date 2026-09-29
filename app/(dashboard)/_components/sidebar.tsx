@@ -38,7 +38,7 @@ export function Sidebar({ permissionKeys, isOwner, companyName, onNavigate }: Si
     : {}
 
   return (
-    <aside className="border-surface-divider bg-surface-raised flex h-full w-60 flex-col border-r">
+    <aside className="border-surface-divider bg-surface-raised flex h-full w-60 shrink-0 flex-col border-r shadow-[var(--shadow-elevation-1)]">
       {/* Company identity */}
       <div className="border-surface-divider flex h-14 items-center gap-2 border-b px-4">
         <span className="bg-ink-900 text-text-inverse flex h-7 w-7 items-center justify-center rounded-[var(--radius-sm)] text-xs font-bold">
