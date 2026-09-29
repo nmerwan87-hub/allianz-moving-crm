@@ -36,7 +36,7 @@ export const navSections: NavSection[] = [
     label: "Main",
     items: [
       { label: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
-      { label: "Leads", href: "/leads", icon: Funnel, permission: "leads.view", future: true },
+      { label: "Leads", href: "/leads", icon: Funnel, permission: "leads.view" },
       {
         label: "Customers",
         href: "/customers",

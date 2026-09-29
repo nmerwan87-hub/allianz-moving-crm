@@ -18,15 +18,20 @@ type ToastVariant = "success" | "error" | "info"
 interface ToastRecord {
   id: string
   title: string
-  description?: string
+  description?: string | undefined
   variant: ToastVariant
 }
 
 // ─── Toast context ──────────────────────────────────────────────
 
-const ToastContext = createContext<{
+interface ToastApi {
   toast: (t: Omit<ToastRecord, "id">) => void
-} | null>(null)
+  success: (title: string, description?: string) => void
+  error: (title: string, description?: string) => void
+  info: (title: string, description?: string) => void
+}
+
+const ToastContext = createContext<ToastApi | null>(null)
 
 export function useToast() {
   const ctx = useContext(ToastContext)
@@ -49,12 +54,37 @@ export function ToastProvider({ children }: { children: ReactNode }) {
     setToasts((prev) => [...prev, { ...t, id }])
   }, [])
 
+  const success = useCallback(
+    (title: string, description?: string) => {
+      const t: Omit<ToastRecord, "id"> = { title, variant: "success" }
+      if (description) t.description = description
+      toast(t)
+    },
+    [toast],
+  )
+  const error = useCallback(
+    (title: string, description?: string) => {
+      const t: Omit<ToastRecord, "id"> = { title, variant: "error" }
+      if (description) t.description = description
+      toast(t)
+    },
+    [toast],
+  )
+  const info = useCallback(
+    (title: string, description?: string) => {
+      const t: Omit<ToastRecord, "id"> = { title, variant: "info" }
+      if (description) t.description = description
+      toast(t)
+    },
+    [toast],
+  )
+
   const dismiss = useCallback((id: string) => {
     setToasts((prev) => prev.filter((t) => t.id !== id))
   }, [])
 
   return (
-    <ToastContext value={{ toast }}>
+    <ToastContext value={{ toast, success, error, info }}>
       <ToastPrimitive.Provider swipeDirection="right">
         {children}
         {mounted &&

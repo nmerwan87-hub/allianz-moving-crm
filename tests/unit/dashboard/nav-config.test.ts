@@ -55,7 +55,7 @@ describe("navigation config", () => {
     const dashboard = allItems.find((i) => i.label === "Dashboard") as NavItem
     const team = allItems.find((i) => i.label === "Team & Permissions") as NavItem
 
-    expect(leads.future).toBe(true)
+    expect(leads.future).toBeUndefined()
     expect(dashboard.future).toBeUndefined()
     expect(team.future).toBeUndefined()
   })

@@ -92,7 +92,7 @@ export function FieldLabel({ className, required, children, ...props }: FieldLab
   )
 }
 
-export function FieldError({ message }: { message?: string }) {
+export function FieldError({ message }: { message?: string | undefined }) {
   if (!message) return null
   return <p className="text-danger-700 mt-1 text-xs">{message}</p>
 }
