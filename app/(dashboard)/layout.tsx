@@ -35,7 +35,20 @@ export default async function DashboardLayout({
 
   return (
     <div>
-      <div style={{ background: "red", color: "white", padding: "8px 16px", fontSize: 20, fontWeight: 900, position: "fixed", top: 0, left: 0, right: 0, zIndex: 9999 }}>
+      <div
+        style={{
+          background: "red",
+          color: "white",
+          padding: "8px 16px",
+          fontSize: 20,
+          fontWeight: 900,
+          position: "fixed",
+          top: 0,
+          left: 0,
+          right: 0,
+          zIndex: 9999,
+        }}
+      >
         BIVRO APP SHELL ACTIVE
       </div>
       <AppShell>{children}</AppShell>
