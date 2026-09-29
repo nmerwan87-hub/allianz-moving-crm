@@ -5,6 +5,7 @@ import { forgotPassword, changePassword } from "./password"
 import { teamRouter } from "./team"
 import { permissionGroupsRouter, permissionDefinitionsRouter } from "./permission-groups"
 import { userPermissionsRouter } from "./user-permissions"
+import { sessionRouter } from "./session"
 
 export const iamRouter = createTRPCRouter({
   register,
@@ -20,4 +21,5 @@ export const iamRouter = createTRPCRouter({
   permissionGroups: permissionGroupsRouter,
   permissionDefinitions: permissionDefinitionsRouter,
   userPermissions: userPermissionsRouter,
+  session: sessionRouter,
 })

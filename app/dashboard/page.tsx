@@ -1,63 +1,170 @@
-import { redirect } from "next/navigation"
-import { createClient } from "@/lib/supabase/server"
-import { getJwtAppMetadata } from "@/lib/supabase/jwt"
+"use client"
 
-export default async function DashboardPage() {
-  const supabase = await createClient()
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
+import { Funnel, Users, FileText, Truck, Receipt, CheckSquare } from "lucide-react"
+import { trpc } from "@/lib/trpc/client"
+import { PageHeader } from "@/app/(dashboard)/_components/ui/page-header"
+import { Card, CardContent, CardHeader } from "@/app/(dashboard)/_components/ui/card"
+import { Skeleton, SkeletonCard } from "@/app/(dashboard)/_components/ui/skeleton"
+import { ErrorState } from "@/app/(dashboard)/_components/ui/error-state"
+import { EmptyState } from "@/app/(dashboard)/_components/ui/empty-state"
 
-  if (!user) redirect("/login")
+interface MetricCardProps {
+  label: string
+  value: number | undefined
+  icon: typeof Funnel
+  loading: boolean
+}
 
-  // Decode the JWT from the access_token to read hook-injected claims.
-  // session.user.app_metadata is the GoTrue response body (no hook injections).
-  // The hook claims (company_status, role, company_id) live in the JWT payload only.
-  const {
-    data: { session },
-  } = await supabase.auth.getSession()
-  const jwtMeta = getJwtAppMetadata(session?.access_token)
-  const companyStatus = jwtMeta["company_status"] as string | undefined
-  if (companyStatus !== "active") redirect("/pending-approval")
+function MetricCard({ label, value, icon: Icon, loading }: MetricCardProps) {
+  return (
+    <Card>
+      <CardContent className="flex items-center gap-4 py-4">
+        <div className="bg-surface-sunken flex h-10 w-10 items-center justify-center rounded-[var(--radius-md)]">
+          <Icon className="text-text-secondary h-5 w-5" strokeWidth={2} />
+        </div>
+        <div>
+          <p className="text-text-muted text-xs font-medium tracking-wide uppercase">{label}</p>
+          {loading ? (
+            <Skeleton className="mt-1 h-7 w-16" />
+          ) : (
+            <p className="text-text-primary font-bold text-[var(--text-display-lg)]">
+              {value ?? 0}
+            </p>
+          )}
+        </div>
+      </CardContent>
+    </Card>
+  )
+}
 
-  const { data: profile } = await supabase
-    .from("profiles")
-    .select("first_name, role, company_id")
-    .eq("id", user.id)
-    .maybeSingle()
+export default function DashboardPage() {
+  const metricsQuery = trpc.dashboard.metrics.useQuery()
+  const sessionQuery = trpc.iam.session.me.useQuery()
 
-  const { data: company } = await supabase
-    .from("companies")
-    .select("name, legal_name")
-    .eq("id", profile?.company_id ?? "")
-    .maybeSingle()
-
-  const displayName = company?.name ?? company?.legal_name ?? "your company"
-  const firstName = profile?.first_name ?? "there"
+  const firstName = sessionQuery.data?.profile.firstName ?? "there"
+  const loading = metricsQuery.isLoading
+  const metrics = metricsQuery.data
+  const allZero =
+    metrics &&
+    metrics.activeLeads === 0 &&
+    metrics.totalCustomers === 0 &&
+    metrics.activeQuotes === 0 &&
+    metrics.activeJobs === 0 &&
+    metrics.outstandingInvoices === 0 &&
+    metrics.openTasks === 0
 
   return (
-    <div className="flex min-h-screen flex-col bg-slate-50">
-      <header className="border-b border-slate-200 bg-white px-6 py-4">
-        <div className="mx-auto flex max-w-7xl items-center justify-between">
-          <span className="text-lg font-semibold text-slate-900">Bivro</span>
-          <span className="text-sm text-slate-500">{displayName}</span>
-        </div>
-      </header>
+    <div>
+      <PageHeader
+        title={`Welcome back, ${firstName}`}
+        description="Here's what's happening with your moving company today."
+      />
 
-      <main className="mx-auto w-full max-w-7xl flex-1 px-6 py-12">
-        <h1 className="text-2xl font-bold text-slate-900">Welcome back, {firstName}</h1>
-        <p className="mt-2 text-sm text-slate-500">
-          Role: <strong className="text-slate-700">{profile?.role ?? "—"}</strong> · Company status:{" "}
-          <strong className="text-slate-700">active</strong>
-        </p>
+      {metricsQuery.isError ? (
+        <ErrorState
+          title="Couldn't load dashboard data"
+          message="There was a problem fetching your metrics. Please refresh the page."
+        />
+      ) : (
+        <>
+          {/* Metric cards — real data from the database */}
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            <MetricCard
+              label="Active Leads"
+              value={metrics?.activeLeads}
+              icon={Funnel}
+              loading={loading}
+            />
+            <MetricCard
+              label="Customers"
+              value={metrics?.totalCustomers}
+              icon={Users}
+              loading={loading}
+            />
+            <MetricCard
+              label="Active Quotes"
+              value={metrics?.activeQuotes}
+              icon={FileText}
+              loading={loading}
+            />
+            <MetricCard
+              label="Active Jobs"
+              value={metrics?.activeJobs}
+              icon={Truck}
+              loading={loading}
+            />
+            <MetricCard
+              label="Outstanding Invoices"
+              value={metrics?.outstandingInvoices}
+              icon={Receipt}
+              loading={loading}
+            />
+            <MetricCard
+              label="Open Tasks"
+              value={metrics?.openTasks}
+              icon={CheckSquare}
+              loading={loading}
+            />
+          </div>
 
-        <div className="mt-10 rounded-lg border border-dashed border-slate-300 bg-white p-12 text-center">
-          <p className="text-sm font-medium text-slate-600">Dashboard shell — Sprint 4</p>
-          <p className="mt-1 text-xs text-slate-400">
-            Authentication, IAM, and company provisioning verified. Tenant dashboard coming next.
-          </p>
-        </div>
-      </main>
+          {/* Operational areas — structured but using real data where possible */}
+          <div className="mt-8 grid gap-4 lg:grid-cols-2">
+            {/* Upcoming work area */}
+            <Card>
+              <CardHeader>Upcoming Work</CardHeader>
+              <CardContent>
+                {loading ? (
+                  <div className="space-y-3">
+                    <Skeleton className="h-16 w-full" />
+                    <Skeleton className="h-16 w-full" />
+                  </div>
+                ) : (metrics?.activeJobs ?? 0) === 0 ? (
+                  <EmptyState
+                    icon={Truck}
+                    title="No upcoming jobs"
+                    description="Scheduled jobs will appear here once you start booking work."
+                  />
+                ) : (
+                  <p className="text-text-secondary text-sm">
+                    {metrics?.activeJobs} active job(s) scheduled.
+                  </p>
+                )}
+              </CardContent>
+            </Card>
+
+            {/* Recent activity / tasks area */}
+            <Card>
+              <CardHeader>Tasks &amp; Actions</CardHeader>
+              <CardContent>
+                {loading ? (
+                  <SkeletonCard />
+                ) : (metrics?.openTasks ?? 0) === 0 ? (
+                  <EmptyState
+                    icon={CheckSquare}
+                    title="No open tasks"
+                    description="Tasks you create will show up here so nothing falls through the cracks."
+                  />
+                ) : (
+                  <p className="text-text-secondary text-sm">
+                    {metrics?.openTasks} task(s) need attention.
+                  </p>
+                )}
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* All-zero onboarding empty state */}
+          {allZero && !loading && (
+            <div className="mt-8">
+              <EmptyState
+                icon={Funnel}
+                title="Your workspace is ready"
+                description="Start by creating your first lead or customer. The CRM pipeline flows from leads to quotes to jobs to invoices."
+              />
+            </div>
+          )}
+        </>
+      )}
     </div>
   )
 }
