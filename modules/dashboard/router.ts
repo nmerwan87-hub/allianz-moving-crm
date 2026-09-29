@@ -14,17 +14,17 @@ export const dashboardRouter = createTRPCRouter({
         .from("quotes")
         .select("id", { count: "exact", head: true })
         .is("deleted_at", null)
-        .in("quote_status", ["draft", "sent", "viewed"]),
+        .in("status", ["draft", "sent", "viewed"]),
       sb
         .from("jobs")
         .select("id", { count: "exact", head: true })
         .is("deleted_at", null)
-        .in("job_status", ["scheduled", "confirmed", "in_progress"]),
+        .in("status", ["scheduled", "confirmed", "in_progress"]),
       sb
         .from("invoices")
         .select("id", { count: "exact", head: true })
         .is("deleted_at", null)
-        .in("invoice_status", ["sent", "viewed", "overdue", "partially_paid"]),
+        .in("status", ["sent", "viewed", "overdue", "partially_paid"]),
       sb
         .from("tasks")
         .select("id", { count: "exact", head: true })
