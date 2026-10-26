@@ -9,6 +9,7 @@ const LOCATABLE_TABLES = {
   lead: "leads",
   customer: "customers",
   quote: "quotes",
+  job: "jobs",
 } as const
 
 export const sessionRouter = createTRPCRouter({
@@ -105,7 +106,9 @@ export const sessionRouter = createTRPCRouter({
    * the caller does not belong to.
    */
   locateRecord: protectedProcedure
-    .input(z.object({ entity: z.enum(["lead", "customer", "quote"]), id: z.string().uuid() }))
+    .input(
+      z.object({ entity: z.enum(["lead", "customer", "quote", "job"]), id: z.string().uuid() }),
+    )
     .query(async ({ ctx, input }) => {
       const svc = createServiceRoleClient()
       const table = LOCATABLE_TABLES[input.entity]
