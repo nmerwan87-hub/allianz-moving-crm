@@ -20,7 +20,7 @@ import {
   DialogFooter,
 } from "@/app/(dashboard)/_components/ui/dialog"
 import { useToast } from "@/app/(dashboard)/_components/ui/toast"
-import { leadStatusEnum } from "@/modules/leads/interface"
+import type { leadStatusEnum } from "@/modules/leads/interface"
 
 const STATUS_BADGE: Record<
   string,
@@ -87,6 +87,12 @@ export default function LeadDetailPage({ params }: { params: Promise<{ id: strin
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
 
   const lead = query.data
+  const allowedQuery = trpc.workflow.allowedTransitions.useQuery(
+    { entity: "lead", fromStatus: lead?.status ?? "" },
+    { enabled: Boolean(lead?.status) },
+  )
+  const allowedTransitions = allowedQuery.data ?? []
+  const selectedTransition = allowedTransitions.find((t) => t.toStatus === newStatus)
 
   const handleStatusChange = async () => {
     if (!newStatus) return
@@ -94,7 +100,7 @@ export default function LeadDetailPage({ params }: { params: Promise<{ id: strin
       await updateStatusMutation.mutateAsync({
         id,
         status: newStatus as (typeof leadStatusEnum)["options"][number],
-        lostReason: newStatus === "lost" ? lostReason : undefined,
+        lostReason: selectedTransition?.requiresReason ? lostReason : undefined,
       })
       toast.success("Status updated")
       setStatusDialogOpen(false)
@@ -295,7 +301,7 @@ export default function LeadDetailPage({ params }: { params: Promise<{ id: strin
                   variant="secondary"
                   size="sm"
                   onClick={() => {
-                    setNewStatus(lead.status)
+                    setNewStatus("")
                     setStatusDialogOpen(true)
                   }}
                 >
@@ -383,16 +389,19 @@ export default function LeadDetailPage({ params }: { params: Promise<{ id: strin
                 value={newStatus}
                 onChange={(e) => setNewStatus(e.target.value)}
               >
-                {leadStatusEnum.options.map((s) => (
-                  <option key={s} value={s}>
-                    {formatLabel(s)}
+                <option value="" disabled>
+                  {allowedTransitions.length === 0 ? "No further status available" : "Select…"}
+                </option>
+                {allowedTransitions.map((t) => (
+                  <option key={t.toStatus} value={t.toStatus}>
+                    {formatLabel(t.toStatus)}
                   </option>
                 ))}
               </Select>
             </div>
-            {newStatus === "lost" && (
+            {selectedTransition?.requiresReason && (
               <div>
-                <FieldLabel htmlFor="lostReason">Lost reason (optional)</FieldLabel>
+                <FieldLabel htmlFor="lostReason">Reason (required)</FieldLabel>
                 <Textarea
                   id="lostReason"
                   rows={3}
@@ -409,7 +418,11 @@ export default function LeadDetailPage({ params }: { params: Promise<{ id: strin
             </Button>
             <Button
               onClick={handleStatusChange}
-              disabled={!newStatus || updateStatusMutation.isPending}
+              disabled={
+                !newStatus ||
+                (selectedTransition?.requiresReason === true && !lostReason.trim()) ||
+                updateStatusMutation.isPending
+              }
             >
               {updateStatusMutation.isPending ? "Saving..." : "Update Status"}
             </Button>

@@ -1,6 +1,14 @@
 {
   "crons": [
     {
+      "path": "/api/cron/process-events",
+      "schedule": "* * * * *"
+    },
+    {
+      "path": "/api/cron/sync-tasks",
+      "schedule": "*/15 * * * *"
+    },
+    {
       "path": "/api/cron/expire-invitations",
       "schedule": "5 0 * * *"
     },
@@ -15,14 +23,6 @@
     {
       "path": "/api/cron/analytics",
       "schedule": "0 6 * * *"
-    },
-    {
-      "path": "/api/cron/overdue-invoices",
-      "schedule": "0 9 * * *"
-    },
-    {
-      "path": "/api/cron/quote-expiry",
-      "schedule": "0 8 * * *"
     },
     {
       "path": "/api/cron/lead-scoring",
