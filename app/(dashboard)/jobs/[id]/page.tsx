@@ -29,6 +29,7 @@ import { Skeleton } from "@/app/(dashboard)/_components/ui/skeleton"
 import { ErrorState } from "@/app/(dashboard)/_components/ui/error-state"
 import { useToast } from "@/app/(dashboard)/_components/ui/toast"
 import { WrongCompanyNotice } from "@/app/(dashboard)/_components/wrong-company-notice"
+import { JobBillingCard } from "@/app/(dashboard)/invoices/_components/job-billing-card"
 import { useHasPermission } from "@/app/(dashboard)/_lib/permissions"
 import type { Job, ResourceConflict } from "@/modules/jobs/interface"
 import {
@@ -360,6 +361,7 @@ export default function JobPage({ params }: { params: Promise<{ id: string }> })
   const canAssign = useHasPermission("jobs.assign")
   const canComplete = useHasPermission("jobs.complete")
   const canCancel = useHasPermission("jobs.cancel")
+  const canViewInvoices = useHasPermission("invoices.view")
   const [dialog, setDialog] = useState<null | "complete" | "cancel">(null)
   const [text, setText] = useState("")
 
@@ -485,6 +487,7 @@ export default function JobPage({ params }: { params: Promise<{ id: string }> })
           />
         </div>
         <div className="space-y-4">
+          {canViewInvoices && <JobBillingCard jobId={job.id} />}
           <Card>
             <CardHeader>Move</CardHeader>
             <CardContent className="space-y-3 text-sm">

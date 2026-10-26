@@ -13,7 +13,7 @@ import { transitionStatus, toWorkflowError } from "@/modules/workflow/transition
 import { generateQuoteDocument } from "@/lib/documents/quote-document"
 import { QUOTE_EMAIL_TEXT, formatDocumentDate, type DocumentLanguage } from "@/lib/documents/labels"
 import { sendTenantEmail } from "@/lib/email/tenant"
-import { QuoteEmail } from "@/emails/tenant/quote-email"
+import { DocumentEmail } from "@/emails/tenant/document-email"
 import {
   createQuoteInput,
   updateQuoteInput,
@@ -693,10 +693,10 @@ async function emailQuote(
       content: document.pdf,
       documentId: document.documentId,
     },
-    react: createElement(QuoteEmail, {
+    react: createElement(DocumentEmail, {
       greeting: text.greeting(customer),
       body: text.body,
-      validity: text.valid(formatDocumentDate(row.expires_at, row.language)),
+      note: text.valid(formatDocumentDate(row.expires_at, row.language)),
       personalMessage: textOrNull(message),
       closing: text.closing,
       companyName,

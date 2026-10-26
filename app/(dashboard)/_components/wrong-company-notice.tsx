@@ -12,6 +12,7 @@ const ENTITY_LABELS = {
   customer: "customer",
   quote: "quote",
   job: "job",
+  invoice: "invoice",
 } as const
 
 /**

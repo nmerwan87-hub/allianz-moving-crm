@@ -1,10 +1,11 @@
 import { Body, Container, Head, Hr, Html, Preview, Text } from "@react-email/components"
 import * as React from "react"
 
-export interface QuoteEmailProps {
+export interface DocumentEmailProps {
   greeting: string
   body: string
-  validity: string
+  /** e.g. validity of a quote or due date of an invoice */
+  note: string
   personalMessage: string | null
   closing: string
   companyName: string
@@ -12,8 +13,11 @@ export interface QuoteEmailProps {
   accentColor: string
 }
 
-/** Sent in the name of the moving company (not Bivro), with the quote PDF attached. */
-export function QuoteEmail(props: QuoteEmailProps) {
+/**
+ * Sent in the name of the moving company (not Bivro), with the document PDF
+ * (quote, invoice, reminder) attached.
+ */
+export function DocumentEmail(props: DocumentEmailProps) {
   return (
     <Html>
       <Head />
@@ -30,7 +34,7 @@ export function QuoteEmail(props: QuoteEmailProps) {
                 {line}
               </Text>
             ))}
-          <Text style={text}>{props.validity}</Text>
+          <Text style={text}>{props.note}</Text>
           <Text style={text}>
             {props.closing}
             <br />

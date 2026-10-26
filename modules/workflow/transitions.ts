@@ -38,6 +38,9 @@ const ERROR_MAP: Array<{
   },
   { prefix: "guard_failed:", code: "PRECONDITION_FAILED", message: (d) => capitalise(d) + "." },
   { prefix: "not_found:", code: "NOT_FOUND", message: () => "Record not found." },
+  { prefix: "invoice_locked:", code: "BAD_REQUEST", message: (d) => capitalise(d) + "." },
+  { prefix: "invalid_payment:", code: "BAD_REQUEST", message: (d) => capitalise(d) + "." },
+  { prefix: "invalid_line:", code: "BAD_REQUEST", message: (d) => capitalise(d) + "." },
 ]
 
 function capitalise(text: string): string {

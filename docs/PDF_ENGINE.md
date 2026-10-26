@@ -639,6 +639,8 @@ QR-bill contains (encoded + human-readable):
 
 **V1.5 upgrade path:** Add a QR-bill rendering zone to the CH invoice template HTML (reserved whitespace at bottom of last page). Generate QR code via a dedicated library (e.g., `swiss-qr-bill` npm package — requires explicit architectural decision per CODING_STANDARDS.md). No schema changes required.
 
+**Decision 2026-10-26 (Phase 4, implemented):** QR-bill moved into V1 because the owner's own companies invoice with it from day one. Library: [`swissqrbill`](https://github.com/schoero/swissqrbill) 4.x (MIT, maintained, validates IBAN/QR-IBAN, QR and creditor references and addresses against the SIX Implementation Guidelines; SVG output). The payment part is rendered as SVG into the invoice HTML and printed by the existing Puppeteer renderer on the last page (210 × 105 mm at the bottom edge, page without margins; CSS margin boxes provide the footer on the other pages). References are created by the database at issue time and pinned to a TypeScript copy and the library's validators by tests. Details: docs/INVOICES.md.
+
 ---
 
 ## 8. Document Design System

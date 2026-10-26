@@ -25,12 +25,21 @@ async function openBrowser(): Promise<Browser> {
   })
 }
 
-export interface RenderOptions {
-  /** Text in the page footer, e.g. "Offerte QT-2026-0001 · Version 1". */
-  footerText: string
-  pageLabel: string
-  ofLabel: string
-}
+export type RenderOptions =
+  | {
+      /** Text in the page footer, e.g. "Offerte QT-2026-0001 · Version 1". */
+      footerText: string
+      pageLabel: string
+      ofLabel: string
+    }
+  | {
+      /**
+       * The template sets page size, margins and footer itself with CSS
+       * (@page margin boxes). Needed when a page must have no margins, like
+       * the QR-bill payment part at the bottom edge of the last page.
+       */
+      cssPages: true
+    }
 
 export async function renderPdf(html: string, options: RenderOptions): Promise<Buffer> {
   const browser = await openBrowser()
@@ -51,20 +60,21 @@ export async function renderPdf(html: string, options: RenderOptions): Promise<B
     })
     await page.setContent(html, { waitUntil: "load", timeout: 20_000 })
 
-    const footer = `
+    const pdf =
+      "cssPages" in options
+        ? await page.pdf({ printBackground: true, preferCSSPageSize: true })
+        : await page.pdf({
+            format: "A4",
+            printBackground: true,
+            displayHeaderFooter: true,
+            headerTemplate: "<span></span>",
+            footerTemplate: `
       <div style="width:100%;font-family:Helvetica,Arial,sans-serif;font-size:7.5pt;color:#6b7280;padding:0 18mm;display:flex;justify-content:space-between;">
         <span>${options.footerText.replace(/[<>&]/g, "")}</span>
         <span>${options.pageLabel} <span class="pageNumber"></span> ${options.ofLabel} <span class="totalPages"></span></span>
-      </div>`
-
-    const pdf = await page.pdf({
-      format: "A4",
-      printBackground: true,
-      displayHeaderFooter: true,
-      headerTemplate: "<span></span>",
-      footerTemplate: footer,
-      margin: { top: "16mm", bottom: "18mm", left: "0", right: "0" },
-    })
+      </div>`,
+            margin: { top: "16mm", bottom: "18mm", left: "0", right: "0" },
+          })
 
     const buffer = Buffer.from(pdf)
     if (buffer.subarray(0, 5).toString("ascii") !== "%PDF-") {
