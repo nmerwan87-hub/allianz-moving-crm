@@ -7,6 +7,7 @@ import { listUserCompanies } from "@/modules/iam/lib/membership"
 
 const LOCATABLE_TABLES = {
   lead: "leads",
+  customer: "customers",
 } as const
 
 export const sessionRouter = createTRPCRouter({
@@ -103,7 +104,7 @@ export const sessionRouter = createTRPCRouter({
    * the caller does not belong to.
    */
   locateRecord: protectedProcedure
-    .input(z.object({ entity: z.enum(["lead"]), id: z.string().uuid() }))
+    .input(z.object({ entity: z.enum(["lead", "customer"]), id: z.string().uuid() }))
     .query(async ({ ctx, input }) => {
       const svc = createServiceRoleClient()
       const table = LOCATABLE_TABLES[input.entity]

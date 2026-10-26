@@ -42,7 +42,6 @@ export const navSections: NavSection[] = [
         href: "/customers",
         icon: Users,
         permission: "customers.view",
-        future: true,
       },
       { label: "Calendar", href: "/calendar", icon: Calendar, future: true },
       { label: "Quotes", href: "/quotes", icon: FileText, permission: "quotes.view", future: true },
@@ -97,13 +96,8 @@ export const navSections: NavSection[] = [
   {
     label: "Settings",
     items: [
-      {
-        label: "Settings",
-        href: "/settings",
-        icon: Settings,
-        permission: "settings.view",
-        future: true,
-      },
+      // Visible to everyone; the settings page lists only the sections the user may open
+      { label: "Settings", href: "/settings", icon: Settings },
       { label: "Team & Permissions", href: "/settings/team", icon: UsersRound },
     ],
   },

@@ -3,6 +3,7 @@ import { transitionStatus } from "@/modules/workflow/transitions"
 import { z } from "zod"
 import { createTRPCRouter, permissionProcedure } from "@/lib/trpc/init"
 import { writeActivityLog } from "@/lib/audit/activity"
+import { sanitizeSearch } from "@/lib/format/search"
 import {
   createLeadInput,
   updateLeadInput,
@@ -96,8 +97,8 @@ export const leadsRouter = createTRPCRouter({
         )
         .is("deleted_at", null)
 
-      if (input.search) {
-        const s = input.search.trim()
+      const s = sanitizeSearch(input.search)
+      if (s) {
         query = query.or(
           `first_name.ilike.%${s}%,last_name.ilike.%${s}%,email.ilike.%${s}%,phone.ilike.%${s}%`,
         )

@@ -9,6 +9,7 @@ import { completeCompanySwitch } from "@/app/(dashboard)/_lib/active-company"
 
 const ENTITY_LABELS = {
   lead: "lead",
+  customer: "customer",
 } as const
 
 /**
