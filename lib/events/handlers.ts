@@ -135,6 +135,17 @@ const createJobFromQuote: EventHandler = {
     }
     for (const column of JOB_COPY_COLUMNS) job[column] = q[column] ?? null
 
+    // Quotes may leave the country empty; jobs require it → the company's country
+    if (!job["origin_country"] || !job["dest_country"]) {
+      const { data: company } = await svc
+        .from("companies")
+        .select("country")
+        .eq("id", event.company_id)
+        .single()
+      job["origin_country"] ??= company?.country ?? "CH"
+      job["dest_country"] ??= company?.country ?? "CH"
+    }
+
     const { error: insertError } = await svc.from("jobs").insert(job)
     // 23505: the unique index on jobs.quote_id — another run created it first
     if (insertError && insertError.code !== "23505") {

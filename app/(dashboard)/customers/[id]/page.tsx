@@ -3,7 +3,7 @@
 import { use, useState } from "react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
-import { ArchiveRestore, ArrowLeft, Archive, Edit, Mail, Phone } from "lucide-react"
+import { ArchiveRestore, ArrowLeft, Archive, Edit, FileText, Mail, Phone } from "lucide-react"
 import { trpc } from "@/lib/trpc/client"
 import { formatPhone } from "@/lib/format/phone"
 import { formatChf } from "@/lib/format/money"
@@ -15,6 +15,8 @@ import { ErrorState } from "@/app/(dashboard)/_components/ui/error-state"
 import { ConfirmDialog } from "@/app/(dashboard)/_components/ui/confirm-dialog"
 import { useToast } from "@/app/(dashboard)/_components/ui/toast"
 import { WrongCompanyNotice } from "@/app/(dashboard)/_components/wrong-company-notice"
+import { useHasPermission } from "@/app/(dashboard)/_lib/permissions"
+import { QUOTE_STATUS_BADGE, QUOTE_STATUS_LABELS } from "@/app/(dashboard)/quotes/_lib/labels"
 import {
   CUSTOMER_TYPE_LABELS,
   LANGUAGE_LABELS,
@@ -52,6 +54,13 @@ export default function CustomerDetailPage({ params }: { params: Promise<{ id: s
   const query = trpc.customers.getById.useQuery({ id })
   const archiveMutation = trpc.customers.archive.useMutation()
   const restoreMutation = trpc.customers.restore.useMutation()
+  const canQuote = useHasPermission("quotes.create")
+  const canSeeQuotes = useHasPermission("quotes.view")
+  const quotes = trpc.quotes.list.useQuery(
+    { customerId: id, pageSize: 20 },
+    { enabled: canSeeQuotes },
+  )
+  const createQuote = trpc.quotes.create.useMutation()
   const [archiveOpen, setArchiveOpen] = useState(false)
 
   if (query.isLoading) {
@@ -127,6 +136,23 @@ export default function CustomerDetailPage({ params }: { params: Promise<{ id: s
             </Button>
           ) : (
             <>
+              {canQuote && (
+                <Button
+                  size="sm"
+                  disabled={createQuote.isPending}
+                  onClick={async () => {
+                    try {
+                      const { id: quoteId } = await createQuote.mutateAsync({ customerId: id })
+                      router.push(`/quotes/${quoteId}`)
+                    } catch (err) {
+                      toast.error(err instanceof Error ? err.message : "Failed to create quote")
+                    }
+                  }}
+                >
+                  <FileText className="h-4 w-4" />
+                  New quote
+                </Button>
+              )}
               <Button
                 variant="secondary"
                 size="sm"
@@ -196,6 +222,39 @@ export default function CustomerDetailPage({ params }: { params: Promise<{ id: s
               </dl>
             </CardContent>
           </Card>
+
+          {canSeeQuotes && (
+            <Card>
+              <CardHeader>Quotes</CardHeader>
+              <CardContent>
+                {(quotes.data?.items ?? []).length === 0 ? (
+                  <p className="text-text-muted text-sm">No quotes for this customer yet.</p>
+                ) : (
+                  <ul className="divide-surface-divider divide-y">
+                    {(quotes.data?.items ?? []).map((q) => (
+                      <li key={q.id} className="flex items-center justify-between gap-3 py-2.5">
+                        <Link
+                          href={`/quotes/${q.id}`}
+                          className="text-text-primary text-sm font-medium hover:underline"
+                        >
+                          {q.quoteNumber}
+                          {q.title ? ` — ${q.title}` : ""}
+                        </Link>
+                        <span className="flex items-center gap-3">
+                          <span className="text-text-secondary text-sm tabular-nums">
+                            {formatChf(q.totalAmountCents)}
+                          </span>
+                          <Badge variant={QUOTE_STATUS_BADGE[q.status] ?? "neutral"}>
+                            {QUOTE_STATUS_LABELS[q.status] ?? q.status}
+                          </Badge>
+                        </span>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </CardContent>
+            </Card>
+          )}
 
           <Card>
             <CardHeader>Leads</CardHeader>

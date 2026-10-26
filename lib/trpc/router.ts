@@ -5,6 +5,7 @@ import { leadsRouter } from "@/modules/leads/router"
 import { customersRouter } from "@/modules/customers/router"
 import { catalogRouter } from "@/modules/catalog/router"
 import { companyRouter } from "@/modules/company/router"
+import { quotesRouter } from "@/modules/quotes/router"
 import { workflowRouter } from "@/modules/workflow/router"
 
 export const appRouter = createTRPCRouter({
@@ -14,6 +15,7 @@ export const appRouter = createTRPCRouter({
   customers: customersRouter,
   catalog: catalogRouter,
   company: companyRouter,
+  quotes: quotesRouter,
   workflow: workflowRouter,
 })
 
