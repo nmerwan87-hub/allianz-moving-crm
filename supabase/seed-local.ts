@@ -99,7 +99,29 @@ async function run() {
   }
 
   const seedSlugs = SEED_COMPANIES.map((c) => `'${c.slug}'`).join(", ")
-  runSql(`DELETE FROM public.companies WHERE slug IN (${seedSlugs});`)
+  // Demo companies may hold data from earlier sessions (customers, leads,
+  // append-only logs). Local dev only: FK and append-only triggers are
+  // bypassed with session_replication_role so the whole tenant can be removed.
+  runSql(`
+    DO $$
+    DECLARE
+      v_ids uuid[];
+      t text;
+    BEGIN
+      SELECT array_agg(id) INTO v_ids FROM public.companies WHERE slug IN (${seedSlugs});
+      IF v_ids IS NULL THEN RETURN; END IF;
+      SET LOCAL session_replication_role = replica;
+      FOR t IN
+        SELECT table_name FROM information_schema.columns
+         WHERE table_schema = 'public' AND column_name = 'company_id'
+           AND table_name IN (SELECT table_name FROM information_schema.tables
+                               WHERE table_schema = 'public' AND table_type = 'BASE TABLE')
+      LOOP
+        EXECUTE format('DELETE FROM public.%I WHERE company_id = ANY($1)', t) USING v_ids;
+      END LOOP;
+      DELETE FROM public.companies WHERE id = ANY(v_ids);
+    END $$;
+  `)
   console.log("  Cleaned stale data.")
 
   // ── 2. Create auth user via GoTrue Admin API ───────────────────────────────
@@ -188,6 +210,15 @@ async function run() {
   `)
 
   console.log("  ✓ Profile and memberships created")
+
+  // ── 4b. Provision companies (settings, 19 standard services, groups, e-mail) ──
+  // Same code path as an approved registration. The service-role client reads
+  // these two variables.
+  process.env["NEXT_PUBLIC_SUPABASE_URL"] = SUPABASE_URL
+  process.env["SUPABASE_SERVICE_ROLE_KEY"] = SERVICE_ROLE_KEY
+  const { provisionCompany } = await import("../modules/iam/lib/provisioning")
+  for (const id of companyIds) await provisionCompany(id)
+  console.log("  ✓ Companies provisioned")
 
   // ── 5. Verify ──────────────────────────────────────────────────────────────
   console.log("\n  Verifying seed data…")
