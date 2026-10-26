@@ -45,7 +45,7 @@ export const navSections: NavSection[] = [
       },
       { label: "Calendar", href: "/calendar", icon: Calendar, future: true },
       { label: "Quotes", href: "/quotes", icon: FileText, permission: "quotes.view" },
-      { label: "Jobs", href: "/jobs", icon: Truck, permission: "jobs.view", future: true },
+      { label: "Jobs", href: "/jobs", icon: Truck, permission: "jobs.view" },
     ],
   },
   {
@@ -56,14 +56,12 @@ export const navSections: NavSection[] = [
         href: "/employees",
         icon: UserCog,
         permission: "employees.view",
-        future: true,
       },
       {
         label: "Vehicles",
         href: "/vehicles",
         icon: Car,
         permission: "vehicles.view",
-        future: true,
       },
     ],
   },

@@ -220,6 +220,129 @@ async function run() {
   for (const id of companyIds) await provisionCompany(id)
   console.log("  ✓ Companies provisioned")
 
+  // ── 4c. Demo content for the first company (to click through locally) ──────
+  runSql(`
+    DO $$
+    DECLARE
+      c uuid := '${companyId}';
+      anna uuid; treuhand uuid; marco uuid; q uuid;
+    BEGIN
+      UPDATE public.companies SET
+        legal_name = 'Bivro Demo Umzüge GmbH', address_line1 = 'Industriestrasse 5',
+        postal_code = '8305', city = 'Dietlikon', phone = '+41445551234',
+        email = 'info@bivro-demo.example', website = 'www.bivro-demo.example',
+        vat_number = 'CHE-123.456.789', accent_color = '#0F766E',
+        bank_iban = 'CH9300762011623852957', bank_name = 'PostFinance',
+        bank_payee_name = 'Bivro Demo Umzüge GmbH'
+      WHERE id = c;
+
+      UPDATE public.company_settings SET
+        default_deposit_percent = 20, default_quote_expiry_days = 14, minimum_hours = 3,
+        travel_flat_fee_cents = 12000, rate_per_km_cents = 250, stair_carry_rate_cents = 3000
+      WHERE company_id = c;
+
+      UPDATE public.service_catalog SET default_unit_price_cents = v.price, default_cost_price_cents = v.cost
+      FROM (VALUES
+        ('Umzugsteam (Stundenansatz)', 15000, 9000), ('Verpackungsservice', 9500, 5500),
+        ('Auspackservice', 9500, 5500), ('Möbelmontage', 15000, 6000), ('Möbeldemontage', 12000, 5000),
+        ('Möbellift', 18000, 9000), ('Endreinigung mit Abnahmegarantie', 65000, 38000),
+        ('Entsorgung', 8000, 3000), ('Umzugskartons', 450, 180), ('Kleiderboxen (Miete)', 1500, 400),
+        ('Verpackungsmaterial', 9000, 4000), ('Einlagerung (pro Monat)', 3500, 1500),
+        ('Klaviertransport', 45000, 20000), ('Anfahrtspauschale', 12000, 5000),
+        ('Kilometerzuschlag', 250, 120), ('Halteverbotszone / Parkbewilligung', 12000, 8000)
+      ) AS v(name, price, cost)
+      WHERE service_catalog.company_id = c AND service_catalog.name = v.name;
+
+      INSERT INTO public.rate_cards (company_id, name, crew_size, vehicle_type, hourly_rate_cents, hourly_cost_cents, sort_order)
+      VALUES (c, '2 Mann + Lieferwagen', 2, 'cargo_van', 15000, 9000, 1),
+             (c, '3 Mann + LKW 3.5 t', 3, 'box_truck_16ft', 19500, 12500, 2),
+             (c, '4 Mann + LKW 7.5 t', 4, 'box_truck_24ft', 25500, 16500, 3);
+
+      INSERT INTO public.customers (company_id, salutation, first_name, last_name, email, phone,
+        billing_street, billing_postal_code, billing_city, source)
+      VALUES (c, 'ms', 'Anna', 'Muster', 'anna.muster@example.com', '+41791234567',
+        'Bahnhofstrasse 1', '8001', 'Zürich', 'web_form')
+      RETURNING id INTO anna;
+
+      INSERT INTO public.customers (company_id, customer_type, company_name, salutation, first_name, last_name,
+        email, phone, billing_street, billing_postal_code, billing_city, source, preferred_language)
+      VALUES (c, 'business', 'Muster Treuhand AG', 'mr', 'Peter', 'Keller', 'p.keller@muster-treuhand.example',
+        '+41445559900', 'Löwenstrasse 20', '8001', 'Zürich', 'referral', 'de')
+      RETURNING id INTO treuhand;
+
+      INSERT INTO public.customers (company_id, salutation, first_name, last_name, email, phone,
+        billing_street, billing_postal_code, billing_city, source, preferred_language)
+      VALUES (c, 'mr', 'Marco', 'Bianchi', 'marco.bianchi@example.com', '+41781112233',
+        'Via Nassa 7', '6900', 'Lugano', 'phone_call', 'it')
+      RETURNING id INTO marco;
+
+      INSERT INTO public.leads (company_id, customer_id, first_name, last_name, email, phone, status, source,
+        move_type, requested_date, origin_address, origin_postal_code, origin_city, origin_floor,
+        dest_address, dest_postal_code, dest_city, dest_floor, dest_has_elevator,
+        date_flexible, origin_has_elevator, origin_has_stairs, dest_has_stairs)
+      VALUES
+        (c, anna, 'Anna', 'Muster', 'anna.muster@example.com', '+41791234567', 'contacted', 'web_form',
+         'local', current_date + 30, 'Bahnhofstrasse 1', '8001', 'Zürich', 3,
+         'Bundesgasse 3', '3011', 'Bern', 1, true, false, false, true, false),
+        (c, marco, 'Marco', 'Bianchi', 'marco.bianchi@example.com', '+41781112233', 'new', 'phone_call',
+         'long_distance', current_date + 45, 'Via Nassa 7', '6900', 'Lugano', 2,
+         'Seestrasse 12', '8002', 'Zürich', 4, true, false, false, true, false);
+
+      INSERT INTO public.quotes (company_id, customer_id, quote_number, status, language, move_type, title,
+        scheduled_date, origin_address, origin_postal_code, origin_city, origin_floor,
+        dest_address, dest_postal_code, dest_city, dest_floor, dest_has_elevator,
+        distance_km, estimated_hours, deposit_percent, cost_cap_cents, expires_at, customer_notes)
+      VALUES (c, treuhand, public.generate_sequence_number(c, 'quote'), 'draft', 'de', 'commercial',
+        'Büroumzug 12 Arbeitsplätze', current_date + 21, 'Löwenstrasse 20', '8001', 'Zürich', 2,
+        'Hardstrasse 201', '8005', 'Zürich', 5, true, 4, 9, 30, 600000, current_date + 14,
+        'Umzug am Freitagabend, Zugang über Hintereingang.')
+      RETURNING id INTO q;
+
+      PERFORM public.replace_quote_items(q, '[
+        {"name": "4 Mann + LKW 7.5 t", "item_type": "labor", "pricing_mode": "hourly", "quantity": 9, "unit": "Std.", "unit_price_cents": 25500, "cost_price_cents": 16500, "vat_rate_percent": 8.1},
+        {"name": "Möbeldemontage", "pricing_mode": "fixed", "quantity": 1, "unit": "Pauschale", "unit_price_cents": 48000, "cost_price_cents": 20000, "vat_rate_percent": 8.1},
+        {"name": "Umzugskartons", "pricing_mode": "quantity", "quantity": 120, "unit": "Stk.", "unit_price_cents": 450, "cost_price_cents": 180, "vat_rate_percent": 8.1},
+        {"name": "Halteverbotszone / Parkbewilligung", "pricing_mode": "fixed", "quantity": 1, "unit": "Pauschale", "unit_price_cents": 12000, "cost_price_cents": 8000, "vat_rate_percent": 0}
+      ]'::jsonb);
+
+      -- Crew, fleet and two jobs this week (dispatch board)
+      INSERT INTO public.employees (company_id, first_name, last_name, role, phone, hourly_rate_cents, driver_license_class)
+      VALUES (c, 'Luca', 'Meier', 'foreman', '+41790001001', 4200, 'C1'),
+             (c, 'Sara', 'Gerber', 'driver', '+41790001002', 3800, 'C'),
+             (c, 'Jonas', 'Frei', 'mover', '+41790001003', 3200, 'B'),
+             (c, 'Elif', 'Kaya', 'mover', '+41790001004', 3200, 'B');
+
+      INSERT INTO public.vehicles (company_id, name, type, license_plate, capacity_m3, payload_kg, next_inspection_on, insurance_expiry)
+      VALUES (c, 'LKW 1', 'box_truck_16ft', 'ZH 123456', 22, 1200, current_date + 200, current_date + 300),
+             (c, 'LKW 2', 'box_truck_24ft', 'ZH 654321', 38, 3500, current_date + 20, current_date + 120),
+             (c, 'Lieferwagen', 'cargo_van', 'ZH 777888', 12, 900, current_date + 400, current_date + 400);
+
+      INSERT INTO public.employee_absences (company_id, employee_id, kind, starts_on, ends_on, note)
+      SELECT c, id, 'vacation', current_date + 2, current_date + 6, 'Ferien'
+        FROM public.employees WHERE company_id = c AND first_name = 'Elif';
+
+      INSERT INTO public.jobs (company_id, customer_id, job_number, status, move_type, scheduled_date,
+        scheduled_start_time, estimated_duration_hours, crew_size_required,
+        origin_address, origin_postal_code, origin_city, dest_address, dest_postal_code, dest_city)
+      VALUES (c, anna, public.generate_sequence_number(c, 'job'), 'confirmed', 'local', current_date + 1,
+        '07:30', 8, 3, 'Bahnhofstrasse 1', '8001', 'Zürich', 'Bundesgasse 3', '3011', 'Bern'),
+             (c, marco, public.generate_sequence_number(c, 'job'), 'scheduled', 'long_distance', current_date + 3,
+        '08:00', 10, 3, 'Via Nassa 7', '6900', 'Lugano', 'Seestrasse 12', '8002', 'Zürich');
+
+      INSERT INTO public.job_assignments (company_id, job_id, employee_id, role)
+      SELECT c, j.id, e.id, CASE WHEN e.first_name = 'Luca' THEN 'lead'::assignment_role ELSE 'mover' END
+        FROM public.jobs j, public.employees e
+       WHERE j.company_id = c AND e.company_id = c
+         AND j.scheduled_date = current_date + 1 AND e.first_name IN ('Luca', 'Sara', 'Jonas');
+
+      INSERT INTO public.job_vehicles (company_id, job_id, vehicle_id)
+      SELECT c, j.id, v.id FROM public.jobs j, public.vehicles v
+       WHERE j.company_id = c AND v.company_id = c
+         AND j.scheduled_date = current_date + 1 AND v.name = 'LKW 1';
+    END $$;
+  `)
+  console.log("  ✓ Demo content created (customers, leads, rates, quote, crew, fleet, jobs)")
+
   // ── 5. Verify ──────────────────────────────────────────────────────────────
   console.log("\n  Verifying seed data…")
 
