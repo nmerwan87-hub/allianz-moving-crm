@@ -84,7 +84,21 @@ async function createLead(overrides: Record<string, unknown> = {}): Promise<stri
   return data.id as string
 }
 
-async function createQuote(overrides: Record<string, unknown> = {}): Promise<string> {
+/** Totals are computed from the lines by the database (migration 028); a manual line sets them. */
+async function addLine(quoteId: string, amountCents: number): Promise<void> {
+  const { error } = await service.rpc("replace_quote_items", {
+    p_quote_id: quoteId,
+    p_items: [
+      { name: "Umzug", pricing_mode: "manual", quantity: 1, unit_price_cents: amountCents },
+    ],
+  })
+  if (error) throw new Error(`addLine: ${error.message}`)
+}
+
+async function createQuote(
+  overrides: Record<string, unknown> = {},
+  amountCents = 148000,
+): Promise<string> {
   const { data, error } = await service
     .from("quotes")
     .insert({
@@ -95,13 +109,13 @@ async function createQuote(overrides: Record<string, unknown> = {}): Promise<str
       move_type: "local",
       status: "draft",
       scheduled_date: "2026-12-15",
-      total_amount_cents: 148000,
       ...ADDRESSES,
       ...overrides,
     })
     .select("id")
     .single()
   if (error || !data) throw new Error(`createQuote: ${error?.message}`)
+  if (amountCents > 0) await addLine(data.id as string, amountCents)
   return data.id as string
 }
 
@@ -237,12 +251,12 @@ describeWithDb("Workflow engine", () => {
     })
 
     it("checks guards, stamps timestamps and records the user as actor", async () => {
-      const quoteId = await createQuote({ total_amount_cents: 0 })
+      const quoteId = await createQuote({}, 0)
 
       const guard = await transition(owner, "quote", quoteId, "sent")
       expect(guard?.message).toContain("guard_failed: quote total must be greater than zero")
 
-      await service.from("quotes").update({ total_amount_cents: 50000 }).eq("id", quoteId)
+      await addLine(quoteId, 50000)
       expect(await transition(owner, "quote", quoteId, "sent")).toBeNull()
 
       const { data: quote } = await service
@@ -518,12 +532,10 @@ describeWithDb("Workflow engine", () => {
 
   describe("time-based transitions", () => {
     it("expires sent quotes past their expiry date", async () => {
-      const quoteId = await createQuote()
+      // Sent quotes are frozen and must be valid when sent: expire shortly after sending
+      const quoteId = await createQuote({ expires_at: new Date(Date.now() + 1500).toISOString() })
       await transition(owner, "quote", quoteId, "sent")
-      await service
-        .from("quotes")
-        .update({ expires_at: new Date(Date.now() - 60_000).toISOString() })
-        .eq("id", quoteId)
+      await new Promise((resolve) => setTimeout(resolve, 2000))
 
       const { error } = await service.rpc("apply_time_based_transitions")
       expect(error).toBeNull()
