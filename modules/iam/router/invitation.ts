@@ -1,10 +1,11 @@
 import { z } from "zod"
 import { TRPCError } from "@trpc/server"
 import { createElement } from "react"
-import { publicProcedure, ownerProcedure } from "@/lib/trpc/init"
+import { publicProcedure, ownerProcedure, protectedProcedure } from "@/lib/trpc/init"
 import { createServiceRoleClient } from "@/lib/supabase/service-role"
 import { sendPlatformEmail } from "@/lib/email/send"
 import { sha256, generateRawToken } from "./registration"
+import { getCompanyMember } from "@/modules/iam/lib/membership"
 
 const PASSWORD_REGEX = /^(?=.*\d)(?=.*[!@#$%^&*()_+\-=[\]{}|;':",.<>?/]).{12,128}$/
 
@@ -39,13 +40,19 @@ export const lookupInvitation = publicProcedure
       return { valid: false as const, reason: "expired" as const }
     }
 
-    // Load company name and inviter name for the landing page
-    const [{ data: company }, { data: inviter }] = await Promise.all([
+    // Load company name, inviter name and whether the invitee already has an account
+    const [{ data: company }, { data: inviter }, { data: existingAccount }] = await Promise.all([
       svc.from("companies").select("name").eq("id", invitation.company_id).maybeSingle(),
       svc
         .from("profiles")
         .select("first_name, last_name")
         .eq("id", invitation.invited_by as string)
+        .maybeSingle(),
+      svc
+        .from("profiles")
+        .select("id")
+        .ilike("email", invitation.email as string)
+        .is("deleted_at", null)
         .maybeSingle(),
     ])
 
@@ -58,6 +65,8 @@ export const lookupInvitation = publicProcedure
         expiresAt: invitation.expires_at,
         companyName: company?.name ?? "your company",
         inviterName: inviter ? `${inviter.first_name} ${inviter.last_name}` : "your administrator",
+        // Existing accounts join by signing in (joinInvitedCompany), never by setting a new password.
+        accountExists: Boolean(existingAccount),
       },
     }
   })
@@ -109,104 +118,190 @@ export const acceptInvitation = publicProcedure
       throw new TRPCError({ code: "BAD_REQUEST", message: "This invitation has expired." })
     }
 
-    // 3. Create or update auth user (look up existing by profile email, not admin API)
+    // 3. New accounts only. An existing account must sign in and use
+    //    joinInvitedCompany — an invitation link must never reset a password.
     const { data: existingProfile } = await svc
       .from("profiles")
       .select("id")
-      .eq("email", invitation.email as string)
-      .maybeSingle()
-    let authUserId: string
-
-    if (existingProfile?.id) {
-      await svc.auth.admin.updateUserById(existingProfile.id, {
-        password: input.password,
-        email_confirm: true,
-      })
-      authUserId = existingProfile.id
-    } else {
-      const { data: newUser, error: createError } = await svc.auth.admin.createUser({
-        email: invitation.email as string,
-        password: input.password,
-        email_confirm: true,
-      })
-      if (createError ?? !newUser.user) {
-        throw new TRPCError({
-          code: "INTERNAL_SERVER_ERROR",
-          message: createError?.message ?? "Failed to create account",
-        })
-      }
-      authUserId = newUser.user.id
-    }
-
-    // 4. Create profile (skip if already exists for this company)
-    const { data: existingProfileCheck } = await svc
-      .from("profiles")
-      .select("id")
-      .eq("id", authUserId)
+      .ilike("email", invitation.email as string)
       .maybeSingle()
 
-    if (!existingProfileCheck) {
-      await svc.from("profiles").insert({
-        id: authUserId,
-        company_id: invitation.company_id,
-        role: "office",
-        first_name: input.firstName,
-        last_name: input.lastName,
-        email: invitation.email,
-        is_active: true,
-        invited_by: invitation.invited_by ?? null,
-        invited_at: invitation.created_at ?? null,
+    if (existingProfile) {
+      throw new TRPCError({
+        code: "CONFLICT",
+        message: "An account with this email already exists. Sign in to accept the invitation.",
       })
     }
 
-    // 5. Create user_permission_groups for each group in the invitation
-    const groupIds = (invitation.permission_group_ids as string[] | null) ?? []
-    if (groupIds.length > 0) {
-      const { data: existing } = await svc
-        .from("user_permission_groups")
-        .select("group_id")
-        .eq("user_id", authUserId)
-        .eq("company_id", invitation.company_id as string)
-
-      const existingGroupIds = new Set((existing ?? []).map((e) => e.group_id))
-
-      const newAssignments = groupIds
-        .filter((gid) => !existingGroupIds.has(gid))
-        .map((gid) => ({
-          user_id: authUserId,
-          company_id: invitation.company_id,
-          group_id: gid,
-        }))
-
-      if (newAssignments.length > 0) {
-        await svc.from("user_permission_groups").insert(newAssignments)
-      }
-    }
-
-    // 6. Mark invitation accepted
-    await svc
-      .from("user_invitations")
-      .update({
-        status: "accepted",
-        accepted_at: new Date().toISOString(),
-        accepted_by_auth_uid: authUserId,
+    const { data: newUser, error: createError } = await svc.auth.admin.createUser({
+      email: invitation.email as string,
+      password: input.password,
+      email_confirm: true,
+    })
+    if (createError ?? !newUser.user) {
+      throw new TRPCError({
+        code: "INTERNAL_SERVER_ERROR",
+        message: createError?.message ?? "Failed to create account",
       })
-      .eq("id", invitation.id)
+    }
+    const authUserId = newUser.user.id
 
-    // 7. Write activity log
-    await svc.from("activity_logs").insert({
+    // 4. Create profile — the profile insert trigger creates the company membership
+    await svc.from("profiles").insert({
+      id: authUserId,
       company_id: invitation.company_id,
-      actor_id: authUserId,
-      actor_type: "user",
-      actor_email: invitation.email,
-      actor_name: `${input.firstName} ${input.lastName}`,
-      action: "user_invitation.accepted",
-      entity_type: "user_invitation",
-      entity_id: invitation.id,
-      metadata: { role: "office", permission_groups: groupIds },
+      role: "office",
+      first_name: input.firstName,
+      last_name: input.lastName,
+      email: invitation.email,
+      is_active: true,
+      invited_by: invitation.invited_by ?? null,
+      invited_at: invitation.created_at ?? null,
     })
 
+    await completeInvitation(svc, invitation, authUserId, `${input.firstName} ${input.lastName}`)
+
     return { success: true, email: invitation.email as string }
+  })
+
+// ─── Shared: permission groups, accepted status, audit ───────────────────────
+
+interface AcceptedInvitation {
+  id: string
+  company_id: string
+  email: string
+  permission_group_ids: string[] | null
+}
+
+async function completeInvitation(
+  svc: ReturnType<typeof createServiceRoleClient>,
+  invitation: AcceptedInvitation,
+  authUserId: string,
+  actorName: string,
+) {
+  // 1. Create user_permission_groups for each group in the invitation
+  const groupIds = (invitation.permission_group_ids as string[] | null) ?? []
+  if (groupIds.length > 0) {
+    const { data: existing } = await svc
+      .from("user_permission_groups")
+      .select("group_id")
+      .eq("user_id", authUserId)
+      .eq("company_id", invitation.company_id as string)
+
+    const existingGroupIds = new Set((existing ?? []).map((e) => e.group_id))
+
+    const newAssignments = groupIds
+      .filter((gid) => !existingGroupIds.has(gid))
+      .map((gid) => ({
+        user_id: authUserId,
+        company_id: invitation.company_id,
+        group_id: gid,
+      }))
+
+    if (newAssignments.length > 0) {
+      await svc.from("user_permission_groups").insert(newAssignments)
+    }
+  }
+
+  // 2. Mark invitation accepted
+  await svc
+    .from("user_invitations")
+    .update({
+      status: "accepted",
+      accepted_at: new Date().toISOString(),
+      accepted_by_auth_uid: authUserId,
+    })
+    .eq("id", invitation.id)
+
+  // 3. Write activity log
+  await svc.from("activity_logs").insert({
+    company_id: invitation.company_id,
+    actor_id: authUserId,
+    actor_type: "user",
+    actor_email: invitation.email,
+    actor_name: actorName,
+    action: "user_invitation.accepted",
+    entity_type: "user_invitation",
+    entity_id: invitation.id,
+    metadata: { role: "office", permission_groups: groupIds },
+  })
+}
+
+// ─── Join a company with an existing account ─────────────────────────────────
+
+export const joinInvitedCompany = protectedProcedure
+  .input(z.object({ rawToken: z.string().min(1) }))
+  .mutation(async ({ input, ctx }) => {
+    const svc = createServiceRoleClient()
+    const tokenHash = sha256(input.rawToken)
+
+    const { data: invitation } = await svc
+      .from("user_invitations")
+      .select("id, company_id, email, role, permission_group_ids, status, expires_at")
+      .eq("token_hash", tokenHash)
+      .maybeSingle()
+
+    if (!invitation) {
+      throw new TRPCError({ code: "NOT_FOUND", message: "Invitation not found." })
+    }
+    if (invitation.status !== "pending") {
+      throw new TRPCError({
+        code: "BAD_REQUEST",
+        message: "This invitation has already been used or revoked.",
+      })
+    }
+    if (new Date(invitation.expires_at as string) < new Date()) {
+      await svc.from("user_invitations").update({ status: "expired" }).eq("id", invitation.id)
+      throw new TRPCError({ code: "BAD_REQUEST", message: "This invitation has expired." })
+    }
+
+    // The invitation belongs to an email address — only that account may use it.
+    const userEmail = ctx.user.email?.toLowerCase()
+    if (!userEmail || userEmail !== (invitation.email as string).toLowerCase()) {
+      throw new TRPCError({
+        code: "FORBIDDEN",
+        message: `This invitation was sent to ${invitation.email as string}. Sign in with that account to accept it.`,
+      })
+    }
+
+    const { data: profile } = await svc
+      .from("profiles")
+      .select("first_name, last_name")
+      .eq("id", ctx.user.id)
+      .maybeSingle()
+
+    // Create the membership, or reactivate a deactivated one. An existing owner
+    // membership keeps its role: invitations never downgrade.
+    const existing = await getCompanyMember(svc, invitation.company_id as string, ctx.user.id)
+    if (!existing) {
+      const { error } = await svc.from("company_memberships").insert({
+        company_id: invitation.company_id,
+        user_id: ctx.user.id,
+        role: "office",
+        is_active: true,
+      })
+      if (error) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR" })
+    } else if (!existing.isActive) {
+      await svc
+        .from("company_memberships")
+        .update({ is_active: true })
+        .eq("company_id", invitation.company_id as string)
+        .eq("user_id", ctx.user.id)
+    }
+
+    await completeInvitation(
+      svc,
+      invitation as AcceptedInvitation,
+      ctx.user.id,
+      profile ? `${profile.first_name} ${profile.last_name}` : (invitation.email as string),
+    )
+
+    // Make the joined company the active one; the client refreshes its session next.
+    await ctx.supabase.rpc("switch_active_company", {
+      p_company_id: invitation.company_id as string,
+    })
+
+    return { success: true, companyId: invitation.company_id as string }
   })
 
 // ─── Invite a user (owner only) ───────────────────────────────────────────────
@@ -224,6 +319,23 @@ export const inviteUser = ownerProcedure
 
     if (!companyId) {
       throw new TRPCError({ code: "UNAUTHORIZED" })
+    }
+
+    // Already an active member of this company → nothing to invite
+    const { data: invitee } = await svc
+      .from("profiles")
+      .select("id")
+      .ilike("email", input.email)
+      .is("deleted_at", null)
+      .maybeSingle()
+    if (invitee) {
+      const member = await getCompanyMember(svc, companyId, invitee.id)
+      if (member?.isActive) {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: "This person is already a member of your company.",
+        })
+      }
     }
 
     // Revoke any existing pending invitation for this email + company

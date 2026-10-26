@@ -18,7 +18,9 @@ export function ErrorState({
         className,
       )}
     >
-      <h3 className="text-danger-700 font-semibold text-[var(--text-display-md)]">{title}</h3>
+      <h3 className="text-danger-700 text-[length:var(--text-display-md)] font-semibold">
+        {title}
+      </h3>
       {message && <p className="text-danger-700/80 mt-1.5 max-w-sm text-sm">{message}</p>}
       {action && <div className="mt-4">{action}</div>}
     </div>

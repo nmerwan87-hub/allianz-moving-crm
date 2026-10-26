@@ -19,7 +19,9 @@ export function PageHeader({
       )}
     >
       <div>
-        <h1 className="text-text-primary font-bold text-[var(--text-display-lg)]">{title}</h1>
+        <h1 className="text-text-primary text-[length:var(--text-display-lg)] font-bold">
+          {title}
+        </h1>
         {description && <p className="text-text-secondary mt-1 text-sm">{description}</p>}
       </div>
       {actions && <div className="flex items-center gap-2">{actions}</div>}

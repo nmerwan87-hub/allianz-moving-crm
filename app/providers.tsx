@@ -12,7 +12,22 @@ function getBaseUrl() {
 }
 
 export function Providers({ children }: { children: React.ReactNode }) {
-  const [queryClient] = useState(() => new QueryClient())
+  const [queryClient] = useState(
+    () =>
+      new QueryClient({
+        defaultOptions: {
+          queries: {
+            // Retry only server/network failures. A 4xx (not found, forbidden) will not
+            // change on retry and would otherwise keep the page loading for seconds.
+            retry: (failureCount, error) => {
+              const status = (error as { data?: { httpStatus?: number } }).data?.httpStatus
+              if (status !== undefined && status < 500) return false
+              return failureCount < 3
+            },
+          },
+        },
+      }),
+  )
   const [trpcClient] = useState(() =>
     trpc.createClient({
       links: [

@@ -20,9 +20,9 @@ export const buttonVariants = cva(
         link: "text-sm text-signal-600 underline-offset-4 hover:underline",
       },
       size: {
-        sm: "h-8 px-3 text-[var(--text-body-sm)]",
-        md: "h-9 px-4 text-[var(--text-body)]",
-        lg: "h-10 px-5 text-[var(--text-body)]",
+        sm: "h-8 px-3 text-[length:var(--text-body-sm)]",
+        md: "h-9 px-4 text-[length:var(--text-body)]",
+        lg: "h-10 px-5 text-[length:var(--text-body)]",
         icon: "h-9 w-9",
       },
     },

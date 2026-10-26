@@ -8,11 +8,13 @@ import { trpc } from "@/lib/trpc/client"
 import { Skeleton } from "./ui/skeleton"
 import { ErrorState } from "./ui/error-state"
 import { ToastProvider } from "./ui/toast"
+import { useActiveCompanySync } from "@/app/(dashboard)/_lib/active-company"
 
 export function AppShell({ children }: { children: React.ReactNode }) {
   const [mobileNavOpen, setMobileNavOpen] = useState(false)
 
   const sessionQuery = trpc.iam.session.me.useQuery()
+  useActiveCompanySync(sessionQuery.data?.company.id ?? "")
 
   // Loading state
   if (sessionQuery.isLoading) {
@@ -61,8 +63,9 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     )
   }
 
-  const { profile, company, role, permissionKeys } = sessionQuery.data
+  const { profile, company, companies, role, permissionKeys } = sessionQuery.data
   const permSet = new Set(permissionKeys)
+  const activeCompany = { id: company.id, name: company.name, logoUrl: company.logoUrl, role }
 
   function closeMobileNav() {
     setMobileNavOpen(false)
@@ -73,7 +76,12 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       <div className="flex h-screen overflow-hidden">
         {/* Desktop sidebar — persistent */}
         <div className="hidden shrink-0 lg:block">
-          <Sidebar permissionKeys={permSet} isOwner={role === "owner"} companyName={company.name} />
+          <Sidebar
+            permissionKeys={permSet}
+            isOwner={role === "owner"}
+            activeCompany={activeCompany}
+            companies={companies}
+          />
         </div>
 
         {/* Mobile sidebar — drawer overlay */}
@@ -92,7 +100,8 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                 <Sidebar
                   permissionKeys={permSet}
                   isOwner={role === "owner"}
-                  companyName={company.name}
+                  activeCompany={activeCompany}
+                  companies={companies}
                   onNavigate={closeMobileNav}
                 />
               </div>,

@@ -17,6 +17,7 @@ import {
 } from "@/app/(dashboard)/_components/ui/field"
 import { Card, CardContent, CardHeader } from "@/app/(dashboard)/_components/ui/card"
 import { useToast } from "@/app/(dashboard)/_components/ui/toast"
+import { useUnsavedChangesGuard } from "@/app/(dashboard)/_lib/active-company"
 import {
   createLeadInput,
   moveTypeEnum,
@@ -121,11 +122,12 @@ export function LeadForm({ mode, lead }: LeadFormProps) {
     register,
     handleSubmit,
     control,
-    formState: { errors, isSubmitting },
+    formState: { errors, isSubmitting, isDirty },
   } = useForm<FormValues>({
     resolver: zodResolver(formSchema),
     defaultValues: lead ? leadToFormValues(lead) : EMPTY,
   })
+  useUnsavedChangesGuard(isDirty && !isSubmitting)
 
   const onSubmit = handleSubmit(async (values) => {
     try {

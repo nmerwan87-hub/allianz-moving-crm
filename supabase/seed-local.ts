@@ -2,7 +2,8 @@
 /**
  * LOCAL DEVELOPMENT SEED — DO NOT RUN IN PRODUCTION.
  *
- * Creates a demo owner account and active company for local development.
+ * Creates one demo owner account that is owner of three active companies, so the
+ * company switcher (docs/MULTI_COMPANY_ACCESS.md) can be used locally.
  * Uses the Supabase Admin API for auth user creation (GoTrue, works for any role)
  * and the postgres DB URL directly for company/profile INSERT (bypasses service_role
  * DML restriction that exists because migrations ran as postgres, not supabase_admin).
@@ -10,7 +11,7 @@
  * Credentials (local only):
  *   Email:    owner@bivro.local
  *   Password: BivroLocal123!
- *   Company:  Bivro Demo Company
+ *   Companies: Bivro Demo Company (active on first login), Bivro Demo Zürich, Bivro Demo Basel
  *
  * Usage:
  *   npx tsx supabase/seed-local.ts
@@ -32,8 +33,11 @@ const DB_URL = "postgresql://postgres:postgres@127.0.0.1:54322/postgres"
 
 const SEED_EMAIL = "owner@bivro.local"
 const SEED_PASSWORD = "BivroLocal123!"
-const SEED_COMPANY_NAME = "Bivro Demo Company"
-const SEED_COMPANY_SLUG = "bivro-demo"
+const SEED_COMPANIES = [
+  { name: "Bivro Demo Company", slug: "bivro-demo" },
+  { name: "Bivro Demo Zürich", slug: "bivro-demo-zuerich" },
+  { name: "Bivro Demo Basel", slug: "bivro-demo-basel" },
+] as const
 
 // Service role client — used only for GoTrue Admin API (auth user creation)
 // GoTrue API calls go through port 54321 auth service, NOT through PostgREST
@@ -85,7 +89,17 @@ async function run() {
     if (!error) console.log(`  Deleted auth user: ${userId}`)
   }
 
-  runSql(`DELETE FROM public.companies WHERE slug = '${SEED_COMPANY_SLUG}';`)
+  // An aborted earlier run can leave an auth user without a profile
+  const { data: authUsers } = await svc.auth.admin.listUsers()
+  for (const user of authUsers?.users ?? []) {
+    if (user.email === SEED_EMAIL && !existingIds.includes(user.id)) {
+      const { error } = await svc.auth.admin.deleteUser(user.id)
+      if (!error) console.log(`  Deleted orphaned auth user: ${user.id}`)
+    }
+  }
+
+  const seedSlugs = SEED_COMPANIES.map((c) => `'${c.slug}'`).join(", ")
+  runSql(`DELETE FROM public.companies WHERE slug IN (${seedSlugs});`)
   console.log("  Cleaned stale data.")
 
   // ── 2. Create auth user via GoTrue Admin API ───────────────────────────────
@@ -105,45 +119,53 @@ async function run() {
   const userId = authData.user!.id
   console.log(`  ✓ Auth user: ${userId}`)
 
-  // ── 3. Create company via postgres connection ──────────────────────────────
-  console.log(`\n  Creating company: ${SEED_COMPANY_NAME}`)
+  // ── 3. Create companies via postgres connection ────────────────────────────
   const trialEndsAt = new Date()
   trialEndsAt.setDate(trialEndsAt.getDate() + 90)
 
-  runSql(`
-    INSERT INTO public.companies (
-      name, legal_name, slug, country,
-      company_status, subscription_tier, subscription_status, trial_ends_at
-    ) VALUES (
-      '${SEED_COMPANY_NAME}',
-      '${SEED_COMPANY_NAME}',
-      '${SEED_COMPANY_SLUG}',
-      'CH',
-      'active',
-      'pro',
-      'trialing',
-      '${trialEndsAt.toISOString()}'
-    );
-  `)
+  const companyIds: string[] = []
+  for (const company of SEED_COMPANIES) {
+    console.log(`\n  Creating company: ${company.name}`)
+    runSql(`
+      INSERT INTO public.companies (
+        name, legal_name, slug, country,
+        company_status, subscription_tier, subscription_status, trial_ends_at
+      ) VALUES (
+        '${company.name}',
+        '${company.name}',
+        '${company.slug}',
+        'CH',
+        'active',
+        'pro',
+        'trialing',
+        '${trialEndsAt.toISOString()}'
+      );
+    `)
 
-  const companyResult = execSync(
-    `npx supabase db query --db-url "${DB_URL}" "SELECT id FROM public.companies WHERE slug = '${SEED_COMPANY_SLUG}';"`,
-    { stdio: "pipe" },
-  ).toString()
+    const companyResult = execSync(
+      `npx supabase db query --db-url "${DB_URL}" "SELECT id FROM public.companies WHERE slug = '${company.slug}';"`,
+      { stdio: "pipe" },
+    ).toString()
 
-  const companyParsed = JSON.parse(companyResult) as { rows?: Array<{ id: string }> }
-  const companyId = companyParsed.rows?.[0]?.id
+    const companyParsed = JSON.parse(companyResult) as { rows?: Array<{ id: string }> }
+    const id = companyParsed.rows?.[0]?.id
 
-  if (!companyId) {
-    console.error("  ✗ Could not retrieve company ID after INSERT")
-    await svc.auth.admin.deleteUser(userId)
-    process.exit(1)
+    if (!id) {
+      console.error("  ✗ Could not retrieve company ID after INSERT")
+      await svc.auth.admin.deleteUser(userId)
+      process.exit(1)
+    }
+
+    companyIds.push(id)
+    console.log(`  ✓ Company: ${id}`)
   }
 
-  console.log(`  ✓ Company: ${companyId}`)
+  const companyId = companyIds[0]!
 
-  // ── 4. Create owner profile via postgres connection ────────────────────────
-  console.log("\n  Creating owner profile…")
+  // ── 4. Create owner profile + memberships ──────────────────────────────────
+  // The profile insert trigger creates the membership for the first company;
+  // the other two are added explicitly.
+  console.log("\n  Creating owner profile and memberships…")
   runSql(`
     INSERT INTO public.profiles (
       id, company_id, role, first_name, last_name, email, is_active
@@ -157,8 +179,15 @@ async function run() {
       true
     );
   `)
+  runSql(`
+    INSERT INTO public.company_memberships (company_id, user_id, role, is_active)
+    VALUES ${companyIds
+      .slice(1)
+      .map((id) => `('${id}', '${userId}', 'owner', true)`)
+      .join(",\n           ")};
+  `)
 
-  console.log("  ✓ Profile created")
+  console.log("  ✓ Profile and memberships created")
 
   // ── 5. Verify ──────────────────────────────────────────────────────────────
   console.log("\n  Verifying seed data…")
@@ -196,11 +225,11 @@ async function run() {
   console.log("✅  Local seed complete\n")
   console.log("  Email:       owner@bivro.local")
   console.log("  Password:    BivroLocal123!")
-  console.log("  Company:     Bivro Demo Company")
+  console.log("  Companies:   " + SEED_COMPANIES.map((c) => c.name).join(", "))
   console.log("  Status:      active")
   console.log("  Role:        owner")
   console.log("  User ID:     " + userId)
-  console.log("  Company ID:  " + companyId)
+  console.log("  Company IDs: " + companyIds.join(", "))
   console.log("\n  Login at:   http://localhost:3000/login")
   console.log("  Redirects → http://localhost:3000/dashboard")
   console.log("─".repeat(58))

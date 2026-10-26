@@ -10,6 +10,7 @@ import { Badge } from "@/app/(dashboard)/_components/ui/badge"
 import { Card, CardContent, CardHeader } from "@/app/(dashboard)/_components/ui/card"
 import { Skeleton } from "@/app/(dashboard)/_components/ui/skeleton"
 import { ErrorState } from "@/app/(dashboard)/_components/ui/error-state"
+import { WrongCompanyNotice } from "@/app/(dashboard)/_components/wrong-company-notice"
 import { Select, Textarea, FieldLabel } from "@/app/(dashboard)/_components/ui/field"
 import {
   Dialog,
@@ -138,10 +139,12 @@ export default function LeadDetailPage({ params }: { params: Promise<{ id: strin
           Back to leads
         </Button>
         <div className="mt-8">
-          <ErrorState
-            title="Lead not found"
-            message="This lead may have been archived or you may not have access to it."
-          />
+          <WrongCompanyNotice entity="lead" id={id}>
+            <ErrorState
+              title="Lead not found"
+              message="This lead may have been archived or you may not have access to it."
+            />
+          </WrongCompanyNotice>
         </div>
       </div>
     )
