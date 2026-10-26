@@ -46,7 +46,7 @@ export function Sidebar({
     : {}
 
   return (
-    <aside className="border-surface-divider bg-surface-raised flex h-full w-60 flex-col border-r">
+    <aside className="border-surface-divider bg-surface-raised flex h-full w-60 shrink-0 flex-col border-r shadow-[var(--shadow-elevation-1)]">
       {/* Company identity */}
       <div className="border-surface-divider flex h-14 items-center gap-2 border-b px-4">
         <CompanySwitcher active={activeCompany} companies={companies} />
