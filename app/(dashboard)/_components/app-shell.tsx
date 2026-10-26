@@ -8,32 +8,18 @@ import { trpc } from "@/lib/trpc/client"
 import { Skeleton } from "./ui/skeleton"
 import { ErrorState } from "./ui/error-state"
 import { ToastProvider } from "./ui/toast"
+import { useActiveCompanySync } from "@/app/(dashboard)/_lib/active-company"
 
 export function AppShell({ children }: { children: React.ReactNode }) {
   const [mobileNavOpen, setMobileNavOpen] = useState(false)
 
   const sessionQuery = trpc.iam.session.me.useQuery()
+  useActiveCompanySync(sessionQuery.data?.company.id ?? "")
 
   // Loading state
   if (sessionQuery.isLoading) {
     return (
       <div className="flex h-screen">
-        <div
-          style={{
-            background: "blue",
-            color: "white",
-            padding: 8,
-            fontSize: 16,
-            fontWeight: 900,
-            position: "fixed",
-            top: 0,
-            left: 0,
-            right: 0,
-            zIndex: 9999,
-          }}
-        >
-          SHELL:LOADING
-        </div>
         <div className="border-surface-divider bg-surface-raised hidden w-60 shrink-0 border-r lg:block">
           <div className="border-surface-divider flex h-14 items-center gap-2 border-b px-4">
             <Skeleton className="h-7 w-7 rounded-[var(--radius-sm)]" />
@@ -69,22 +55,6 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   if (sessionQuery.isError || !sessionQuery.data) {
     return (
       <div className="flex min-h-screen items-center justify-center p-6">
-        <div
-          style={{
-            background: "orange",
-            color: "white",
-            padding: 8,
-            fontSize: 16,
-            fontWeight: 900,
-            position: "fixed",
-            top: 0,
-            left: 0,
-            right: 0,
-            zIndex: 9999,
-          }}
-        >
-          SHELL:ERROR:{String(sessionQuery.error?.message ?? "no data")}
-        </div>
         <ErrorState
           title="Unable to load your workspace"
           message="There was a problem loading your session. Please try signing in again."
@@ -93,8 +63,9 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     )
   }
 
-  const { profile, company, role, permissionKeys } = sessionQuery.data
+  const { profile, company, companies, role, permissionKeys } = sessionQuery.data
   const permSet = new Set(permissionKeys)
+  const activeCompany = { id: company.id, name: company.name, logoUrl: company.logoUrl, role }
 
   function closeMobileNav() {
     setMobileNavOpen(false)
@@ -103,25 +74,14 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   return (
     <ToastProvider>
       <div className="flex h-screen overflow-hidden">
-        <div
-          style={{
-            background: "green",
-            color: "white",
-            padding: 8,
-            fontSize: 16,
-            fontWeight: 900,
-            position: "fixed",
-            top: 0,
-            left: 0,
-            right: 0,
-            zIndex: 9999,
-          }}
-        >
-          SHELL:SUCCESS:role={role}:perms={permissionKeys.length}
-        </div>
         {/* Desktop sidebar — persistent */}
         <div className="hidden shrink-0 lg:block">
-          <Sidebar permissionKeys={permSet} isOwner={role === "owner"} companyName={company.name} />
+          <Sidebar
+            permissionKeys={permSet}
+            isOwner={role === "owner"}
+            activeCompany={activeCompany}
+            companies={companies}
+          />
         </div>
 
         {/* Mobile sidebar — drawer overlay */}
@@ -140,7 +100,8 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                 <Sidebar
                   permissionKeys={permSet}
                   isOwner={role === "owner"}
-                  companyName={company.name}
+                  activeCompany={activeCompany}
+                  companies={companies}
                   onNavigate={closeMobileNav}
                 />
               </div>,

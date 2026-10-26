@@ -1,6 +1,7 @@
 import { TRPCError } from "@trpc/server"
 import { createTRPCRouter, protectedProcedure } from "@/lib/trpc/init"
 import { createServiceRoleClient } from "@/lib/supabase/service-role"
+import { listCompanyMembers } from "@/modules/iam/lib/membership"
 
 export const teamRouter = createTRPCRouter({
   list: protectedProcedure.query(async ({ ctx }) => {
@@ -8,16 +9,14 @@ export const teamRouter = createTRPCRouter({
 
     const svc = createServiceRoleClient()
 
-    const { data: profiles, error } = await svc
-      .from("profiles")
-      .select("id, first_name, last_name, email, role, is_active, last_seen_at, created_at")
-      .eq("company_id", ctx.companyId)
-      .is("deleted_at", null)
-      .order("created_at", { ascending: true })
+    let members
+    try {
+      members = await listCompanyMembers(svc, ctx.companyId)
+    } catch {
+      throw new TRPCError({ code: "INTERNAL_SERVER_ERROR" })
+    }
 
-    if (error) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR" })
-
-    const profileIds = (profiles ?? []).map((p) => p.id)
+    const profileIds = members.map((m) => m.id)
     if (profileIds.length === 0) return []
 
     // Load group memberships for all users in one query
@@ -63,15 +62,15 @@ export const teamRouter = createTRPCRouter({
       overrideCountByUser.set(o.user_id, (overrideCountByUser.get(o.user_id) ?? 0) + 1)
     }
 
-    return (profiles ?? []).map((p) => ({
+    return members.map((p) => ({
       id: p.id,
-      firstName: p.first_name,
-      lastName: p.last_name,
+      firstName: p.firstName,
+      lastName: p.lastName,
       email: p.email,
-      role: p.role as "owner" | "office",
-      isActive: p.is_active,
-      lastSeenAt: p.last_seen_at as string | null,
-      createdAt: p.created_at as string,
+      role: p.role,
+      isActive: p.isActive,
+      lastSeenAt: p.lastSeenAt,
+      createdAt: p.joinedAt,
       groups: groupsByUser.get(p.id) ?? [],
       overrideCount: overrideCountByUser.get(p.id) ?? 0,
     }))

@@ -1,9 +1,10 @@
 "use client"
 
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
 import { trpc } from "@/lib/trpc/client"
 import { createClient } from "@/lib/supabase/client"
+import { completeCompanySwitch } from "@/app/(dashboard)/_lib/active-company"
 
 function passwordStrength(pwd: string): { score: number; label: string; color: string } {
   let score = 0
@@ -81,6 +82,18 @@ export function InviteAcceptanceClient({ rawToken }: InviteAcceptanceClientProps
   }
 
   const { invitation } = lookup
+
+  if (invitation.accountExists) {
+    return (
+      <JoinWithExistingAccount
+        rawToken={rawToken}
+        email={invitation.email as string}
+        companyName={invitation.companyName}
+        inviterName={invitation.inviterName}
+      />
+    )
+  }
+
   const strength = passwordStrength(password)
 
   return (
@@ -201,6 +214,100 @@ export function InviteAcceptanceClient({ rawToken }: InviteAcceptanceClientProps
               : "Accept invitation & set up account"}
         </button>
       </form>
+    </div>
+  )
+}
+
+/**
+ * The invited email already has a Bivro account (e.g. the owner of another
+ * company). The person signs in with their existing password and the
+ * invitation adds a membership — the password is never reset by an invite link.
+ */
+function JoinWithExistingAccount({
+  rawToken,
+  email,
+  companyName,
+  inviterName,
+}: {
+  rawToken: string
+  email: string
+  companyName: string
+  inviterName: string
+}) {
+  const supabase = createClient()
+  const [signedInEmail, setSignedInEmail] = useState<string | null | undefined>(undefined)
+  const [error, setError] = useState<string | null>(null)
+
+  useEffect(() => {
+    void supabase.auth.getUser().then(({ data }) => setSignedInEmail(data.user?.email ?? null))
+  }, [supabase])
+
+  const joinMutation = trpc.iam.joinInvitedCompany.useMutation({
+    onSuccess: async ({ companyId }) => {
+      await completeCompanySwitch(companyId)
+    },
+    onError: (err) => setError(err.message),
+  })
+
+  const loginHref = `/login?next=${encodeURIComponent(`/invite/${rawToken}`)}`
+  const isInvitedAccount = signedInEmail?.toLowerCase() === email.toLowerCase()
+
+  return (
+    <div className="text-center">
+      <h1 className="text-2xl font-bold text-slate-900">Join {companyName}</h1>
+      <p className="mt-2 text-sm text-slate-500">
+        <strong>{inviterName}</strong> has invited <strong>{email}</strong> to join{" "}
+        <strong>{companyName}</strong>. You already have a Bivro account, so the company will be
+        added to your company switcher.
+      </p>
+
+      {error ? (
+        <div className="mt-4 rounded-md border border-red-200 bg-red-50 px-4 py-3 text-left text-sm text-red-700">
+          {error}
+        </div>
+      ) : null}
+
+      <div className="mt-6">
+        {signedInEmail === undefined ? (
+          <p className="text-sm text-slate-500">Checking your session…</p>
+        ) : isInvitedAccount ? (
+          <button
+            type="button"
+            onClick={() => {
+              setError(null)
+              joinMutation.mutate({ rawToken })
+            }}
+            disabled={joinMutation.isPending || joinMutation.isSuccess}
+            className="w-full rounded-md bg-slate-900 px-4 py-2.5 text-sm font-semibold text-white hover:bg-slate-800 focus:ring-2 focus:ring-violet-600/30 focus:ring-offset-2 focus:outline-none disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            {joinMutation.isPending || joinMutation.isSuccess ? "Joining…" : `Join ${companyName}`}
+          </button>
+        ) : signedInEmail ? (
+          <div className="space-y-3 text-sm text-slate-600">
+            <p>
+              You are signed in as <strong>{signedInEmail}</strong>. Sign in as{" "}
+              <strong>{email}</strong> to accept this invitation.
+            </p>
+            <button
+              type="button"
+              onClick={async () => {
+                await supabase.auth.signOut()
+                window.location.assign(loginHref)
+              }}
+              className="font-medium text-violet-600 hover:text-violet-700"
+            >
+              Sign out and switch account →
+            </button>
+          </div>
+        ) : (
+          <a
+            href={loginHref}
+            className="inline-block w-full rounded-md bg-slate-900 px-4 py-2.5 text-sm font-semibold text-white hover:bg-slate-800"
+          >
+            Sign in to accept
+          </a>
+        )}
+      </div>
     </div>
   )
 }

@@ -1,4 +1,5 @@
 import { TRPCError } from "@trpc/server"
+import { transitionStatus } from "@/modules/workflow/transitions"
 import { z } from "zod"
 import { createTRPCRouter, permissionProcedure } from "@/lib/trpc/init"
 import { writeActivityLog } from "@/lib/audit/activity"
@@ -360,7 +361,7 @@ export const leadsRouter = createTRPCRouter({
       return { id }
     }),
 
-  /** Change a lead's status. Writes an audit entry for meaningful transitions. */
+  /** Change a lead's status through the workflow engine and write an audit entry. */
   updateStatus: permissionProcedure("leads.edit")
     .input(updateLeadStatusInput)
     .mutation(async ({ ctx, input }): Promise<{ id: string }> => {
@@ -382,25 +383,10 @@ export const leadsRouter = createTRPCRouter({
       }
 
       const oldStatus = existing["status"] as string
-      const updateData: Record<string, unknown> = { status: input.status }
 
-      if (input.status === "lost" && input.lostReason) {
-        updateData["lost_reason"] = nullIfEmpty(input.lostReason)
-      }
-
-      // Mark conversion timestamp when lead is booked
-      if (input.status === "booked" && oldStatus !== "booked") {
-        updateData["converted_at"] = new Date().toISOString()
-      }
-
-      const { error: updateError } = await sb.from("leads").update(updateData).eq("id", input.id)
-
-      if (updateError) {
-        throw new TRPCError({
-          code: "INTERNAL_SERVER_ERROR",
-          message: updateError.message ?? "Failed to update lead status",
-        })
-      }
+      // Allowed transitions, required reasons and timestamps are enforced by the
+      // database (docs/WORKFLOW_ENGINE.md).
+      await transitionStatus(sb, "lead", input.id, input.status, input.lostReason)
 
       await writeActivityLog(ctx, {
         action: "lead.status_changed",

@@ -22,7 +22,7 @@ export function CardHeader({
   return (
     <div
       className={cn(
-        "border-surface-divider border-b px-5 py-4 font-semibold text-[var(--text-display-md)]",
+        "border-surface-divider border-b px-5 py-4 text-[length:var(--text-display-md)] font-semibold",
         className,
       )}
       {...props}

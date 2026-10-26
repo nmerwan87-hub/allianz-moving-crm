@@ -420,6 +420,27 @@ describeWithDb("Leads module — RLS and tenant isolation", () => {
       const blockedByRls = error !== null
       expect(noRowsAffected || blockedByRls).toBe(true)
     })
+
+    it("Owner B can still read their archived lead (restore, history)", async () => {
+      const { data, error } = await clientB
+        .from("leads")
+        .select("id, deleted_at")
+        .eq("id", leadBId)
+        .single()
+
+      expect(error).toBeNull()
+      expect(data?.deleted_at).not.toBeNull()
+    })
+
+    it("Owner A cannot read Company B's archived lead", async () => {
+      const { data } = await clientA.from("leads").select("id").eq("id", leadBId)
+      expect(data).toEqual([])
+    })
+
+    it("lists filtered by deleted_at no longer contain the archived lead", async () => {
+      const { data } = await clientB.from("leads").select("id").is("deleted_at", null)
+      expect((data ?? []).map((r) => r.id)).not.toContain(leadBId)
+    })
   })
 
   // ── 7. Unauthenticated access ────────────────────────────────────────────

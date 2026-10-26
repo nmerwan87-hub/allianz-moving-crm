@@ -2,6 +2,7 @@ import { z } from "zod"
 import { TRPCError } from "@trpc/server"
 import { createTRPCRouter, ownerProcedure } from "@/lib/trpc/init"
 import { createServiceRoleClient } from "@/lib/supabase/service-role"
+import { getCompanyMember } from "@/modules/iam/lib/membership"
 import { writeActivityLog } from "@/lib/audit/activity"
 import { invalidatePermissionCache } from "../lib/permissions"
 
@@ -53,14 +54,8 @@ export const userPermissionsRouter = createTRPCRouter({
       const svc = createServiceRoleClient()
 
       // Verify user and group both belong to this company
-      const [{ data: profile }, { data: group }] = await Promise.all([
-        svc
-          .from("profiles")
-          .select("id, first_name, last_name, role")
-          .eq("id", input.userId)
-          .eq("company_id", ctx.companyId)
-          .is("deleted_at", null)
-          .maybeSingle(),
+      const [profile, { data: group }] = await Promise.all([
+        getCompanyMember(svc, ctx.companyId, input.userId),
         svc
           .from("permission_groups")
           .select("id, name")
@@ -102,7 +97,7 @@ export const userPermissionsRouter = createTRPCRouter({
         action: "user.group_assigned",
         entityType: "profile",
         entityId: input.userId,
-        entityLabel: `${profile.first_name} ${profile.last_name}`,
+        entityLabel: `${profile.firstName} ${profile.lastName}`,
         afterState: { groupId: input.groupId, groupName: group.name },
       })
 
@@ -121,14 +116,8 @@ export const userPermissionsRouter = createTRPCRouter({
       if (!ctx.companyId) throw new TRPCError({ code: "UNAUTHORIZED" })
       const svc = createServiceRoleClient()
 
-      const [{ data: profile }, { data: group }] = await Promise.all([
-        svc
-          .from("profiles")
-          .select("id, first_name, last_name")
-          .eq("id", input.userId)
-          .eq("company_id", ctx.companyId)
-          .is("deleted_at", null)
-          .maybeSingle(),
+      const [profile, { data: group }] = await Promise.all([
+        getCompanyMember(svc, ctx.companyId, input.userId),
         svc
           .from("permission_groups")
           .select("id, name")
@@ -155,7 +144,7 @@ export const userPermissionsRouter = createTRPCRouter({
         action: "user.group_removed",
         entityType: "profile",
         entityId: input.userId,
-        entityLabel: `${profile.first_name} ${profile.last_name}`,
+        entityLabel: `${profile.firstName} ${profile.lastName}`,
         beforeState: { groupId: input.groupId, groupName: group.name },
       })
 
@@ -199,13 +188,7 @@ export const userPermissionsRouter = createTRPCRouter({
       if (!ctx.companyId) throw new TRPCError({ code: "UNAUTHORIZED" })
       const svc = createServiceRoleClient()
 
-      const { data: profile } = await svc
-        .from("profiles")
-        .select("id, first_name, last_name, role")
-        .eq("id", input.userId)
-        .eq("company_id", ctx.companyId)
-        .is("deleted_at", null)
-        .maybeSingle()
+      const profile = await getCompanyMember(svc, ctx.companyId, input.userId)
 
       if (!profile) throw new TRPCError({ code: "NOT_FOUND", message: "User not found." })
       if (profile.role === "owner") {
@@ -243,7 +226,7 @@ export const userPermissionsRouter = createTRPCRouter({
         action: "user.permission_override_set",
         entityType: "profile",
         entityId: input.userId,
-        entityLabel: `${profile.first_name} ${profile.last_name}`,
+        entityLabel: `${profile.firstName} ${profile.lastName}`,
         ...(existing
           ? {
               beforeState: {
@@ -270,13 +253,7 @@ export const userPermissionsRouter = createTRPCRouter({
       if (!ctx.companyId) throw new TRPCError({ code: "UNAUTHORIZED" })
       const svc = createServiceRoleClient()
 
-      const { data: profile } = await svc
-        .from("profiles")
-        .select("id, first_name, last_name")
-        .eq("id", input.userId)
-        .eq("company_id", ctx.companyId)
-        .is("deleted_at", null)
-        .maybeSingle()
+      const profile = await getCompanyMember(svc, ctx.companyId, input.userId)
 
       if (!profile) throw new TRPCError({ code: "NOT_FOUND", message: "User not found." })
 
@@ -305,7 +282,7 @@ export const userPermissionsRouter = createTRPCRouter({
         action: "user.permission_override_removed",
         entityType: "profile",
         entityId: input.userId,
-        entityLabel: `${profile.first_name} ${profile.last_name}`,
+        entityLabel: `${profile.firstName} ${profile.lastName}`,
         beforeState: { permissionKey: input.permissionKey, overrideType: existing.override_type },
       })
 

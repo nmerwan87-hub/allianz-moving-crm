@@ -1,6 +1,12 @@
 import { createTRPCRouter } from "@/lib/trpc/init"
 import { register, resendVerification, checkCompanyName } from "./registration"
-import { lookupInvitation, acceptInvitation, inviteUser, revokeInvitation } from "./invitation"
+import {
+  lookupInvitation,
+  acceptInvitation,
+  joinInvitedCompany,
+  inviteUser,
+  revokeInvitation,
+} from "./invitation"
 import { forgotPassword, changePassword } from "./password"
 import { teamRouter } from "./team"
 import { permissionGroupsRouter, permissionDefinitionsRouter } from "./permission-groups"
@@ -13,6 +19,7 @@ export const iamRouter = createTRPCRouter({
   checkCompanyName,
   lookupInvitation,
   acceptInvitation,
+  joinInvitedCompany,
   inviteUser,
   revokeInvitation,
   forgotPassword,

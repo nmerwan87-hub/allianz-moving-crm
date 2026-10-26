@@ -5,6 +5,7 @@ import { trpc } from "@/lib/trpc/client"
 import { PageHeader } from "@/app/(dashboard)/_components/ui/page-header"
 import { Skeleton } from "@/app/(dashboard)/_components/ui/skeleton"
 import { ErrorState } from "@/app/(dashboard)/_components/ui/error-state"
+import { WrongCompanyNotice } from "@/app/(dashboard)/_components/wrong-company-notice"
 import { LeadForm } from "../../_components/lead-form"
 
 export default function EditLeadPage({ params }: { params: Promise<{ id: string }> }) {
@@ -27,10 +28,12 @@ export default function EditLeadPage({ params }: { params: Promise<{ id: string 
     return (
       <div>
         <PageHeader title="Edit Lead" />
-        <ErrorState
-          title="Lead not found"
-          message="This lead may have been archived or you may not have access to it."
-        />
+        <WrongCompanyNotice entity="lead" id={id}>
+          <ErrorState
+            title="Lead not found"
+            message="This lead may have been archived or you may not have access to it."
+          />
+        </WrongCompanyNotice>
       </div>
     )
   }

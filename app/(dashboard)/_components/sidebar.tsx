@@ -5,11 +5,13 @@ import { usePathname } from "next/navigation"
 import { useMemo } from "react"
 import { navSections, type NavItem } from "@/app/(dashboard)/_lib/nav-config"
 import { cn } from "@/app/(dashboard)/_lib/cn"
+import { CompanySwitcher, type SwitcherCompany } from "./company-switcher"
 
 interface SidebarProps {
   permissionKeys: Set<string>
   isOwner: boolean
-  companyName: string
+  activeCompany: SwitcherCompany
+  companies: SwitcherCompany[]
   onNavigate?: () => void
 }
 
@@ -19,7 +21,13 @@ function isItemVisible(item: NavItem, permissionKeys: Set<string>, isOwner: bool
   return permissionKeys.has(item.permission)
 }
 
-export function Sidebar({ permissionKeys, isOwner, companyName, onNavigate }: SidebarProps) {
+export function Sidebar({
+  permissionKeys,
+  isOwner,
+  activeCompany,
+  companies,
+  onNavigate,
+}: SidebarProps) {
   const pathname = usePathname()
 
   const sections = useMemo(
@@ -41,19 +49,14 @@ export function Sidebar({ permissionKeys, isOwner, companyName, onNavigate }: Si
     <aside className="border-surface-divider bg-surface-raised flex h-full w-60 shrink-0 flex-col border-r shadow-[var(--shadow-elevation-1)]">
       {/* Company identity */}
       <div className="border-surface-divider flex h-14 items-center gap-2 border-b px-4">
-        <span className="bg-ink-900 text-text-inverse flex h-7 w-7 items-center justify-center rounded-[var(--radius-sm)] text-xs font-bold">
-          B
-        </span>
-        <span className="text-text-primary truncate text-sm font-semibold">
-          {companyName || "Bivro"}
-        </span>
+        <CompanySwitcher active={activeCompany} companies={companies} />
       </div>
 
       {/* Navigation */}
       <nav className="flex-1 overflow-y-auto px-3 py-4">
         {sections.map((section) => (
           <div key={section.label} className="mb-5">
-            <p className="text-text-muted mb-2 px-2 font-medium tracking-wide text-[var(--text-caption)] uppercase">
+            <p className="text-text-muted mb-2 px-2 text-[length:var(--text-caption)] font-medium tracking-wide uppercase">
               {section.label}
             </p>
             <ul className="space-y-0.5">
@@ -93,7 +96,7 @@ export function Sidebar({ permissionKeys, isOwner, companyName, onNavigate }: Si
 
       {/* Footer */}
       <div className="border-surface-divider border-t px-4 py-3">
-        <p className="text-text-muted text-[var(--text-caption)]">&copy; 2026 Bivro</p>
+        <p className="text-text-muted text-[length:var(--text-caption)]">&copy; 2026 Bivro</p>
       </div>
     </aside>
   )

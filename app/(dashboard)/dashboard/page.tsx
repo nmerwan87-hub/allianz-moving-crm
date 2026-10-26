@@ -27,7 +27,7 @@ function MetricCard({ label, value, icon: Icon, loading }: MetricCardProps) {
           {loading ? (
             <Skeleton className="mt-1 h-7 w-16" />
           ) : (
-            <p className="text-text-primary font-bold text-[var(--text-display-lg)]">
+            <p className="text-text-primary text-[length:var(--text-display-lg)] font-bold">
               {value ?? 0}
             </p>
           )}
