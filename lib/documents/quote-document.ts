@@ -1,27 +1,32 @@
-import { createHash } from "crypto"
-import type { createServiceRoleClient } from "@/lib/supabase/service-role"
 import { formatCents } from "@/lib/format/money"
 import { formatIban } from "@/lib/format/iban"
-import { formatPhone } from "@/lib/format/phone"
 import { QUOTE_LABELS, formatDocumentDate, type DocumentLanguage } from "./labels"
 import { compileTemplate, escapeHtml, escapeMultiline } from "./template"
-import { renderPdf, RENDERER_VERSION } from "./renderer"
+import { renderPdf } from "./renderer"
+import {
+  COMPANY_COLUMNS,
+  CUSTOMER_COLUMNS,
+  accentColor,
+  addressLine,
+  companySnapshot,
+  customerSnapshot,
+  floorText,
+  formatQuantity,
+  letterhead,
+  recipientBlock,
+  storeGeneratedDocument,
+  vatRows,
+  type Row,
+  type ServiceClient,
+  type StoredDocument,
+} from "./shared"
 
-type ServiceClient = ReturnType<typeof createServiceRoleClient>
+export type { StoredDocument } from "./shared"
 
 /**
  * Quote PDF generation (PDF_ENGINE.md §4, §10, §11). Server-only: reads with
  * the service role, so callers must have checked the user's access first.
  */
-
-const DEFAULT_ACCENT = "#1f2937"
-
-const SALUTATIONS: Record<DocumentLanguage, Record<"mr" | "ms", string>> = {
-  de: { mr: "Herr", ms: "Frau" },
-  fr: { mr: "Monsieur", ms: "Madame" },
-  it: { mr: "Signor", ms: "Signora" },
-  en: { mr: "Mr", ms: "Ms" },
-}
 
 interface QuoteRow {
   id: string
@@ -92,27 +97,6 @@ export interface QuoteDocumentContext {
   companyEmail: string | null
 }
 
-function formatQuantity(value: number): string {
-  return Number(value)
-    .toFixed(2)
-    .replace(/\.?0+$/, "")
-}
-
-function floorText(
-  floor: number | null,
-  lift: boolean,
-  l: (typeof QUOTE_LABELS)[DocumentLanguage],
-): string {
-  const parts: string[] = []
-  if (floor !== null) parts.push(floor === 0 ? l.ground_floor : `${floor}. ${l.floor}`)
-  if (floor !== null && floor !== 0) parts.push(lift ? l.lift : l.no_lift)
-  return parts.join(", ")
-}
-
-function addressLine(street: string | null, postal: string | null, city: string | null): string {
-  return [street, [postal, city].filter(Boolean).join(" ")].filter((p) => p && p.trim()).join(", ")
-}
-
 export async function buildQuoteDocument(
   svc: ServiceClient,
   quoteId: string,
@@ -141,26 +125,14 @@ export async function buildQuoteDocument(
       )
       .eq("quote_id", quoteId)
       .order("sort_order", { ascending: true }),
-    svc
-      .from("companies")
-      .select(
-        "name, legal_name, vat_number, address_line1, address_line2, postal_code, city, country, email, phone, website, logo_url, accent_color, bank_iban, bank_name, bank_payee_name",
-      )
-      .eq("id", q.company_id)
-      .single(),
+    svc.from("companies").select(COMPANY_COLUMNS).eq("id", q.company_id).single(),
     svc
       .from("company_settings")
       .select("tax_label, quote_footer_text")
       .eq("company_id", q.company_id)
       .maybeSingle(),
     q.customer_id
-      ? svc
-          .from("customers")
-          .select(
-            "customer_type, salutation, first_name, last_name, company_name, email, billing_street, billing_postal_code, billing_city, billing_country",
-          )
-          .eq("id", q.customer_id)
-          .single()
+      ? svc.from("customers").select(CUSTOMER_COLUMNS).eq("id", q.customer_id).single()
       : Promise.resolve({ data: null }),
     svc
       .from("document_templates")
@@ -178,49 +150,13 @@ export async function buildQuoteDocument(
 
   const language = q.language
   const l = QUOTE_LABELS[language]
-  const c = company as Record<string, string | null>
-  const cu = customer as Record<string, string | null> | null
+  const c = company as unknown as Row
+  const cu = customer as unknown as Row | null
   const lines = (items ?? []) as unknown as ItemRow[]
-  const accent = /^#[0-9a-fA-F]{6}$/.test(c["accent_color"] ?? "")
-    ? c["accent_color"]!
-    : DEFAULT_ACCENT
+  const accent = accentColor(c)
   const vatLabel = language === "de" ? ((settings?.tax_label as string | null) ?? l.vat) : l.vat
-  const companyName = c["legal_name"] || c["name"] || ""
-
-  // ── Header fragments (all values escaped) ──
-  const logoHtml = c["logo_url"]
-    ? `<img src="${escapeHtml(c["logo_url"])}" alt="${escapeHtml(companyName)}">`
-    : `<div class="name accent">${escapeHtml(c["name"])}</div>`
-
-  const companyLines = [
-    `<strong>${escapeHtml(companyName)}</strong>`,
-    escapeHtml(c["address_line1"]),
-    escapeHtml(c["address_line2"]),
-    escapeHtml([c["postal_code"], c["city"]].filter(Boolean).join(" ")),
-    escapeHtml(formatPhone(c["phone"])),
-    escapeHtml(c["email"]),
-    escapeHtml(c["website"]),
-  ].filter((line) => line && line !== "<strong></strong>")
-
-  const recipientName = cu ? `${cu["first_name"]} ${cu["last_name"]}` : ""
-  const recipientLines = cu
-    ? [
-        cu["customer_type"] === "business" ? escapeHtml(cu["company_name"]) : "",
-        escapeHtml(
-          [
-            cu["salutation"] ? SALUTATIONS[language][cu["salutation"] as "mr" | "ms"] : "",
-            recipientName,
-          ]
-            .filter(Boolean)
-            .join(" "),
-        ),
-        escapeHtml(cu["billing_street"]),
-        escapeHtml([cu["billing_postal_code"], cu["billing_city"]].filter(Boolean).join(" ")),
-        cu["billing_country"] && cu["billing_country"] !== "CH"
-          ? escapeHtml(cu["billing_country"])
-          : "",
-      ].filter(Boolean)
-    : []
+  const { companyName, logoHtml, companyBlockHtml, senderLine } = letterhead(c)
+  const { recipientName, recipientHtml } = recipientBlock(cu, language)
 
   // ── Move details ──
   const detailRows: Array<[string, string]> = []
@@ -277,23 +213,9 @@ export async function buildQuoteDocument(
 
   // ── Totals: net, VAT per rate, total, deposit ──
   const netTotal = q.subtotal_cents - q.discount_cents
-  const vatByRate = new Map<number, { base: number; vat: number }>()
-  for (const line of lines) {
-    const rate = Number(line.vat_rate_percent)
-    if (rate === 0) continue
-    const entry = vatByRate.get(rate) ?? { base: 0, vat: 0 }
-    entry.base += line.net_total_cents
-    entry.vat += line.vat_amount_cents
-    vatByRate.set(rate, entry)
-  }
   const totalsRows = [
     `<tr><td>${escapeHtml(l.subtotal)}</td><td class="num">CHF ${escapeHtml(formatCents(netTotal))}</td></tr>`,
-    ...[...vatByRate.entries()]
-      .sort(([a], [b]) => b - a)
-      .map(
-        ([rate, { base, vat }]) =>
-          `<tr><td>${escapeHtml(vatLabel)} ${escapeHtml(formatQuantity(rate))}% <span class="small">(CHF ${escapeHtml(formatCents(base))})</span></td><td class="num">CHF ${escapeHtml(formatCents(vat))}</td></tr>`,
-      ),
+    ...vatRows(lines, vatLabel),
     `<tr class="grand"><td>${escapeHtml(l.total)} ${q.tax_cents > 0 ? escapeHtml(l.incl_vat) : ""}</td><td class="num">CHF ${escapeHtml(formatCents(q.total_amount_cents))}</td></tr>`,
     q.deposit_amount_cents > 0
       ? `<tr class="muted"><td>${escapeHtml(l.deposit)} ${escapeHtml(formatQuantity(q.deposit_percent))}%</td><td class="num">CHF ${escapeHtml(formatCents(q.deposit_amount_cents))}</td></tr>`
@@ -337,18 +259,12 @@ export async function buildQuoteDocument(
       quote_title: q.title ?? "",
       issue_date: formatDocumentDate(issueDate, language),
       valid_until: formatDocumentDate(q.expires_at, language),
-      sender_line: [
-        companyName,
-        c["address_line1"],
-        [c["postal_code"], c["city"]].filter(Boolean).join(" "),
-      ]
-        .filter(Boolean)
-        .join(" · "),
+      sender_line: senderLine,
     },
     {
       logo_html: logoHtml,
-      company_block_html: companyLines.join("<br>"),
-      recipient_html: recipientLines.join("<br>"),
+      company_block_html: companyBlockHtml,
+      recipient_html: recipientHtml,
       move_details_rows: moveDetailsRows,
       item_rows: itemRows,
       totals_rows: totalsRows,
@@ -370,36 +286,8 @@ export async function buildQuoteDocument(
     companyName,
     companyEmail: c["email"] ?? null,
     snapshots: {
-      company: {
-        name: c["name"],
-        legal_name: c["legal_name"],
-        vat_number: c["vat_number"],
-        address: [
-          c["address_line1"],
-          c["address_line2"],
-          c["postal_code"],
-          c["city"],
-          c["country"],
-        ],
-        email: c["email"],
-        phone: c["phone"],
-        logo_url: c["logo_url"],
-        accent_color: accent,
-        bank_iban: c["bank_iban"],
-      },
-      customer: cu
-        ? {
-            name: recipientName,
-            company_name: cu["company_name"],
-            email: cu["email"],
-            billing_address: [
-              cu["billing_street"],
-              cu["billing_postal_code"],
-              cu["billing_city"],
-              cu["billing_country"],
-            ],
-          }
-        : null,
+      company: companySnapshot(c, accent),
+      customer: customerSnapshot(cu),
       financial: {
         subtotal_cents: q.subtotal_cents,
         discount_cents: q.discount_cents,
@@ -431,18 +319,7 @@ export async function renderQuotePdf(context: QuoteDocumentContext): Promise<Buf
   })
 }
 
-export interface StoredDocument {
-  documentId: string
-  storagePath: string
-  fileName: string
-  pdf: Buffer
-}
-
-/**
- * Generates the quote PDF and stores it as an immutable document
- * (PDF_ENGINE.md §11.3): documents row with snapshots → upload under a path
- * containing the document id → row finalised. Never overwrites a file.
- */
+/** Generates the quote PDF and stores it as an immutable document. */
 export async function generateQuoteDocument(
   svc: ServiceClient,
   quoteId: string,
@@ -451,68 +328,19 @@ export async function generateQuoteDocument(
   const context = await buildQuoteDocument(svc, quoteId)
   const q = context.quote
   const l = QUOTE_LABELS[context.language]
-  const fileName = `${l.document_title}-${q.quote_number}-v${q.version}.pdf`
-
-  const { data: doc, error: docError } = await svc
-    .from("documents")
-    .insert({
-      company_id: q.company_id,
-      entity_type: "quote",
-      entity_id: q.id,
-      document_type: "quote_pdf",
-      name: fileName,
-      language: context.language,
-      jurisdiction_profile: "CH",
-      version: q.version,
-      generation_status: "generating",
-      generation_started_at: new Date().toISOString(),
-      generated_by: actorId,
-      template_id: context.template.id,
-      template_version: context.template.version,
-      renderer_version: RENDERER_VERSION,
-      company_snapshot: context.snapshots.company,
-      customer_snapshot: context.snapshots.customer,
-      financial_snapshot: context.snapshots.financial,
-      service_line_snapshot: context.snapshots.lines,
-      is_customer_visible: true,
-    })
-    .select("id")
-    .single()
-  if (docError || !doc) throw new Error(`Failed to create document: ${docError?.message}`)
-  const documentId = doc.id as string
-
-  try {
-    const pdf = await renderQuotePdf(context)
-    const storagePath = `${q.company_id}/quotes/${q.id}/quote_pdf-v${q.version}-${documentId}.pdf`
-
-    const { error: uploadError } = await svc.storage
-      .from("documents")
-      .upload(storagePath, pdf, { contentType: "application/pdf", upsert: false })
-    if (uploadError) throw new Error(`Upload failed: ${uploadError.message}`)
-
-    const now = new Date().toISOString()
-    const { error: finalizeError } = await svc
-      .from("documents")
-      .update({
-        generation_status: "generated",
-        storage_path: storagePath,
-        file_size_bytes: pdf.length,
-        content_hash: createHash("sha256").update(pdf).digest("hex"),
-        generated_at: now,
-        generation_completed_at: now,
-      })
-      .eq("id", documentId)
-    if (finalizeError) throw new Error(`Finalize failed: ${finalizeError.message}`)
-
-    return { documentId, storagePath, fileName, pdf }
-  } catch (err) {
-    await svc
-      .from("documents")
-      .update({
-        generation_status: "failed",
-        generation_error: err instanceof Error ? err.message.slice(0, 1000) : String(err),
-      })
-      .eq("id", documentId)
-    throw err
-  }
+  return storeGeneratedDocument(svc, {
+    companyId: q.company_id,
+    entityType: "quote",
+    entityId: q.id,
+    folder: "quotes",
+    documentType: "quote_pdf",
+    storageStem: `quote_pdf-v${q.version}`,
+    fileName: `${l.document_title}-${q.quote_number}-v${q.version}.pdf`,
+    language: context.language,
+    version: q.version,
+    actorId,
+    template: context.template,
+    snapshots: context.snapshots,
+    render: () => renderQuotePdf(context),
+  })
 }

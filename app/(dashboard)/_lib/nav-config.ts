@@ -73,7 +73,6 @@ export const navSections: NavSection[] = [
         href: "/invoices",
         icon: Receipt,
         permission: "invoices.view",
-        future: true,
       },
     ],
   },

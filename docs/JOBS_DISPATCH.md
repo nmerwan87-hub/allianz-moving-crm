@@ -64,7 +64,7 @@ Name, licence plate (normalised `ZH 123456`), type (Swiss labels: delivery van, 
 
 ## 8. Not in this phase
 
-Drag-and-drop on the board, crew mobile app (clock in/out, photos, signatures), multi-stop jobs, capacity check against inventory volume, final settlement (Abrechnung) — the settlement follows with invoicing.
+Drag-and-drop on the board, crew mobile app (clock in/out, photos, signatures), multi-stop jobs, capacity check against inventory volume. The final settlement (Abrechnung) is part of invoicing (docs/INVOICES.md).
 
 ## 9. Local Development
 

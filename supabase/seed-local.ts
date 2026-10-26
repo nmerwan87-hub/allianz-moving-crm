@@ -225,7 +225,7 @@ async function run() {
     DO $$
     DECLARE
       c uuid := '${companyId}';
-      anna uuid; treuhand uuid; marco uuid; q uuid;
+      anna uuid; treuhand uuid; marco uuid; q uuid; done_q uuid; done_job uuid;
     BEGIN
       UPDATE public.companies SET
         legal_name = 'Bivro Demo Umzüge GmbH', address_line1 = 'Industriestrasse 5',
@@ -339,9 +339,55 @@ async function run() {
       SELECT c, j.id, v.id FROM public.jobs j, public.vehicles v
        WHERE j.company_id = c AND v.company_id = c
          AND j.scheduled_date = current_date + 1 AND v.name = 'LKW 1';
+
+      -- A move done yesterday from an accepted quote, deposit paid: ready
+      -- for the final settlement (Schlussabrechnung)
+      INSERT INTO public.quotes (company_id, customer_id, quote_number, status, language, move_type, title,
+        scheduled_date, origin_address, origin_postal_code, origin_city, origin_floor,
+        dest_address, dest_postal_code, dest_city, dest_floor, dest_has_elevator,
+        distance_km, estimated_hours, deposit_percent, cost_cap_cents, expires_at)
+      VALUES (c, anna, public.generate_sequence_number(c, 'quote'), 'draft', 'de', 'local',
+        'Privatumzug 3.5 Zimmer', current_date - 1, 'Bahnhofstrasse 1', '8001', 'Zürich', 3,
+        'Bundesgasse 3', '3011', 'Bern', 1, true, 125, 6, 20, 300000, current_date + 14)
+      RETURNING id INTO done_q;
+
+      PERFORM public.replace_quote_items(done_q, '[
+        {"name": "3 Mann + LKW 3.5 t", "item_type": "labor", "pricing_mode": "hourly", "quantity": 6, "unit": "Std.", "unit_price_cents": 19500, "cost_price_cents": 12000, "vat_rate_percent": 8.1},
+        {"name": "Anfahrt / Rückfahrt", "item_type": "truck", "pricing_mode": "fixed", "quantity": 1, "unit": "Pauschale", "unit_price_cents": 18000, "cost_price_cents": 9000, "vat_rate_percent": 8.1},
+        {"name": "Umzugskartons", "item_type": "packing", "pricing_mode": "quantity", "quantity": 40, "unit": "Stk.", "unit_price_cents": 450, "cost_price_cents": 180, "vat_rate_percent": 8.1}
+      ]'::jsonb);
+      UPDATE public.quotes SET status = 'sent' WHERE id = done_q;
+      UPDATE public.quotes SET status = 'accepted' WHERE id = done_q;
+
+      INSERT INTO public.jobs (company_id, customer_id, quote_id, job_number, status, move_type, scheduled_date,
+        scheduled_start_time, estimated_duration_hours, crew_size_required,
+        origin_address, origin_postal_code, origin_city, origin_floor,
+        dest_address, dest_postal_code, dest_city, dest_floor, dest_has_elevator,
+        total_amount_cents, deposit_amount_cents, actual_start_at, actual_end_at, completion_notes)
+      SELECT c, anna, done_q, public.generate_sequence_number(c, 'job'), 'completed', 'local', current_date - 1,
+        '07:30', 6, 3, 'Bahnhofstrasse 1', '8001', 'Zürich', 3, 'Bundesgasse 3', '3011', 'Bern', 1, true,
+        q2.total_amount_cents, q2.deposit_amount_cents,
+        (current_date - 1 + time '07:30') AT TIME ZONE 'Europe/Zurich',
+        (current_date - 1 + time '14:20') AT TIME ZONE 'Europe/Zurich',
+        'Klavier zusätzlich getragen (vom Kunden vor Ort gewünscht).'
+        FROM public.quotes q2 WHERE q2.id = done_q
+      RETURNING id INTO done_job;
+
+      INSERT INTO public.job_assignments (company_id, job_id, employee_id, role)
+      SELECT c, done_job, e.id, CASE WHEN e.first_name = 'Luca' THEN 'lead'::assignment_role ELSE 'mover' END
+        FROM public.employees e
+       WHERE e.company_id = c AND e.first_name IN ('Luca', 'Jonas', 'Elif');
+
+      INSERT INTO public.payments (company_id, job_id, customer_id, payment_type, method, status,
+        amount_cents, reference_number, paid_at)
+      SELECT c, done_job, anna, 'deposit', 'bank_transfer', 'completed', j.deposit_amount_cents,
+        'Anzahlung Umzug', now() - interval '5 days'
+        FROM public.jobs j WHERE j.id = done_job;
     END $$;
   `)
-  console.log("  ✓ Demo content created (customers, leads, rates, quote, crew, fleet, jobs)")
+  console.log(
+    "  ✓ Demo content created (customers, leads, rates, quotes, crew, fleet, jobs, deposit)",
+  )
 
   // ── 5. Verify ──────────────────────────────────────────────────────────────
   console.log("\n  Verifying seed data…")

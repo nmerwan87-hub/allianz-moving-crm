@@ -122,6 +122,9 @@ importers:
       svix:
         specifier: ^1.67.0
         version: 1.98.0
+      swissqrbill:
+        specifier: 4.4.3
+        version: 4.4.3(typescript@5.9.3)
       tailwind-merge:
         specifier: ^3.3.0
         version: 3.6.0
@@ -3486,6 +3489,7 @@ packages:
   eslint@9.39.5:
     resolution: {integrity: sha512-DgZS62aPLXKlnxILS/AYCoRvHaZeXceIzlXPkkGGzJWSow1aEk0lbTlxUSlyjC8jcaKxAdOnTDz+o1JFSBsyjw==}
     engines: {node: ^18.18.0 || ^20.9.0 || >=21.1.0}
+    deprecated: This version is no longer supported. Please see https://eslint.org/version-support for other options.
     hasBin: true
     peerDependencies:
       jiti: '*'
@@ -5138,8 +5142,23 @@ packages:
     resolution: {integrity: sha512-ot0WnXS9fgdkgIcePe6RHNk1WA8+muPa6cSjeR3V8K27q9BB1rTE3R1p7Hv0z1ZyAc8s6Vvv8DIyWf681MAt0w==}
     engines: {node: '>= 0.4'}
 
+  svg-engine@0.3.0:
+    resolution: {integrity: sha512-s172jAcwfoCcvM/6DwNBvmWN3brztHGFENCR+RU3CBJKeBxPrRlTltVxX1Je5hst782QgP8PM6U37vUR/RhPng==}
+
   svix@1.98.0:
     resolution: {integrity: sha512-Pe7zeGemPEFrpSmfzaX8/u2PballejtzoYQejklzK3qB1tQHDePbFcIStArAsaIx292/pDH5cU+YeIBro5Awww==}
+
+  swissqrbill@4.4.3:
+    resolution: {integrity: sha512-XXAb+fYrBhleIOuhlrHh2jAARY0Phonpff3fo35gYEdsebfEm6LqP+etw3SHJ7pvtymPCXlfbjOcg/y+nvp++A==}
+    engines: {node: '>=18.0.0'}
+    peerDependencies:
+      pdfkit: '>=0.13.0'
+      typescript: '>=4.7.0'
+    peerDependenciesMeta:
+      pdfkit:
+        optional: true
+      typescript:
+        optional: true
 
   symbol-tree@3.2.4:
     resolution: {integrity: sha512-9QNk5KwDF+Bvz+PyObkmSYjI5ksVUYtjW7AU22r2NKcfLJcXp96hkDWU3+XndOsUb+AQ9QhfzfCT2O+CNWT5Tw==}
@@ -10399,9 +10418,17 @@ snapshots:
 
   supports-preserve-symlinks-flag@1.0.0: {}
 
+  svg-engine@0.3.0: {}
+
   svix@1.98.0:
     dependencies:
       standardwebhooks: 1.0.0
+
+  swissqrbill@4.4.3(typescript@5.9.3):
+    dependencies:
+      svg-engine: 0.3.0
+    optionalDependencies:
+      typescript: 5.9.3
 
   symbol-tree@3.2.4: {}
 

@@ -218,6 +218,196 @@ export const QUOTE_EMAIL_TEXT = {
   },
 } as const
 
+/**
+ * Invoice and reminder texts. Move details, columns and totals reuse the quote
+ * labels; only the invoice-specific texts are added or replaced.
+ */
+export const INVOICE_LABELS = {
+  de: {
+    ...QUOTE_LABELS.de,
+    draft: "Entwurf",
+    document_title: "Rechnung",
+    reminder_1: "Zahlungserinnerung",
+    reminder_2: "2. Mahnung",
+    reminder_3: "3. Mahnung",
+    invoice_number: "Rechnung Nr.",
+    invoice_date: "Rechnungsdatum",
+    service_date: "Leistungsdatum",
+    due_date: "Zahlbar bis",
+    job_number: "Auftrag",
+    reference: "Referenz",
+    quoted: "offeriert",
+    deposit_received: "Erhaltene Anzahlung",
+    already_paid: "Bereits bezahlt",
+    amount_due: "Zu bezahlen",
+    cost_cap_kept: "Das vereinbarte Kostendach wurde eingehalten.",
+    payment: "Zahlung",
+    thanks: "Vielen Dank für Ihren Auftrag und Ihr Vertrauen.",
+    reminder_text_1:
+      "Bei der Durchsicht unserer Buchhaltung haben wir festgestellt, dass die folgende Rechnung noch offen ist. Sicher handelt es sich um ein Versehen. Wir bitten Sie, den offenen Betrag innert 10 Tagen zu überweisen. Sollte sich Ihre Zahlung mit diesem Schreiben gekreuzt haben, betrachten Sie es bitte als gegenstandslos.",
+    reminder_text_2:
+      "Trotz unserer Zahlungserinnerung ist die folgende Rechnung noch nicht beglichen. Wir bitten Sie, den offenen Betrag innert 10 Tagen zu überweisen.",
+    reminder_text_3:
+      "Die folgende Rechnung ist trotz zweier Mahnungen weiterhin offen. Wir fordern Sie letztmals auf, den Betrag innert 10 Tagen zu bezahlen. Andernfalls leiten wir ohne weitere Ankündigung die Betreibung ein.",
+  },
+  fr: {
+    ...QUOTE_LABELS.fr,
+    draft: "Brouillon",
+    document_title: "Facture",
+    reminder_1: "Rappel de paiement",
+    reminder_2: "2e sommation",
+    reminder_3: "3e sommation",
+    invoice_number: "Facture n°",
+    invoice_date: "Date de facture",
+    service_date: "Date de prestation",
+    due_date: "Payable jusqu'au",
+    job_number: "Mandat",
+    reference: "Référence",
+    quoted: "offert",
+    deposit_received: "Acompte reçu",
+    already_paid: "Déjà payé",
+    amount_due: "Montant à payer",
+    cost_cap_kept: "Le plafond de coûts convenu a été respecté.",
+    payment: "Paiement",
+    thanks: "Nous vous remercions de votre mandat et de votre confiance.",
+    reminder_text_1:
+      "Sauf erreur de notre part, la facture suivante est toujours ouverte. Il s'agit certainement d'un oubli. Nous vous prions de verser le montant dû dans les 10 jours. Si votre paiement a croisé ce courrier, veuillez ne pas en tenir compte.",
+    reminder_text_2:
+      "Malgré notre rappel, la facture suivante n'a pas encore été réglée. Nous vous prions de verser le montant dû dans les 10 jours.",
+    reminder_text_3:
+      "Malgré deux sommations, la facture suivante est toujours ouverte. Nous vous invitons une dernière fois à payer le montant dans les 10 jours, faute de quoi nous engagerons une poursuite sans autre avis.",
+  },
+  it: {
+    ...QUOTE_LABELS.it,
+    draft: "Bozza",
+    document_title: "Fattura",
+    reminder_1: "Promemoria di pagamento",
+    reminder_2: "2° sollecito",
+    reminder_3: "3° sollecito",
+    invoice_number: "Fattura n.",
+    invoice_date: "Data fattura",
+    service_date: "Data della prestazione",
+    due_date: "Pagabile entro",
+    job_number: "Incarico",
+    reference: "Riferimento",
+    quoted: "offerto",
+    deposit_received: "Acconto ricevuto",
+    already_paid: "Già pagato",
+    amount_due: "Importo da pagare",
+    cost_cap_kept: "Il tetto dei costi concordato è stato rispettato.",
+    payment: "Pagamento",
+    thanks: "Grazie per il vostro incarico e la vostra fiducia.",
+    reminder_text_1:
+      "Dai nostri registri risulta che la seguente fattura è ancora aperta. Sicuramente si tratta di una svista. Vi preghiamo di versare l'importo entro 10 giorni. Se il vostro pagamento si è incrociato con questa lettera, vogliate considerarla nulla.",
+    reminder_text_2:
+      "Nonostante il nostro promemoria, la seguente fattura non è ancora stata saldata. Vi preghiamo di versare l'importo entro 10 giorni.",
+    reminder_text_3:
+      "Nonostante due solleciti, la seguente fattura è ancora aperta. Vi invitiamo per l'ultima volta a pagare l'importo entro 10 giorni, in caso contrario avvieremo l'esecuzione senza ulteriore preavviso.",
+  },
+  en: {
+    ...QUOTE_LABELS.en,
+    draft: "Draft",
+    document_title: "Invoice",
+    reminder_1: "Payment reminder",
+    reminder_2: "Second reminder",
+    reminder_3: "Final reminder",
+    invoice_number: "Invoice no.",
+    invoice_date: "Invoice date",
+    service_date: "Date of service",
+    due_date: "Payable by",
+    job_number: "Job",
+    reference: "Reference",
+    quoted: "quoted",
+    deposit_received: "Deposit received",
+    already_paid: "Already paid",
+    amount_due: "Amount due",
+    cost_cap_kept: "The agreed cost cap has been respected.",
+    payment: "Payment",
+    thanks: "Thank you for your order and your trust.",
+    reminder_text_1:
+      "According to our records, the following invoice is still unpaid. This is probably an oversight. Please transfer the open amount within 10 days. If your payment has crossed with this letter, please disregard it.",
+    reminder_text_2:
+      "Despite our reminder, the following invoice has not been paid yet. Please transfer the open amount within 10 days.",
+    reminder_text_3:
+      "Despite two reminders, the following invoice is still unpaid. This is our final request to pay the amount within 10 days; otherwise we will start debt collection proceedings without further notice.",
+  },
+} as const satisfies Record<DocumentLanguage, Record<string, string>>
+
+export const INVOICE_EMAIL_TEXT = {
+  de: {
+    subject: (company: string, number: string) => `Ihre Rechnung ${number} von ${company}`,
+    reminderSubject: (title: string, number: string) => `${title}: Rechnung ${number}`,
+    greeting: (name: string) => `Guten Tag ${name}`,
+    body: "Vielen Dank für Ihren Auftrag. Im Anhang finden Sie unsere Rechnung mit QR-Zahlteil.",
+    reminderBody: "Im Anhang finden Sie unser Schreiben zur noch offenen Rechnung.",
+    due: (amount: string, date: string) => `Zu bezahlen: CHF ${amount} bis ${date}.`,
+    closing: "Freundliche Grüsse",
+  },
+  fr: {
+    subject: (company: string, number: string) => `Votre facture ${number} de ${company}`,
+    reminderSubject: (title: string, number: string) => `${title} : facture ${number}`,
+    greeting: (name: string) => `Bonjour ${name}`,
+    body: "Merci pour votre mandat. Vous trouverez en pièce jointe notre facture avec QR-facture.",
+    reminderBody: "Vous trouverez en pièce jointe notre courrier concernant la facture ouverte.",
+    due: (amount: string, date: string) => `À payer : CHF ${amount} jusqu'au ${date}.`,
+    closing: "Meilleures salutations",
+  },
+  it: {
+    subject: (company: string, number: string) => `La vostra fattura ${number} di ${company}`,
+    reminderSubject: (title: string, number: string) => `${title}: fattura ${number}`,
+    greeting: (name: string) => `Buongiorno ${name}`,
+    body: "Grazie per il vostro incarico. In allegato trovate la nostra fattura con QR-fattura.",
+    reminderBody: "In allegato trovate la nostra lettera relativa alla fattura aperta.",
+    due: (amount: string, date: string) => `Da pagare: CHF ${amount} entro il ${date}.`,
+    closing: "Cordiali saluti",
+  },
+  en: {
+    subject: (company: string, number: string) => `Your invoice ${number} from ${company}`,
+    reminderSubject: (title: string, number: string) => `${title}: invoice ${number}`,
+    greeting: (name: string) => `Hello ${name}`,
+    body: "Thank you for your order. Please find attached our invoice with the QR payment slip.",
+    reminderBody: "Please find attached our letter about the open invoice.",
+    due: (amount: string, date: string) => `Amount due: CHF ${amount} by ${date}.`,
+    closing: "Kind regards",
+  },
+} as const
+
+/** Sentences with values on invoices and reminders. */
+export const INVOICE_TEXT = {
+  de: {
+    paymentTerms: (days: number, date: string) =>
+      `Zahlbar innert ${days} Tagen bis ${date} mit dem QR-Zahlteil auf der letzten Seite.`,
+    reminderPayment: (date: string) =>
+      `Bitte bezahlen Sie den offenen Betrag bis ${date} mit dem QR-Zahlteil auf der letzten Seite.`,
+    slipHead: (amount: string, date: string) => `Zu bezahlen CHF ${amount} bis ${date}`,
+    quotedQuantity: (quantity: string) => `offeriert: ${quantity}`,
+  },
+  fr: {
+    paymentTerms: (days: number, date: string) =>
+      `Payable dans les ${days} jours, d'ici au ${date}, avec la section paiement QR en dernière page.`,
+    reminderPayment: (date: string) =>
+      `Veuillez payer le montant ouvert d'ici au ${date} avec la section paiement QR en dernière page.`,
+    slipHead: (amount: string, date: string) => `À payer CHF ${amount} jusqu'au ${date}`,
+    quotedQuantity: (quantity: string) => `offert : ${quantity}`,
+  },
+  it: {
+    paymentTerms: (days: number, date: string) =>
+      `Pagabile entro ${days} giorni, entro il ${date}, con la sezione pagamento QR all'ultima pagina.`,
+    reminderPayment: (date: string) =>
+      `Vi preghiamo di pagare l'importo aperto entro il ${date} con la sezione pagamento QR all'ultima pagina.`,
+    slipHead: (amount: string, date: string) => `Da pagare CHF ${amount} entro il ${date}`,
+    quotedQuantity: (quantity: string) => `offerto: ${quantity}`,
+  },
+  en: {
+    paymentTerms: (days: number, date: string) =>
+      `Payable within ${days} days, by ${date}, using the QR payment part on the last page.`,
+    reminderPayment: (date: string) =>
+      `Please pay the open amount by ${date} using the QR payment part on the last page.`,
+    slipHead: (amount: string, date: string) => `Amount due CHF ${amount} by ${date}`,
+    quotedQuantity: (quantity: string) => `quoted: ${quantity}`,
+  },
+} as const
+
 const MONTHS: Record<DocumentLanguage, string[]> = {
   de: [
     "Januar",
