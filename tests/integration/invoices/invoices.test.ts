@@ -26,6 +26,7 @@ import { isQRReferenceValid, isSCORReferenceValid } from "swissqrbill/utils"
 import { provisionCompany } from "@/modules/iam/lib/provisioning"
 import { processDomainEvents } from "@/lib/events/processor"
 import { invoicePaymentReference } from "@/lib/format/payment-reference"
+import { loadPortalInvoice, portalDocument } from "@/lib/portal/service"
 import {
   HAS_LOCAL_DB,
   serviceClient,
@@ -324,6 +325,30 @@ describeWithDb("Invoices, payments and reminders", () => {
     const { data: file } = await svc.storage.from("documents").download(doc!.storage_path as string)
     const pdf = Buffer.from(await file!.arrayBuffer())
     expect(pdf.subarray(0, 5).toString("ascii")).toBe("%PDF-")
+  })
+
+  it("shows the issued invoice in the customer portal", async () => {
+    const { url } = await owner.invoices.portalLink({ id: firstInvoice })
+    const token = url.split("/").pop()!
+    const portal = await loadPortalInvoice(svc, token)
+    const row = await invoiceRow(firstInvoice)
+    expect(portal).toMatchObject({
+      id: firstInvoice,
+      invoiceNumber: row.invoice_number,
+      paymentReference: row.payment_reference,
+      balanceCents: row.balance_due_cents,
+      overdue: false,
+    })
+    expect(portal?.company.iban).toBe("CH9300762011623852957")
+    const pdf = await portalDocument(svc, "invoice", token)
+    expect(Buffer.from(pdf!.pdf).subarray(0, 5).toString("ascii")).toBe("%PDF-")
+
+    expect(
+      await loadPortalInvoice(
+        svc,
+        token.replace(/.$/, (c) => (c === "A" ? "B" : "A")),
+      ),
+    ).toBeNull()
   })
 
   it("freezes an issued invoice", async () => {

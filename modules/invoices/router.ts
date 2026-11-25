@@ -23,6 +23,8 @@ import {
   formatDocumentDate,
   type DocumentLanguage,
 } from "@/lib/documents/labels"
+import { issuePortalLink } from "@/lib/portal/service"
+import { portalUrl } from "@/lib/portal/token"
 import { sendTenantEmail } from "@/lib/email/tenant"
 import { DocumentEmail } from "@/emails/tenant/document-email"
 import {
@@ -556,6 +558,7 @@ export const invoicesRouter = createTRPCRouter({
 
       await transitionStatus(ctx.supabase, "invoice", input.id, "sent")
       const issued = mapInvoice(await loadInvoiceRow(ctx.supabase, input.id))
+      await issuePortalLink(svc, "invoice", input.id, issued.dueAt)
 
       await writeActivityLog(ctx, {
         action: "invoice.issued",
@@ -762,6 +765,20 @@ export const invoicesRouter = createTRPCRouter({
     }),
 
   /** Short-lived link to a stored invoice or reminder PDF. */
+  /** Link to the customer portal of an issued invoice. */
+  portalLink: permissionProcedure("invoices.edit")
+    .input(invoiceIdInput)
+    .mutation(async ({ ctx, input }) => {
+      const invoice = mapInvoice(await loadInvoiceRow(ctx.supabase, input.id))
+      if (invoice.status === "draft")
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: "Den Kundenlink gibt es erst nach dem Ausstellen.",
+        })
+      await issuePortalLink(createServiceRoleClient(), "invoice", input.id, invoice.dueAt)
+      return { url: portalUrl("invoice", input.id) }
+    }),
+
   documentUrl: permissionProcedure("invoices.view")
     .input(invoiceIdInput.extend({ documentId: z.string().uuid() }))
     .query(async ({ ctx, input }) => {
@@ -952,6 +969,7 @@ async function emailInvoice(
     customers: { first_name: string; last_name: string } | null
     companies: Record<string, string | null>
   }
+  await issuePortalLink(svc, "invoice", invoiceId, dueDate)
   const text = INVOICE_EMAIL_TEXT[row.language]
   const labels = INVOICE_LABELS[row.language]
   const company = row.companies
@@ -981,6 +999,7 @@ async function emailInvoice(
       greeting: text.greeting(customer),
       body: reminder ? text.reminderBody : text.body,
       note: text.due(formatCents(row.balance_due_cents), formatDocumentDate(dueDate, row.language)),
+      action: { url: portalUrl("invoice", invoiceId), label: text.action },
       personalMessage: textOrNull(message),
       closing: text.closing,
       companyName,

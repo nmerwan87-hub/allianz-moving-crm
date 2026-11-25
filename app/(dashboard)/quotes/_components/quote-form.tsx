@@ -325,7 +325,11 @@ export function QuoteForm({
   const costCapCents = kind === "hourly" && costCap.trim() ? parseToCents(costCap) : null
   const overCap = costCapCents !== null && totals.totalCents > costCapCents
 
-  async function save(): Promise<boolean> {
+  /**
+   * Saves header and lines. `reload: false` keeps this form mounted (the page
+   * remounts it after every reload), e.g. so the send dialog can open next.
+   */
+  async function save({ reload = true }: { reload?: boolean } = {}): Promise<boolean> {
     const problems: string[] = []
     const payload = buildLines()
     const m = payload[0]!
@@ -379,8 +383,8 @@ export function QuoteForm({
         internalNotes,
       })
       await saveLinesMutation.mutateAsync({ id: quote.id, lines: payload })
-      await utils.quotes.get.invalidate({ id: quote.id })
       setDirty(false)
+      if (reload) await utils.quotes.get.invalidate({ id: quote.id })
       return true
     } catch (err) {
       setErrors([err instanceof Error ? err.message : "Speichern fehlgeschlagen"])
@@ -413,7 +417,7 @@ export function QuoteForm({
   return (
     <div className="pb-10">
       {/* Action bar (Bixin: Verwerfen · Speichern · Senden) */}
-      <div className="border-surface-divider bg-surface-raised/95 sticky top-0 z-20 -mx-4 -mt-6 mb-6 flex items-center gap-3 border-b px-4 py-3 backdrop-blur sm:-mx-6 sm:px-6 lg:-mx-8 lg:px-8">
+      <div className="border-surface-divider bg-surface-raised/95 sticky top-0 z-20 -mx-4 -mt-6 mb-6 flex flex-wrap items-center gap-x-3 gap-y-2 border-b px-4 py-3 backdrop-blur sm:-mx-6 sm:px-6 lg:-mx-8 lg:px-8">
         <Button variant="secondary" size="icon" aria-label="Zurück" onClick={() => router.back()}>
           <ArrowLeft className="h-4 w-4" />
         </Button>
@@ -424,7 +428,7 @@ export function QuoteForm({
           )}
         </h1>
         {!readOnly && (
-          <div className="ml-auto flex shrink-0 items-center gap-2">
+          <div className="ml-auto flex flex-wrap items-center justify-end gap-2">
             <Button
               variant="ghost"
               size="sm"
@@ -455,7 +459,7 @@ export function QuoteForm({
                 size="sm"
                 disabled={saving || !capOk}
                 onClick={async () => {
-                  if (!(await save())) return
+                  if (!(await save({ reload: false }))) return
                   setSendOpen(true)
                 }}
               >
@@ -479,8 +483,8 @@ export function QuoteForm({
         {/* Hauptservice */}
         <Section title="Hauptservice">
           <Row label="Kunde">
-            <div className="flex items-center justify-end gap-3 text-sm">
-              <span className="text-text-primary truncate">
+            <div className="flex min-w-0 items-center gap-3 text-sm sm:justify-end">
+              <span className="text-text-primary min-w-0 truncate">
                 {quote.customerName ?? "—"}
                 {quote.customerEmail && (
                   <span className="text-text-muted"> · {quote.customerEmail}</span>
@@ -900,7 +904,10 @@ export function QuoteForm({
           quoteId={quote.id}
           customerEmail={quote.customerEmail}
           totalCents={totals.totalCents}
-          onClose={() => setSendOpen(false)}
+          onClose={() => {
+            setSendOpen(false)
+            void utils.quotes.get.invalidate({ id: quote.id })
+          }}
         />
       )}
 
@@ -1078,7 +1085,7 @@ function Section({
 }) {
   return (
     <section className="border-surface-divider bg-surface-raised rounded-[var(--radius-lg)] border px-5 py-4">
-      <div className="mb-3 flex items-center gap-2">
+      <div className="mb-3 flex flex-wrap items-center gap-2">
         <h2 className="text-text-primary text-base font-semibold">{title}</h2>
         {badge}
         {action && <div className="ml-auto">{action}</div>}
@@ -1098,7 +1105,8 @@ function Row({ label, children }: { label: string; children: React.ReactNode }) 
   )
 }
 
-const GRID = "grid grid-cols-[minmax(0,1fr)_96px_128px_28px] items-start gap-3"
+const GRID =
+  "grid grid-cols-[minmax(0,1fr)_76px_100px_20px] items-start gap-2 sm:grid-cols-[minmax(0,1fr)_96px_128px_28px] sm:gap-3"
 
 function GridHead({ title = "Service" }: { title?: string }) {
   return (

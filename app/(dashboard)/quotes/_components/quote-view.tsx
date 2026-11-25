@@ -3,7 +3,17 @@
 import { useState } from "react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
-import { Ban, CheckCircle2, Copy, Download, Mail, Receipt, Truck, XCircle } from "lucide-react"
+import {
+  Ban,
+  CheckCircle2,
+  Copy,
+  Download,
+  Link2,
+  Mail,
+  Receipt,
+  Truck,
+  XCircle,
+} from "lucide-react"
 import { trpc } from "@/lib/trpc/client"
 import { formatChf, formatCents } from "@/lib/format/money"
 import { Button } from "@/app/(dashboard)/_components/ui/button"
@@ -70,6 +80,17 @@ export function QuoteView({ data }: { data: QuoteDetail }) {
   const cancel = trpc.quotes.cancel.useMutation()
   const revise = trpc.quotes.createRevision.useMutation()
   const settle = trpc.invoices.createFromJob.useMutation()
+  const portalLink = trpc.quotes.portalLink.useMutation()
+
+  async function copyPortalLink() {
+    try {
+      const { url } = await portalLink.mutateAsync({ id: quote.id })
+      await navigator.clipboard.writeText(url)
+      toast.success("Link kopiert — z. B. per WhatsApp an den Kunden senden")
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Link konnte nicht erstellt werden")
+    }
+  }
 
   const open = quote.status === "sent" || quote.status === "viewed"
   const canRevise = ["sent", "viewed", "expired", "declined"].includes(quote.status)
@@ -127,7 +148,8 @@ export function QuoteView({ data }: { data: QuoteDetail }) {
   } else if (quote.status === "accepted") {
     banner = (
       <Banner tone="success" title="Angenommen">
-        Angenommen am {formatDate(quote.acceptedAt)}.
+        Angenommen am {formatDate(quote.acceptedAt)}
+        {quote.acceptedByName ? ` online von ${quote.acceptedByName}` : ""}.
         {job ? (
           <div className="mt-3 flex flex-wrap items-center gap-2">
             <Link href={`/jobs/${job.id}`}>
@@ -361,8 +383,14 @@ export function QuoteView({ data }: { data: QuoteDetail }) {
         <AttachmentsBlock entityType="quote" entityId={quote.id} canEdit={permissions.edit} />
       </Card>
 
-      {permissions.edit && (open || canRevise) && (
+      {permissions.edit && (open || canRevise || quote.status === "accepted") && (
         <div className="flex flex-wrap gap-2">
+          {(open || quote.status === "accepted") && permissions.send && (
+            <Button variant="secondary" disabled={portalLink.isPending} onClick={copyPortalLink}>
+              <Link2 className="h-4 w-4" />
+              Kundenlink kopieren
+            </Button>
+          )}
           {open && permissions.send && (
             <Button variant="secondary" onClick={() => setResendOpen(true)}>
               <Mail className="h-4 w-4" />

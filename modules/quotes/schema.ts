@@ -197,6 +197,8 @@ export interface Quote extends QuoteSummary {
   customerNotes: string | null
   internalNotes: string | null
   acceptedAt: string | null
+  /** Typed by the customer when accepting in the portal */
+  acceptedByName: string | null
   declinedAt: string | null
   declinedReason: string | null
   customerEmail: string | null
