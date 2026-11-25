@@ -37,9 +37,9 @@ export default async function OnboardingWelcomePage() {
   return (
     <div className="flex min-h-screen items-center justify-center bg-slate-50 px-6 py-12">
       <div className="w-full max-w-lg text-center">
-        <div className="mb-6 inline-flex h-20 w-20 items-center justify-center rounded-full bg-violet-100">
+        <div className="bg-signal-100 mb-6 inline-flex h-20 w-20 items-center justify-center rounded-full">
           <svg
-            className="h-10 w-10 text-violet-600"
+            className="text-signal-600 h-10 w-10"
             fill="none"
             viewBox="0 0 24 24"
             stroke="currentColor"
@@ -58,9 +58,9 @@ export default async function OnboardingWelcomePage() {
 
         <div className="mt-10 grid gap-4 text-left sm:grid-cols-2">
           <div className="rounded-lg border border-slate-200 bg-white p-5">
-            <div className="mb-3 flex h-9 w-9 items-center justify-center rounded-md bg-violet-100">
+            <div className="bg-signal-100 mb-3 flex h-9 w-9 items-center justify-center rounded-md">
               <svg
-                className="h-5 w-5 text-violet-600"
+                className="text-signal-600 h-5 w-5"
                 fill="none"
                 viewBox="0 0 24 24"
                 stroke="currentColor"
@@ -80,9 +80,9 @@ export default async function OnboardingWelcomePage() {
           </div>
 
           <div className="rounded-lg border border-slate-200 bg-white p-5">
-            <div className="mb-3 flex h-9 w-9 items-center justify-center rounded-md bg-violet-100">
+            <div className="bg-signal-100 mb-3 flex h-9 w-9 items-center justify-center rounded-md">
               <svg
-                className="h-5 w-5 text-violet-600"
+                className="text-signal-600 h-5 w-5"
                 fill="none"
                 viewBox="0 0 24 24"
                 stroke="currentColor"
@@ -103,7 +103,7 @@ export default async function OnboardingWelcomePage() {
         {role === "office" ? (
           <p className="mt-8 text-sm text-slate-400">
             Deine Rechte hat der Inhaber festgelegt.{" "}
-            <a href="/settings/profile" className="text-violet-600 hover:text-violet-700">
+            <a href="/settings/profile" className="text-signal-600 hover:text-signal-700">
               Rechte ansehen
             </a>
           </p>
@@ -111,7 +111,7 @@ export default async function OnboardingWelcomePage() {
 
         <a
           href="/dashboard"
-          className="mt-8 inline-block rounded-md bg-slate-900 px-8 py-3 text-sm font-semibold text-white hover:bg-slate-800 focus:ring-2 focus:ring-violet-600/30 focus:ring-offset-2 focus:outline-none"
+          className="bg-signal-600 hover:bg-signal-700 focus:ring-signal-600/30 mt-8 inline-block rounded-md px-8 py-3 text-sm font-semibold text-white focus:ring-2 focus:ring-offset-2 focus:outline-none"
         >
           Zur Übersicht →
         </a>

@@ -64,7 +64,7 @@ export default async function SuspendedPage() {
           Melde dich zur Klärung bei{" "}
           <a
             href="mailto:support@bivro.io"
-            className="font-medium text-violet-600 hover:text-violet-700"
+            className="text-signal-600 hover:text-signal-700 font-medium"
           >
             support@bivro.io
           </a>

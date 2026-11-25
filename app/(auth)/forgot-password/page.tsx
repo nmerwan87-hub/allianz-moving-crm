@@ -21,7 +21,7 @@ export default function ForgotPasswordPage() {
     <div className="flex min-h-screen items-center justify-center bg-slate-50 px-6 py-12">
       <div className="w-full max-w-sm">
         <div className="mb-8">
-          <a href="/login" className="text-sm text-violet-600 hover:text-violet-700">
+          <a href="/login" className="text-signal-600 hover:text-signal-700 text-sm">
             ← Back to sign in
           </a>
           <h1 className="mt-4 text-2xl font-bold text-slate-900">Passwort vergessen?</h1>
@@ -50,14 +50,14 @@ export default function ForgotPasswordPage() {
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 placeholder="name@firma.ch"
-                className="block w-full rounded-md border border-slate-300 bg-slate-50 px-3 py-2 text-sm text-slate-900 placeholder:text-slate-400 focus:border-violet-600 focus:ring-2 focus:ring-violet-600/20 focus:outline-none"
+                className="focus:border-signal-600 focus:ring-signal-600/20 block w-full rounded-md border border-slate-300 bg-slate-50 px-3 py-2 text-sm text-slate-900 placeholder:text-slate-400 focus:ring-2 focus:outline-none"
               />
             </div>
 
             <button
               type="submit"
               disabled={mutation.isPending || !email}
-              className="w-full rounded-md bg-slate-900 px-4 py-2.5 text-sm font-semibold text-white hover:bg-slate-800 focus:ring-2 focus:ring-violet-600/30 focus:ring-offset-2 focus:outline-none disabled:cursor-not-allowed disabled:opacity-50"
+              className="bg-signal-600 hover:bg-signal-700 focus:ring-signal-600/30 w-full rounded-md px-4 py-2.5 text-sm font-semibold text-white focus:ring-2 focus:ring-offset-2 focus:outline-none disabled:cursor-not-allowed disabled:opacity-50"
             >
               {mutation.isPending ? "Wird gesendet …" : "Link senden"}
             </button>

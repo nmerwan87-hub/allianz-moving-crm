@@ -17,9 +17,9 @@ export default function CheckEmailPage() {
   return (
     <div className="flex min-h-screen items-center justify-center bg-slate-50 px-6 py-12">
       <div className="w-full max-w-md text-center">
-        <div className="mb-6 inline-flex h-16 w-16 items-center justify-center rounded-full bg-violet-100">
+        <div className="bg-signal-100 mb-6 inline-flex h-16 w-16 items-center justify-center rounded-full">
           <svg
-            className="h-8 w-8 text-violet-600"
+            className="text-signal-600 h-8 w-8"
             fill="none"
             viewBox="0 0 24 24"
             stroke="currentColor"
@@ -55,7 +55,7 @@ export default function CheckEmailPage() {
               type="button"
               onClick={() => email && resendMutation.mutate({ email })}
               disabled={resendMutation.isPending || !email}
-              className="mt-4 text-sm font-medium text-violet-600 hover:text-violet-700 disabled:opacity-50"
+              className="text-signal-600 hover:text-signal-700 mt-4 text-sm font-medium disabled:opacity-50"
             >
               {resendMutation.isPending ? "Wird gesendet …" : "Bestätigung erneut senden"}
             </button>
@@ -64,7 +64,7 @@ export default function CheckEmailPage() {
 
         <p className="mt-6 text-sm text-slate-500">
           Falsches Konto?{" "}
-          <a href="/register" className="font-medium text-violet-600 hover:text-violet-700">
+          <a href="/register" className="text-signal-600 hover:text-signal-700 font-medium">
             Neu beginnen
           </a>
         </p>

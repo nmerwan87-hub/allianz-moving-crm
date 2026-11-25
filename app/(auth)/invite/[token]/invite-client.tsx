@@ -73,7 +73,7 @@ export function InviteAcceptanceClient({ rawToken }: InviteAcceptanceClientProps
         </p>
         <a
           href="/login"
-          className="mt-4 inline-block text-sm font-medium text-violet-600 hover:text-violet-700"
+          className="text-signal-600 hover:text-signal-700 mt-4 inline-block text-sm font-medium"
         >
           Go to sign in →
         </a>
@@ -152,7 +152,7 @@ export function InviteAcceptanceClient({ rawToken }: InviteAcceptanceClientProps
               onChange={(e) => setFirstName(e.target.value)}
               placeholder="Vorname"
               autoComplete="given-name"
-              className="block w-full rounded-md border border-slate-300 bg-slate-50 px-3 py-2 text-sm placeholder:text-slate-400 focus:border-violet-600 focus:ring-2 focus:ring-violet-600/20 focus:outline-none"
+              className="focus:border-signal-600 focus:ring-signal-600/20 block w-full rounded-md border border-slate-300 bg-slate-50 px-3 py-2 text-sm placeholder:text-slate-400 focus:ring-2 focus:outline-none"
             />
           </div>
           <div>
@@ -166,7 +166,7 @@ export function InviteAcceptanceClient({ rawToken }: InviteAcceptanceClientProps
               onChange={(e) => setLastName(e.target.value)}
               placeholder="Nachname"
               autoComplete="family-name"
-              className="block w-full rounded-md border border-slate-300 bg-slate-50 px-3 py-2 text-sm placeholder:text-slate-400 focus:border-violet-600 focus:ring-2 focus:ring-violet-600/20 focus:outline-none"
+              className="focus:border-signal-600 focus:ring-signal-600/20 block w-full rounded-md border border-slate-300 bg-slate-50 px-3 py-2 text-sm placeholder:text-slate-400 focus:ring-2 focus:outline-none"
             />
           </div>
         </div>
@@ -182,7 +182,7 @@ export function InviteAcceptanceClient({ rawToken }: InviteAcceptanceClientProps
             onChange={(e) => setPassword(e.target.value)}
             placeholder="Mindestens 12 Zeichen"
             autoComplete="new-password"
-            className="block w-full rounded-md border border-slate-300 bg-slate-50 px-3 py-2 text-sm placeholder:text-slate-400 focus:border-violet-600 focus:ring-2 focus:ring-violet-600/20 focus:outline-none"
+            className="focus:border-signal-600 focus:ring-signal-600/20 block w-full rounded-md border border-slate-300 bg-slate-50 px-3 py-2 text-sm placeholder:text-slate-400 focus:ring-2 focus:outline-none"
           />
           {password.length > 0 ? (
             <div className="mt-2">
@@ -205,7 +205,7 @@ export function InviteAcceptanceClient({ rawToken }: InviteAcceptanceClientProps
         <button
           type="submit"
           disabled={acceptMutation.isPending || signingIn}
-          className="w-full rounded-md bg-slate-900 px-4 py-2.5 text-sm font-semibold text-white hover:bg-slate-800 focus:ring-2 focus:ring-violet-600/30 focus:ring-offset-2 focus:outline-none disabled:cursor-not-allowed disabled:opacity-50"
+          className="bg-signal-600 hover:bg-signal-700 focus:ring-signal-600/30 w-full rounded-md px-4 py-2.5 text-sm font-semibold text-white focus:ring-2 focus:ring-offset-2 focus:outline-none disabled:cursor-not-allowed disabled:opacity-50"
         >
           {signingIn
             ? "Anmelden …"
@@ -278,7 +278,7 @@ function JoinWithExistingAccount({
               joinMutation.mutate({ rawToken })
             }}
             disabled={joinMutation.isPending || joinMutation.isSuccess}
-            className="w-full rounded-md bg-slate-900 px-4 py-2.5 text-sm font-semibold text-white hover:bg-slate-800 focus:ring-2 focus:ring-violet-600/30 focus:ring-offset-2 focus:outline-none disabled:cursor-not-allowed disabled:opacity-50"
+            className="bg-signal-600 hover:bg-signal-700 focus:ring-signal-600/30 w-full rounded-md px-4 py-2.5 text-sm font-semibold text-white focus:ring-2 focus:ring-offset-2 focus:outline-none disabled:cursor-not-allowed disabled:opacity-50"
           >
             {joinMutation.isPending || joinMutation.isSuccess
               ? "Wird beigetreten …"
@@ -296,7 +296,7 @@ function JoinWithExistingAccount({
                 await supabase.auth.signOut()
                 window.location.assign(loginHref)
               }}
-              className="font-medium text-violet-600 hover:text-violet-700"
+              className="text-signal-600 hover:text-signal-700 font-medium"
             >
               Abmelden und Konto wechseln →
             </button>
@@ -304,7 +304,7 @@ function JoinWithExistingAccount({
         ) : (
           <a
             href={loginHref}
-            className="inline-block w-full rounded-md bg-slate-900 px-4 py-2.5 text-sm font-semibold text-white hover:bg-slate-800"
+            className="bg-signal-600 hover:bg-signal-700 inline-block w-full rounded-md px-4 py-2.5 text-sm font-semibold text-white"
           >
             Anmelden und annehmen
           </a>

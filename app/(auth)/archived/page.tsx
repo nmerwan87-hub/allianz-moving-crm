@@ -37,7 +37,7 @@ export default function ArchivedPage() {
           </p>
           <a
             href="mailto:support@bivro.io?subject=Data%20Export%20Request"
-            className="mt-3 inline-block text-sm font-medium text-violet-600 hover:text-violet-700"
+            className="text-signal-600 hover:text-signal-700 mt-3 inline-block text-sm font-medium"
           >
             Datenexport anfordern →
           </a>
@@ -47,7 +47,7 @@ export default function ArchivedPage() {
           Questions?{" "}
           <a
             href="mailto:support@bivro.io"
-            className="font-medium text-violet-600 hover:text-violet-700"
+            className="text-signal-600 hover:text-signal-700 font-medium"
           >
             support@bivro.io
           </a>

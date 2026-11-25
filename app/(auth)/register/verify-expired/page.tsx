@@ -33,13 +33,13 @@ export default function VerifyExpiredPage() {
         <div className="mt-8 space-y-3">
           <a
             href="/register/check-email"
-            className="block w-full rounded-md bg-slate-900 px-4 py-2.5 text-center text-sm font-semibold text-white hover:bg-slate-800 focus:ring-2 focus:ring-violet-600/30 focus:ring-offset-2 focus:outline-none"
+            className="bg-signal-600 hover:bg-signal-700 focus:ring-signal-600/30 block w-full rounded-md px-4 py-2.5 text-center text-sm font-semibold text-white focus:ring-2 focus:ring-offset-2 focus:outline-none"
           >
             Bestätigung erneut senden
           </a>
           <a
             href="/register"
-            className="block w-full rounded-md border border-slate-300 bg-white px-4 py-2.5 text-center text-sm font-medium text-slate-700 hover:bg-slate-50 focus:ring-2 focus:ring-violet-600/30 focus:ring-offset-2 focus:outline-none"
+            className="focus:ring-signal-600/30 block w-full rounded-md border border-slate-300 bg-white px-4 py-2.5 text-center text-sm font-medium text-slate-700 hover:bg-slate-50 focus:ring-2 focus:ring-offset-2 focus:outline-none"
           >
             Neu beginnen
           </a>

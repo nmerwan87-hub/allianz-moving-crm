@@ -104,7 +104,7 @@ export default function RegisterPage() {
   return (
     <div className="flex min-h-screen">
       {/* Left branding panel */}
-      <div className="hidden flex-col justify-between bg-slate-900 p-12 text-white lg:flex lg:w-1/2">
+      <div className="bg-signal-700 hidden flex-col justify-between p-12 text-white lg:flex lg:w-1/2">
         <span className="text-xl font-semibold tracking-tight">Bivro</span>
         <div>
           <p className="text-3xl leading-snug font-bold">
@@ -130,7 +130,7 @@ export default function RegisterPage() {
             <h1 className="text-2xl font-bold text-slate-900">Firma registrieren</h1>
             <p className="mt-1 text-sm text-slate-500">
               Already have an account?{" "}
-              <a href="/login" className="font-medium text-violet-600 hover:text-violet-700">
+              <a href="/login" className="text-signal-600 hover:text-signal-700 font-medium">
                 Anmelden
               </a>
             </p>
@@ -343,11 +343,11 @@ export default function RegisterPage() {
                   id="termsAccepted"
                   type="checkbox"
                   {...register("termsAccepted")}
-                  className="mt-0.5 h-4 w-4 rounded border-slate-300 text-violet-600 focus:ring-violet-500"
+                  className="text-signal-600 focus:ring-signal-500 mt-0.5 h-4 w-4 rounded border-slate-300"
                 />
                 <label htmlFor="termsAccepted" className="text-sm text-slate-600">
                   Ich akzeptiere die{" "}
-                  <a href="/terms" className="font-medium text-violet-600 hover:text-violet-700">
+                  <a href="/terms" className="text-signal-600 hover:text-signal-700 font-medium">
                     AGB
                   </a>{" "}
                   <span className="text-red-500">*</span>
@@ -362,11 +362,11 @@ export default function RegisterPage() {
                   id="privacyAccepted"
                   type="checkbox"
                   {...register("privacyAccepted")}
-                  className="mt-0.5 h-4 w-4 rounded border-slate-300 text-violet-600 focus:ring-violet-500"
+                  className="text-signal-600 focus:ring-signal-500 mt-0.5 h-4 w-4 rounded border-slate-300"
                 />
                 <label htmlFor="privacyAccepted" className="text-sm text-slate-600">
                   Ich akzeptiere die{" "}
-                  <a href="/privacy" className="font-medium text-violet-600 hover:text-violet-700">
+                  <a href="/privacy" className="text-signal-600 hover:text-signal-700 font-medium">
                     Datenschutzerklärung
                   </a>{" "}
                   <span className="text-red-500">*</span>
@@ -380,7 +380,7 @@ export default function RegisterPage() {
             <button
               type="submit"
               disabled={isSubmitting || registerMutation.isPending}
-              className="mt-2 w-full rounded-md bg-slate-900 px-4 py-2.5 text-sm font-semibold text-white hover:bg-slate-800 focus:ring-2 focus:ring-violet-600/30 focus:ring-offset-2 focus:outline-none disabled:cursor-not-allowed disabled:opacity-50"
+              className="bg-signal-600 hover:bg-signal-700 focus:ring-signal-600/30 mt-2 w-full rounded-md px-4 py-2.5 text-sm font-semibold text-white focus:ring-2 focus:ring-offset-2 focus:outline-none disabled:cursor-not-allowed disabled:opacity-50"
             >
               {isSubmitting || registerMutation.isPending
                 ? "Konto wird erstellt …"
@@ -396,7 +396,7 @@ export default function RegisterPage() {
 function inputClass(hasError: boolean): string {
   return [
     "block w-full rounded-md border bg-slate-50 px-3 py-2 text-sm text-slate-900 placeholder:text-slate-400",
-    "focus:outline-none focus:ring-2 focus:ring-violet-600/20",
-    hasError ? "border-red-400 focus:border-red-500" : "border-slate-300 focus:border-violet-600",
+    "focus:outline-none focus:ring-2 focus:ring-signal-600/20",
+    hasError ? "border-red-400 focus:border-red-500" : "border-slate-300 focus:border-signal-600",
   ].join(" ")
 }

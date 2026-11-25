@@ -55,7 +55,7 @@ function LoginForm() {
           value={email}
           onChange={(e) => setEmail(e.target.value)}
           placeholder="name@firma.ch"
-          className="block w-full rounded-md border border-slate-300 bg-slate-50 px-3 py-2 text-sm text-slate-900 placeholder:text-slate-400 focus:border-violet-600 focus:ring-2 focus:ring-violet-600/20 focus:outline-none"
+          className="focus:border-signal-600 focus:ring-signal-600/20 block w-full rounded-md border border-slate-300 bg-slate-50 px-3 py-2 text-sm text-slate-900 placeholder:text-slate-400 focus:ring-2 focus:outline-none"
         />
       </div>
 
@@ -64,7 +64,7 @@ function LoginForm() {
           <label htmlFor="password" className="block text-sm font-medium text-slate-700">
             Passwort
           </label>
-          <a href="/forgot-password" className="text-xs text-violet-600 hover:text-violet-700">
+          <a href="/forgot-password" className="text-signal-600 hover:text-signal-700 text-xs">
             Passwort vergessen?
           </a>
         </div>
@@ -76,14 +76,14 @@ function LoginForm() {
           value={password}
           onChange={(e) => setPassword(e.target.value)}
           placeholder="••••••••"
-          className="block w-full rounded-md border border-slate-300 bg-slate-50 px-3 py-2 text-sm text-slate-900 placeholder:text-slate-400 focus:border-violet-600 focus:ring-2 focus:ring-violet-600/20 focus:outline-none"
+          className="focus:border-signal-600 focus:ring-signal-600/20 block w-full rounded-md border border-slate-300 bg-slate-50 px-3 py-2 text-sm text-slate-900 placeholder:text-slate-400 focus:ring-2 focus:outline-none"
         />
       </div>
 
       <button
         type="submit"
         disabled={loading}
-        className="mt-2 w-full rounded-md bg-slate-900 px-4 py-2.5 text-sm font-semibold text-white hover:bg-slate-800 focus:ring-2 focus:ring-violet-600/30 focus:ring-offset-2 focus:outline-none disabled:cursor-not-allowed disabled:opacity-50"
+        className="bg-signal-600 hover:bg-signal-700 focus:ring-signal-600/30 mt-2 w-full rounded-md px-4 py-2.5 text-sm font-semibold text-white focus:ring-2 focus:ring-offset-2 focus:outline-none disabled:cursor-not-allowed disabled:opacity-50"
       >
         {loading ? "Anmelden …" : "Anmelden"}
       </button>
@@ -95,7 +95,7 @@ export default function LoginPage() {
   return (
     <div className="flex min-h-screen">
       {/* Left branding panel — lg+ only */}
-      <div className="hidden flex-col justify-between bg-slate-900 p-12 text-white lg:flex lg:w-1/2">
+      <div className="bg-signal-700 hidden flex-col justify-between p-12 text-white lg:flex lg:w-1/2">
         <span className="text-xl font-semibold tracking-tight">Bivro</span>
         <div>
           <p className="text-3xl leading-snug font-bold">
