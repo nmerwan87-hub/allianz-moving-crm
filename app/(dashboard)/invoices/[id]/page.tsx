@@ -33,13 +33,13 @@ export default function InvoicePage({ params }: { params: Promise<{ id: string }
       <div>
         <Button variant="ghost" size="sm" onClick={() => router.push("/invoices")}>
           <ArrowLeft className="h-4 w-4" />
-          Back to invoices
+          Zurück zu den Rechnungen
         </Button>
         <div className="mt-8">
           <WrongCompanyNotice entity="invoice" id={id}>
             <ErrorState
-              title="Invoice not found"
-              message="It may have been removed or belong to another company."
+              title="Rechnung nicht gefunden"
+              message="Sie wurde entfernt oder gehört zu einer anderen Firma."
             />
           </WrongCompanyNotice>
         </div>
@@ -52,11 +52,11 @@ export default function InvoicePage({ params }: { params: Promise<{ id: string }
     <div>
       <Button variant="ghost" size="sm" onClick={() => router.push("/invoices")}>
         <ArrowLeft className="h-4 w-4" />
-        Back to invoices
+        Zurück zu den Rechnungen
       </Button>
       <div className="mt-2 mb-6 flex flex-wrap items-center gap-3">
         <h1 className="text-text-primary text-[length:var(--text-display-md)] font-semibold">
-          {invoice.invoiceNumber ?? `Settlement ${invoice.jobNumber ?? ""}`}
+          {invoice.invoiceNumber ?? `Abrechnung ${invoice.jobNumber ?? ""}`}
         </h1>
         <Badge variant={INVOICE_STATUS_BADGE[invoice.status] ?? "neutral"}>
           {INVOICE_STATUS_LABELS[invoice.status] ?? invoice.status}
@@ -68,7 +68,7 @@ export default function InvoicePage({ params }: { params: Promise<{ id: string }
           {invoice.customerName}
         </Link>
         <Link href={`/jobs/${invoice.jobId}`} className="text-text-muted text-sm hover:underline">
-          Job {invoice.jobNumber}
+          Auftrag {invoice.jobNumber}
         </Link>
       </div>
       {invoice.status === "draft" ? (

@@ -63,7 +63,7 @@ function mapCustomer(row: Record<string, unknown>): Customer {
 }
 
 /** Input → database row. Business-only fields are cleared for private customers. */
-function toRow(input: CreateCustomerInput): Record<string, unknown> {
+export function toRow(input: CreateCustomerInput): Record<string, unknown> {
   return {
     customer_type: input.customerType,
     salutation: input.salutation ?? null,
@@ -91,8 +91,11 @@ async function loadCustomer(sb: SupabaseClient, id: string): Promise<Record<stri
     .eq("id", id)
     .maybeSingle()
   if (error)
-    throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Failed to load customer" })
-  if (!data) throw new TRPCError({ code: "NOT_FOUND", message: "Customer not found" })
+    throw new TRPCError({
+      code: "INTERNAL_SERVER_ERROR",
+      message: "Kunde konnte nicht geladen werden",
+    })
+  if (!data) throw new TRPCError({ code: "NOT_FOUND", message: "Kunde nicht gefunden" })
   return data as Record<string, unknown>
 }
 
@@ -125,7 +128,10 @@ export const customersRouter = createTRPCRouter({
 
       const { data, error, count } = await query
       if (error)
-        throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Failed to fetch customers" })
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: "Kunden konnten nicht geladen werden",
+        })
 
       const total = count ?? 0
       return {
@@ -217,7 +223,10 @@ export const customersRouter = createTRPCRouter({
         .single()
 
       if (error || !data) {
-        throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Failed to create customer" })
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: "Kunde konnte nicht erstellt werden",
+        })
       }
 
       await writeActivityLog(ctx, {
@@ -236,13 +245,16 @@ export const customersRouter = createTRPCRouter({
       const { id, ...fields } = input
       const before = await loadCustomer(ctx.supabase, id)
       if (before["deleted_at"]) {
-        throw new TRPCError({ code: "BAD_REQUEST", message: "Restore the customer before editing" })
+        throw new TRPCError({ code: "BAD_REQUEST", message: "Stelle den Kunden zuerst wieder her" })
       }
 
       const row = toRow(fields)
       const { error } = await ctx.supabase.from("customers").update(row).eq("id", id)
       if (error)
-        throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Failed to update customer" })
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: "Kunde konnte nicht gespeichert werden",
+        })
 
       const changed = Object.keys(row).filter((key) => before[key] !== row[key])
       await writeActivityLog(ctx, {
@@ -271,7 +283,7 @@ export const customersRouter = createTRPCRouter({
       if (error)
         throw new TRPCError({
           code: "INTERNAL_SERVER_ERROR",
-          message: "Failed to archive customer",
+          message: "Archivieren fehlgeschlagen",
         })
 
       await writeActivityLog(ctx, {
@@ -296,7 +308,7 @@ export const customersRouter = createTRPCRouter({
       if (error)
         throw new TRPCError({
           code: "INTERNAL_SERVER_ERROR",
-          message: "Failed to restore customer",
+          message: "Wiederherstellen fehlgeschlagen",
         })
 
       await writeActivityLog(ctx, {

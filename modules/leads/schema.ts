@@ -48,20 +48,27 @@ export const propertySizeEnum = z.enum([
 // ─── Create input ─────────────────────────────────────────────────────────────
 
 export const createLeadInput = z.object({
-  firstName: z.string().min(1, "First name is required").max(100),
-  lastName: z.string().min(1, "Last name is required").max(100),
-  email: z.string().email("Invalid email").max(255).nullable().or(z.literal("")).optional(),
+  firstName: z.string().min(1, "Vorname fehlt").max(100),
+  lastName: z.string().min(1, "Nachname fehlt").max(100),
+  email: z
+    .string()
+    .email("Ungültige E-Mail-Adresse")
+    .max(255)
+    .nullable()
+    .or(z.literal(""))
+    .optional(),
   phone: z.string().max(50).nullable().or(z.literal("")).optional(),
 
   moveType: moveTypeEnum.nullable().optional(),
   requestedDate: z
     .string()
-    .regex(/^\d{4}-\d{2}-\d{2}$/, "Use YYYY-MM-DD")
+    .regex(/^\d{4}-\d{2}-\d{2}$/, "Format JJJJ-MM-TT")
     .nullable()
     .or(z.literal(""))
     .optional(),
   dateFlexible: z.boolean().default(false),
   propertySize: propertySizeEnum.nullable().optional(),
+  rooms: z.number().positive().max(30).nullable().optional(),
 
   originAddress: z.string().max(500).nullable().or(z.literal("")).optional(),
   originCity: z.string().max(200).nullable().or(z.literal("")).optional(),
@@ -115,6 +122,7 @@ export const updateLeadInput = z.object({
     .optional(),
   dateFlexible: z.boolean().optional(),
   propertySize: propertySizeEnum.nullable().optional(),
+  rooms: z.number().positive().max(30).nullable().optional(),
 
   originAddress: z.string().max(500).nullable().or(z.literal("")).optional(),
   originCity: z.string().max(200).nullable().or(z.literal("")).optional(),
@@ -231,6 +239,10 @@ export interface Lead {
   createdAt: string
   updatedAt: string
   assignedToName: string | null
+  rooms: number | null
+  questionnaire: LeadQuestionnaire
+  inventory: InventoryRow[]
+  wishedServices: WishedService[]
 }
 
 export interface LeadListResult {
@@ -240,3 +252,56 @@ export interface LeadListResult {
   pageSize: number
   totalPages: number
 }
+
+// ─── Inquiry details (questionnaire, inventory, wished services) ─────────────
+
+export const dwellingEnum = z.enum([
+  "flat",
+  "maisonette",
+  "shared_flat",
+  "house_1",
+  "house_2",
+  "house_3",
+  "storage",
+  "office",
+])
+export const liftSizeEnum = z.enum(["none", "small", "medium", "large", "goods"])
+
+const accessSide = z.object({
+  dwelling: dwellingEnum.nullable().optional(),
+  liftSize: liftSizeEnum.nullable().optional(),
+  parkingDistanceM: z.number().int().min(0).max(1000).nullable().optional(),
+  outsideSteps: z.number().int().min(0).max(200).nullable().optional(),
+  comment: z.string().max(1000).nullable().optional(),
+})
+
+export const leadQuestionnaire = z.object({
+  origin: accessSide.optional(),
+  dest: accessSide.optional(),
+  boxes: z.number().int().min(0).max(1000).nullable().optional(),
+})
+export type LeadQuestionnaire = z.infer<typeof leadQuestionnaire>
+
+export const inventoryRow = z.object({
+  room: z.string().trim().max(60).default(""),
+  item: z.string().trim().min(1, "Gegenstand fehlt").max(120),
+  quantity: z.number().int().min(1).max(999).default(1),
+  note: z.string().trim().max(200).default(""),
+})
+export type InventoryRow = z.infer<typeof inventoryRow>
+
+export const wishedService = z.object({
+  serviceId: z.string().uuid().nullable().optional(),
+  name: z.string().trim().min(1).max(200),
+  quantity: z.number().min(0).max(100_000).nullable().optional(),
+})
+export type WishedService = z.infer<typeof wishedService>
+
+export const updateLeadDetailsInput = z.object({
+  id: z.string().uuid(),
+  rooms: z.number().positive().max(30).nullable().optional(),
+  questionnaire: leadQuestionnaire.optional(),
+  inventory: z.array(inventoryRow).max(300).optional(),
+  wishedServices: z.array(wishedService).max(50).optional(),
+  internalNotes: z.string().max(5000).nullable().optional(),
+})

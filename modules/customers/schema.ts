@@ -14,10 +14,17 @@ const optionalText = (max: number) => z.string().max(max).nullable().or(z.litera
 const customerFields = {
   customerType: customerTypeEnum.default("private"),
   salutation: salutationEnum.nullable().optional(),
-  firstName: z.string().trim().min(1, "First name is required").max(100),
-  lastName: z.string().trim().min(1, "Last name is required").max(100),
+  firstName: z.string().trim().min(1, "Vorname fehlt").max(100),
+  lastName: z.string().trim().min(1, "Nachname fehlt").max(100),
   companyName: optionalText(200),
-  email: z.string().trim().email("Invalid email").max(255).nullable().or(z.literal("")).optional(),
+  email: z
+    .string()
+    .trim()
+    .email("Ungültige E-Mail-Adresse")
+    .max(255)
+    .nullable()
+    .or(z.literal(""))
+    .optional(),
   phone: optionalText(50),
   secondaryPhone: optionalText(50),
   preferredLanguage: customerLanguageEnum.default("de"),
@@ -38,7 +45,7 @@ function requireCompanyForBusiness(
     ctx.addIssue({
       code: z.ZodIssueCode.custom,
       path: ["companyName"],
-      message: "Company name is required for business customers",
+      message: "Firmenname fehlt",
     })
   }
 }

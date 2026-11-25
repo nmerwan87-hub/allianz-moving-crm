@@ -12,7 +12,9 @@ export default async function InviteTokenPage({ params }: PageProps) {
     <div className="flex min-h-screen items-center justify-center bg-slate-50 px-6 py-12">
       <div className="w-full max-w-md">
         <Suspense
-          fallback={<div className="text-center text-sm text-slate-500">Loading invitation…</div>}
+          fallback={
+            <div className="text-center text-sm text-slate-500">Einladung wird geladen …</div>
+          }
         >
           <InviteAcceptanceClient rawToken={token} />
         </Suspense>

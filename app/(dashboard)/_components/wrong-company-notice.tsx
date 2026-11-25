@@ -8,11 +8,11 @@ import { trpc } from "@/lib/trpc/client"
 import { completeCompanySwitch } from "@/app/(dashboard)/_lib/active-company"
 
 const ENTITY_LABELS = {
-  lead: "lead",
-  customer: "customer",
-  quote: "quote",
-  job: "job",
-  invoice: "invoice",
+  lead: "Diese Anfrage",
+  customer: "Dieser Kunde",
+  quote: "Diese Offerte",
+  job: "Dieser Auftrag",
+  invoice: "Diese Rechnung",
 } as const
 
 /**
@@ -34,7 +34,7 @@ export function WrongCompanyNotice({
     onSuccess: async ({ companyId }) => {
       await completeCompanySwitch(companyId, window.location.pathname)
     },
-    onError: (err) => toast.error("Could not switch company", err.message),
+    onError: (err) => toast.error("Firma konnte nicht gewechselt werden", err.message),
   })
 
   if (locate.isLoading) return null
@@ -50,17 +50,17 @@ export function WrongCompanyNotice({
         </div>
         <div>
           <p className="text-text-primary font-semibold">
-            This {ENTITY_LABELS[entity]} belongs to {companyName}
+            {ENTITY_LABELS[entity]} gehört zu {companyName}
           </p>
           <p className="text-text-muted mt-1 text-sm">
-            Switch to {companyName} to open it. Other open tabs will switch as well.
+            Wechsle zu {companyName}, um sie zu öffnen. Andere offene Tabs wechseln mit.
           </p>
         </div>
         <Button
           onClick={() => switchMutation.mutate({ companyId })}
           disabled={switchMutation.isPending || switchMutation.isSuccess}
         >
-          Switch to {companyName}
+          Zu {companyName} wechseln
         </Button>
       </CardContent>
     </Card>

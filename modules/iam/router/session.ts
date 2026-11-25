@@ -27,7 +27,7 @@ export const sessionRouter = createTRPCRouter({
       .maybeSingle()
 
     if (profileError || !profile) {
-      throw new TRPCError({ code: "NOT_FOUND", message: "Profile not found" })
+      throw new TRPCError({ code: "NOT_FOUND", message: "Profil nicht gefunden" })
     }
 
     const { data: company, error: companyError } = await svc
@@ -93,7 +93,7 @@ export const sessionRouter = createTRPCRouter({
       if (error) {
         throw new TRPCError({
           code: "FORBIDDEN",
-          message: "You do not have access to this company.",
+          message: "Du hast keinen Zugriff auf diese Firma.",
         })
       }
 

@@ -36,12 +36,12 @@ import {
 
 // Swiss names for the stored vehicle classes
 const VEHICLE_LABELS: Record<RateCard["vehicleType"] & string, string> = {
-  cargo_van: "Delivery van",
+  cargo_van: "Lieferwagen",
   pickup_truck: "Pickup",
-  box_truck_16ft: "Truck 3.5 t",
-  box_truck_24ft: "Truck 7.5 t",
-  box_truck_26ft: "Truck 12 t",
-  semi_truck: "Truck 18 t+",
+  box_truck_16ft: "LKW 3.5 t",
+  box_truck_24ft: "LKW 7.5 t",
+  box_truck_26ft: "LKW 12 t",
+  semi_truck: "LKW 18 t+",
 }
 
 // ─── Rate card dialog ─────────────────────────────────────────────────────────
@@ -69,10 +69,11 @@ function RateDialog({ draft, onClose }: { draft: DraftRate; onClose: () => void 
     const crewSize = Number(form.crewSize)
     const rate = parseToCents(form.rate)
     const cost = parseToCents(form.cost || "0")
-    if (!form.name.trim()) return setError("Enter a name, e.g. “2 Mann + Lieferwagen”.")
+    if (!form.name.trim()) return setError("Namen eingeben, z. B. «2 Mann + Lieferwagen».")
     if (!Number.isInteger(crewSize) || crewSize < 1 || crewSize > 20)
-      return setError("Crew size must be between 1 and 20.")
-    if (rate === null || cost === null) return setError("Enter amounts like 150 or 1'250.50.")
+      return setError("Anzahl Personen zwischen 1 und 20.")
+    if (rate === null || cost === null)
+      return setError("Beträge eingeben, z. B. 150 oder 1'250.50.")
 
     const input = {
       name: form.name.trim(),
@@ -86,10 +87,10 @@ function RateDialog({ draft, onClose }: { draft: DraftRate; onClose: () => void 
       if (form.id) await update.mutateAsync({ id: form.id, ...input })
       else await create.mutateAsync(input)
       await utils.catalog.rateCards.list.invalidate()
-      toast.success("Rate saved")
+      toast.success("Ansatz gespeichert")
       onClose()
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to save rate")
+      setError(err instanceof Error ? err.message : "Speichern fehlgeschlagen")
     }
   }
 
@@ -97,7 +98,7 @@ function RateDialog({ draft, onClose }: { draft: DraftRate; onClose: () => void 
     <Dialog open onOpenChange={(open) => !open && onClose()}>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>{form.id ? "Edit team rate" : "Add team rate"}</DialogTitle>
+          <DialogTitle>{form.id ? "Teamansatz bearbeiten" : "Teamansatz erfassen"}</DialogTitle>
         </DialogHeader>
         <div className="grid gap-4 py-2 sm:grid-cols-2">
           <div className="sm:col-span-2">
@@ -113,7 +114,7 @@ function RateDialog({ draft, onClose }: { draft: DraftRate; onClose: () => void 
           </div>
           <div>
             <FieldLabel required htmlFor="rate-crew">
-              Crew size
+              Personen
             </FieldLabel>
             <Input
               id="rate-crew"
@@ -125,13 +126,13 @@ function RateDialog({ draft, onClose }: { draft: DraftRate; onClose: () => void 
             />
           </div>
           <div>
-            <FieldLabel htmlFor="rate-vehicle">Vehicle</FieldLabel>
+            <FieldLabel htmlFor="rate-vehicle">Fahrzeug</FieldLabel>
             <Select
               id="rate-vehicle"
               value={form.vehicleType}
               onChange={(e) => setForm({ ...form, vehicleType: e.target.value })}
             >
-              <option value="">No vehicle</option>
+              <option value="">Ohne Fahrzeug</option>
               {vehicleTypeEnum.options.map((v) => (
                 <option key={v} value={v}>
                   {VEHICLE_LABELS[v]}
@@ -141,7 +142,7 @@ function RateDialog({ draft, onClose }: { draft: DraftRate; onClose: () => void 
           </div>
           <div>
             <FieldLabel required htmlFor="rate-price">
-              Price per hour (CHF)
+              Preis pro Stunde (CHF)
             </FieldLabel>
             <Input
               id="rate-price"
@@ -151,14 +152,14 @@ function RateDialog({ draft, onClose }: { draft: DraftRate; onClose: () => void 
             />
           </div>
           <div>
-            <FieldLabel htmlFor="rate-cost">Cost per hour (CHF)</FieldLabel>
+            <FieldLabel htmlFor="rate-cost">Kosten pro Stunde (CHF)</FieldLabel>
             <Input
               id="rate-cost"
               inputMode="decimal"
               value={form.cost}
               onChange={(e) => setForm({ ...form, cost: e.target.value })}
             />
-            <FieldHint>Wages and vehicle, for margin only.</FieldHint>
+            <FieldHint>Lohn und Fahrzeug, nur für die Marge.</FieldHint>
           </div>
           <label className="text-text-primary flex items-center gap-2 text-sm sm:col-span-2">
             <input
@@ -166,7 +167,7 @@ function RateDialog({ draft, onClose }: { draft: DraftRate; onClose: () => void 
               checked={form.isActive}
               onChange={(e) => setForm({ ...form, isActive: e.target.checked })}
             />
-            Offer this rate in new quotes
+            In neuen Offerten anbieten
           </label>
           {error && (
             <div className="sm:col-span-2">
@@ -176,10 +177,10 @@ function RateDialog({ draft, onClose }: { draft: DraftRate; onClose: () => void 
         </div>
         <DialogFooter>
           <Button variant="secondary" onClick={onClose} disabled={saving}>
-            Cancel
+            Abbrechen
           </Button>
           <Button onClick={save} disabled={saving}>
-            {saving ? "Saving..." : "Save"}
+            {saving ? "Speichern …" : "Speichern"}
           </Button>
         </DialogFooter>
       </DialogContent>
@@ -206,21 +207,21 @@ type NumberKey =
   | "taxRatePercent"
 
 const MONEY_FIELDS: Array<{ key: MoneyKey; label: string; hint?: string }> = [
-  { key: "travelFlatFeeCents", label: "Travel flat fee", hint: "Anfahrtspauschale per job" },
-  { key: "ratePerKmCents", label: "Price per km" },
-  { key: "minimumChargeCents", label: "Minimum charge per job" },
-  { key: "stairCarryRateCents", label: "Stairs surcharge per floor", hint: "Without lift" },
-  { key: "longCarryRateCents", label: "Long carry surcharge", hint: "Far from parking" },
-  { key: "elevatorWaitRateCents", label: "Lift waiting time per hour" },
+  { key: "travelFlatFeeCents", label: "Anfahrtspauschale", hint: "pro Auftrag" },
+  { key: "ratePerKmCents", label: "Preis pro km" },
+  { key: "minimumChargeCents", label: "Mindestbetrag pro Auftrag" },
+  { key: "stairCarryRateCents", label: "Zuschlag pro Stockwerk", hint: "ohne Lift" },
+  { key: "longCarryRateCents", label: "Zuschlag langer Tragweg", hint: "weit vom Parkplatz" },
+  { key: "elevatorWaitRateCents", label: "Wartezeit Lift pro Stunde" },
 ]
 
 const NUMBER_FIELDS: Array<{ key: NumberKey; label: string; suffix: string }> = [
-  { key: "minimumHours", label: "Minimum hours", suffix: "h" },
-  { key: "weekendSurchargePercent", label: "Weekend / holiday surcharge", suffix: "%" },
-  { key: "fuelSurchargePercent", label: "Fuel surcharge", suffix: "%" },
-  { key: "defaultDepositPercent", label: "Deposit", suffix: "%" },
-  { key: "defaultQuoteExpiryDays", label: "Offer valid for", suffix: "days" },
-  { key: "defaultPaymentTermsDays", label: "Payment terms", suffix: "days" },
+  { key: "minimumHours", label: "Mindeststunden", suffix: "Std." },
+  { key: "weekendSurchargePercent", label: "Wochenend-/Feiertagszuschlag", suffix: "%" },
+  { key: "fuelSurchargePercent", label: "Treibstoffzuschlag", suffix: "%" },
+  { key: "defaultDepositPercent", label: "Anzahlung", suffix: "%" },
+  { key: "defaultQuoteExpiryDays", label: "Offerte gültig", suffix: "Tage" },
+  { key: "defaultPaymentTermsDays", label: "Zahlungsfrist", suffix: "Tage" },
 ]
 
 function SettingsForm({ initial, canEdit }: { initial: PricingSettings; canEdit: boolean }) {
@@ -269,15 +270,15 @@ function SettingsForm({ initial, canEdit }: { initial: PricingSettings; canEdit:
       await update.mutateAsync(parsed.data)
       await utils.catalog.pricingSettings.get.invalidate()
       setDirty(false)
-      toast.success("Rates and terms saved")
+      toast.success("Ansätze und Bedingungen gespeichert")
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Failed to save")
+      toast.error(err instanceof Error ? err.message : "Speichern fehlgeschlagen")
     }
   }
 
   return (
     <Card>
-      <CardHeader>Surcharges & terms</CardHeader>
+      <CardHeader>Zuschläge und Bedingungen</CardHeader>
       <CardContent className="space-y-6">
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {MONEY_FIELDS.map((f) => (
@@ -317,10 +318,10 @@ function SettingsForm({ initial, canEdit }: { initial: PricingSettings; canEdit:
               checked={form.taxEnabled}
               onChange={(e) => change((d) => void (d.taxEnabled = e.target.checked))}
             />
-            Company is VAT registered
+            Firma ist MWST-pflichtig
           </label>
           <div>
-            <FieldLabel htmlFor="taxLabel">VAT label</FieldLabel>
+            <FieldLabel htmlFor="taxLabel">MWST-Bezeichnung</FieldLabel>
             <Input
               id="taxLabel"
               disabled={!canEdit || !form.taxEnabled}
@@ -329,7 +330,7 @@ function SettingsForm({ initial, canEdit }: { initial: PricingSettings; canEdit:
             />
           </div>
           <div>
-            <FieldLabel htmlFor="taxRatePercent">Standard VAT rate (%)</FieldLabel>
+            <FieldLabel htmlFor="taxRatePercent">Normalsatz MWST (%)</FieldLabel>
             <Input
               id="taxRatePercent"
               inputMode="decimal"
@@ -344,7 +345,7 @@ function SettingsForm({ initial, canEdit }: { initial: PricingSettings; canEdit:
         {canEdit && (
           <div className="flex justify-end">
             <Button onClick={save} disabled={!dirty || update.isPending}>
-              {update.isPending ? "Saving..." : "Save rates & terms"}
+              {update.isPending ? "Speichern …" : "Speichern"}
             </Button>
           </div>
         )}
@@ -378,17 +379,17 @@ export default function RatesSettingsPage() {
   return (
     <div className="space-y-6">
       <PageHeader
-        title="Rates & terms"
-        description="Hourly rates per team and the surcharges and terms used for new offers."
+        title="Ansätze und Bedingungen"
+        description="Stundenansätze pro Team sowie Zuschläge und Bedingungen für neue Offerten."
       />
 
       <Card className="overflow-hidden p-0">
         <div className="flex items-center justify-between pr-4">
-          <CardHeader>Team rates (per hour)</CardHeader>
+          <CardHeader>Teamansätze (pro Stunde)</CardHeader>
           {canEdit && (
             <Button size="sm" onClick={() => setEditing(toDraft())}>
               <Plus className="h-4 w-4" />
-              Add rate
+              Ansatz erfassen
             </Button>
           )}
         </div>
@@ -404,12 +405,12 @@ export default function RatesSettingsPage() {
         ) : (
           <table className="w-full border-collapse text-sm">
             <thead>
-              <tr className="border-surface-divider text-text-muted border-y text-left text-xs font-semibold tracking-wide uppercase">
+              <tr className="border-surface-divider text-text-muted border-y text-left text-xs font-medium">
                 <th className="px-4 py-2.5">Team</th>
-                <th className="hidden px-4 py-2.5 sm:table-cell">Crew</th>
-                <th className="hidden px-4 py-2.5 md:table-cell">Vehicle</th>
-                <th className="px-4 py-2.5 text-right">Price / h</th>
-                <th className="hidden px-4 py-2.5 text-right md:table-cell">Cost / h</th>
+                <th className="hidden px-4 py-2.5 sm:table-cell">Personen</th>
+                <th className="hidden px-4 py-2.5 md:table-cell">Fahrzeug</th>
+                <th className="px-4 py-2.5 text-right">Preis / Std.</th>
+                <th className="hidden px-4 py-2.5 text-right md:table-cell">Kosten / Std.</th>
                 {canEdit && <th className="px-4 py-2.5" />}
               </tr>
             </thead>
@@ -418,7 +419,7 @@ export default function RatesSettingsPage() {
                 <tr key={r.id} className="border-surface-divider border-b last:border-0">
                   <td className="px-4 py-3">
                     <span className="text-text-primary font-medium">{r.name}</span>{" "}
-                    {!r.isActive && <Badge variant="neutral">Inactive</Badge>}
+                    {!r.isActive && <Badge variant="neutral">Inaktiv</Badge>}
                   </td>
                   <td className="text-text-secondary hidden px-4 py-3 sm:table-cell">
                     {r.crewSize}
@@ -438,7 +439,7 @@ export default function RatesSettingsPage() {
                         <Button
                           variant="ghost"
                           size="icon"
-                          aria-label={`Edit ${r.name}`}
+                          aria-label={`${r.name} bearbeiten`}
                           onClick={() => setEditing(toDraft(r))}
                         >
                           <Pencil className="h-4 w-4" />
@@ -446,7 +447,7 @@ export default function RatesSettingsPage() {
                         <Button
                           variant="dangerGhost"
                           size="icon"
-                          aria-label={`Remove ${r.name}`}
+                          aria-label={`${r.name} entfernen`}
                           onClick={() => setRemoving(r)}
                         >
                           <Trash2 className="h-4 w-4" />
@@ -477,9 +478,9 @@ export default function RatesSettingsPage() {
       <ConfirmDialog
         open={removing !== null}
         onOpenChange={(open) => !open && setRemoving(null)}
-        title={`Remove ${removing?.name ?? "rate"}?`}
-        description="Offers that already use this rate keep their prices."
-        confirmLabel="Remove"
+        title={`${removing?.name ?? "Ansatz"} entfernen?`}
+        description="Offerten mit diesem Ansatz behalten ihre Preise."
+        confirmLabel="Entfernen"
         onConfirm={async () => {
           if (!removing) return
           const target = removing
@@ -487,9 +488,9 @@ export default function RatesSettingsPage() {
           try {
             await remove.mutateAsync({ id: target.id })
             await utils.catalog.rateCards.list.invalidate()
-            toast.success("Rate removed")
+            toast.success("Ansatz entfernt")
           } catch (err) {
-            toast.error(err instanceof Error ? err.message : "Failed to remove rate")
+            toast.error(err instanceof Error ? err.message : "Entfernen fehlgeschlagen")
           }
         }}
       />

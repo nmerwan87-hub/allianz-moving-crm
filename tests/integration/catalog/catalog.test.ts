@@ -126,7 +126,7 @@ describeWithDb("Catalog module", () => {
       const viewer = await callerFor(viewerA)
       expect(await viewer.catalog.services.list()).toHaveLength(19)
       await expect(viewer.catalog.services.create({ ...SERVICE, name: "Nope" })).rejects.toThrow(
-        /Missing permission: settings.services/,
+        /Fehlendes Recht: settings.services/,
       )
     })
 
@@ -136,7 +136,7 @@ describeWithDb("Catalog module", () => {
 
       await expect(
         owner.catalog.services.create({ ...SERVICE, name: "aquarium-transport" }),
-      ).rejects.toThrow(/already exists/)
+      ).rejects.toThrow(/gibt es schon/)
 
       const created = (await owner.catalog.services.list()).find((s) => s.id === id)
       expect(created).toMatchObject({
@@ -164,7 +164,7 @@ describeWithDb("Catalog module", () => {
 
       await expect(
         owner.catalog.services.reorder({ category: "Spezialleistungen", orderedIds: [customId] }),
-      ).rejects.toThrow(/every service of the category/)
+      ).rejects.toThrow(/jede Leistung der Kategorie/)
 
       await owner.catalog.services.reorder({ category: "Spezialleistungen", orderedIds: reversed })
       const after = (await owner.catalog.services.list())
@@ -176,7 +176,7 @@ describeWithDb("Catalog module", () => {
     it("refuses to remove standard services", async () => {
       const standard = (await owner.catalog.services.list()).find((s) => s.isSystemDefault)!
       await expect(owner.catalog.services.remove({ id: standard.id })).rejects.toThrow(
-        /cannot be removed/,
+        /können nicht entfernt werden/,
       )
     })
 
@@ -247,7 +247,7 @@ describeWithDb("Catalog module", () => {
           hourlyCostCents: 0,
           isActive: true,
         }),
-      ).rejects.toThrow(/Rate not found/)
+      ).rejects.toThrow(/Ansatz nicht gefunden/)
 
       await owner.catalog.rateCards.remove({ id })
       expect(await owner.catalog.rateCards.list()).toEqual([])
@@ -278,7 +278,7 @@ describeWithDb("Catalog module", () => {
 
       const viewer = await callerFor(viewerA)
       await expect(viewer.catalog.pricingSettings.update(settings)).rejects.toThrow(
-        /Missing permission/,
+        /Fehlendes Recht/,
       )
     })
   })

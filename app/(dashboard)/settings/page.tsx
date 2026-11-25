@@ -12,29 +12,29 @@ const SECTIONS = [
   {
     href: "/settings/company",
     icon: Building2,
-    title: "Company profile",
-    description: "Name, address, UID / VAT number, bank details, logo and colour.",
+    title: "Firmendaten",
+    description: "Name, Adresse, UID/MWST-Nr., Bankverbindung, Logo und Farbe.",
     permission: "settings.company",
   },
   {
     href: "/settings/services",
     icon: Package,
-    title: "Services",
-    description: "Your service catalog: prices, units and VAT for offers.",
+    title: "Leistungen",
+    description: "Euer Leistungskatalog: Preise, Einheiten und MWST für Offerten.",
     permission: "settings.services",
   },
   {
     href: "/settings/rates",
     icon: Tags,
-    title: "Rates & terms",
-    description: "Hourly team rates, surcharges, deposit, validity and payment terms.",
+    title: "Ansätze und Bedingungen",
+    description: "Stundenansätze der Teams, Zuschläge, Anzahlung, Gültigkeit und Zahlungsfrist.",
     permission: "settings.services",
   },
   {
     href: "/settings/team",
     icon: UsersRound,
-    title: "Team & permissions",
-    description: "Invite office users and decide what they may do.",
+    title: "Team und Rechte",
+    description: "Büro-Mitarbeitende einladen und festlegen, was sie dürfen.",
     permission: "settings.users",
     ownerOnly: true,
   },
@@ -62,12 +62,12 @@ export default function SettingsPage() {
 
   return (
     <div>
-      <PageHeader title="Settings" description="Configure your company in Bivro." />
+      <PageHeader title="Einstellungen" description="Eure Firma in Bivro einrichten." />
       {visible.length === 0 ? (
         <EmptyState
           icon={Building2}
-          title="No settings available"
-          description="Ask the owner of your company for access to settings."
+          title="Keine Einstellungen verfügbar"
+          description="Frag den Inhaber nach Zugriff auf die Einstellungen."
         />
       ) : (
         <div className="grid gap-3 sm:grid-cols-2">

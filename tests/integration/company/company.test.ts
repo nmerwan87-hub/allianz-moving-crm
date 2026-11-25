@@ -106,7 +106,7 @@ describeWithDb("Company module", () => {
     const plain = await callerFor(reader)
     expect((await plain.company.profile()).name).toBe("Muster Umzüge")
     await expect(plain.company.updateProfile(PROFILE)).rejects.toThrow(
-      /Missing permission: settings.company/,
+      /Fehlendes Recht: settings.company/,
     )
   })
 
@@ -121,12 +121,12 @@ describeWithDb("Company module", () => {
     const editor = await callerFor(profileEditor)
     await expect(
       editor.company.updateBank({ bankIban: "CH93 0076 2011 6238 5295 7" }),
-    ).rejects.toThrow(/Missing permission: settings.banking/)
+    ).rejects.toThrow(/Fehlendes Recht: settings.banking/)
 
     const caller = await callerFor(owner)
     await expect(
       caller.company.updateBank({ bankIban: "CH94 0076 2011 6238 5295 7" }),
-    ).rejects.toThrow(/not valid/)
+    ).rejects.toThrow(/ungültig/)
 
     const result = await caller.company.updateBank({
       bankIban: "ch44 3199 9123 0008 8901 2",
@@ -163,7 +163,7 @@ describeWithDb("Company module", () => {
     const caller = await callerFor(owner)
     const svgAsPng = `data:image/png;base64,${Buffer.from("<svg onload=alert(1)>").toString("base64")}`
     await expect(caller.company.uploadLogo({ dataUrl: svgAsPng })).rejects.toThrow(
-      /PNG, JPEG or WebP/,
+      /PNG, JPEG oder WebP/,
     )
   })
 

@@ -14,6 +14,8 @@ import { generateQuoteDocument } from "@/lib/documents/quote-document"
 import { QUOTE_EMAIL_TEXT, formatDocumentDate, type DocumentLanguage } from "@/lib/documents/labels"
 import { sendTenantEmail } from "@/lib/email/tenant"
 import { DocumentEmail } from "@/emails/tenant/document-email"
+import { toRow as customerRow } from "@/modules/customers/router"
+import { createCustomerInput } from "@/modules/customers/schema"
 import {
   createQuoteInput,
   updateQuoteInput,
@@ -30,7 +32,7 @@ import {
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
 const QUOTE_COLUMNS =
-  "id, quote_number, version, status, title, customer_id, lead_id, language, move_type, scheduled_date, date_flexible, origin_address, origin_postal_code, origin_city, origin_floor, origin_has_elevator, dest_address, dest_postal_code, dest_city, dest_floor, dest_has_elevator, distance_km, estimated_hours, subtotal_cents, discount_cents, tax_cents, total_amount_cents, deposit_percent, deposit_amount_cents, cost_cap_cents, customer_notes, internal_notes, expires_at, sent_at, accepted_at, declined_at, declined_reason, created_at, customers(first_name, last_name, company_name, customer_type, email)"
+  "id, quote_number, version, status, title, customer_id, lead_id, language, move_type, scheduled_date, date_flexible, origin_address, origin_postal_code, origin_city, origin_floor, origin_has_elevator, dest_address, dest_postal_code, dest_city, dest_floor, dest_has_elevator, distance_km, estimated_hours, subtotal_cents, discount_cents, tax_cents, total_amount_cents, deposit_percent, deposit_amount_cents, cost_cap_cents, pricing_kind, crew_size, rooms, rate_card_id, customer_notes, internal_notes, expires_at, sent_at, accepted_at, declined_at, declined_reason, created_at, customers(first_name, last_name, company_name, customer_type, email)"
 
 const LINE_COLUMNS =
   "id, service_catalog_id, item_type, name, description, pricing_mode, quantity, unit, unit_price_cents, cost_price_cents, discount_type, discount_value, discount_amount_cents, net_total_cents, vat_rate_percent, vat_amount_cents, gross_total_cents, internal_notes, customer_notes, sort_order"
@@ -99,6 +101,10 @@ function mapQuote(r: Record<string, unknown>, totalCostCents: number | null): Qu
     depositPercent: Number(r["deposit_percent"]),
     depositAmountCents: r["deposit_amount_cents"] as number,
     costCapCents: r["cost_cap_cents"] as number | null,
+    pricingKind: r["pricing_kind"] as Quote["pricingKind"],
+    crewSize: r["crew_size"] as number | null,
+    rooms: n("rooms"),
+    rateCardId: r["rate_card_id"] as string | null,
     customerNotes: r["customer_notes"] as string | null,
     internalNotes: r["internal_notes"] as string | null,
     acceptedAt: r["accepted_at"] as string | null,
@@ -136,8 +142,12 @@ function mapLine(r: Record<string, unknown>, showCost: boolean): QuoteLine {
 
 async function loadQuoteRow(sb: SupabaseClient, id: string): Promise<Record<string, unknown>> {
   const { data, error } = await sb.from("quotes").select(QUOTE_COLUMNS).eq("id", id).maybeSingle()
-  if (error) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Failed to load quote" })
-  if (!data) throw new TRPCError({ code: "NOT_FOUND", message: "Quote not found" })
+  if (error)
+    throw new TRPCError({
+      code: "INTERNAL_SERVER_ERROR",
+      message: "Offerte konnte nicht geladen werden",
+    })
+  if (!data) throw new TRPCError({ code: "NOT_FOUND", message: "Offerte nicht gefunden" })
   return data as unknown as Record<string, unknown>
 }
 
@@ -145,7 +155,8 @@ function requireDraft(row: Record<string, unknown>) {
   if (row["status"] !== "draft") {
     throw new TRPCError({
       code: "BAD_REQUEST",
-      message: "This quote was already sent and cannot be changed. Create a new version instead.",
+      message:
+        "Diese Offerte ist gesendet und kann nicht mehr geändert werden. Erstelle eine neue Version.",
     })
   }
 }
@@ -154,6 +165,60 @@ function addDays(date: Date, days: number): string {
   const d = new Date(date)
   d.setUTCDate(d.getUTCDate() + days)
   return d.toISOString().slice(0, 10)
+}
+
+/**
+ * The customer of a lead: the linked one, or a new customer created from the
+ * lead's contact data and moving-out address (the lead is linked to it).
+ */
+async function customerForLead(ctx: Ctx, leadId: string): Promise<string> {
+  const { data: lead } = await ctx.supabase
+    .from("leads")
+    .select(
+      "id, customer_id, first_name, last_name, email, phone, source, origin_address, origin_postal_code, origin_city",
+    )
+    .eq("id", leadId)
+    .is("deleted_at", null)
+    .maybeSingle()
+  if (!lead) throw new TRPCError({ code: "NOT_FOUND", message: "Anfrage nicht gefunden" })
+  if (lead.customer_id) return lead.customer_id as string
+  if (!(await hasPermission(ctx, "customers.create")))
+    throw new TRPCError({ code: "FORBIDDEN", message: "Fehlendes Recht: customers.create" })
+
+  const parsed = createCustomerInput.safeParse({
+    firstName: lead.first_name,
+    lastName: lead.last_name,
+    email: lead.email ?? "",
+    phone: lead.phone ?? "",
+    source: lead.source ?? null,
+    billingStreet: lead.origin_address ?? "",
+    billingPostalCode: lead.origin_postal_code ?? "",
+    billingCity: lead.origin_city ?? "",
+  })
+  if (!parsed.success)
+    throw new TRPCError({
+      code: "BAD_REQUEST",
+      message: "Die Anfrage braucht Vor- und Nachname, damit ein Kunde erstellt werden kann.",
+    })
+  const { data: customer, error } = await ctx.supabase
+    .from("customers")
+    .insert({ ...customerRow(parsed.data), company_id: ctx.companyId })
+    .select("id")
+    .single()
+  if (error || !customer)
+    throw new TRPCError({
+      code: "INTERNAL_SERVER_ERROR",
+      message: "Kunde konnte nicht erstellt werden",
+    })
+  await ctx.supabase.from("leads").update({ customer_id: customer.id }).eq("id", leadId)
+  await writeActivityLog(ctx, {
+    action: "customer.created",
+    entityType: "customer",
+    entityId: customer.id as string,
+    entityLabel: `${parsed.data.firstName} ${parsed.data.lastName}`,
+    metadata: { from_lead_id: leadId },
+  })
+  return customer.id as string
 }
 
 // ─── Procedures ───────────────────────────────────────────────────────────────
@@ -172,6 +237,7 @@ export const quotesRouter = createTRPCRouter({
 
       if (input.status) query = query.eq("status", input.status)
       if (input.customerId) query = query.eq("customer_id", input.customerId)
+      if (input.leadId) query = query.eq("lead_id", input.leadId)
       const s = sanitizeSearch(input.search)
       if (s) query = query.or(`quote_number.ilike.%${s}%,title.ilike.%${s}%`)
 
@@ -179,7 +245,10 @@ export const quotesRouter = createTRPCRouter({
         .order("created_at", { ascending: false })
         .range(offset, offset + input.pageSize - 1)
       if (error)
-        throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Failed to fetch quotes" })
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: "Offerten konnten nicht geladen werden",
+        })
 
       const total = count ?? 0
       return {
@@ -197,34 +266,45 @@ export const quotesRouter = createTRPCRouter({
       const row = await loadQuoteRow(ctx.supabase, input.id)
       const showCost = await hasPermission(ctx, "quotes.view_cost_price")
 
-      const [{ data: lines }, { data: versions }, { data: documents }, { data: emails }] =
-        await Promise.all([
-          ctx.supabase
-            .from("quote_items")
-            .select(LINE_COLUMNS)
-            .eq("quote_id", input.id)
-            .order("sort_order"),
-          ctx.supabase
-            .from("quotes")
-            .select("id, version, status, sent_at, created_at")
-            .eq("quote_number", row["quote_number"] as string)
-            .is("deleted_at", null)
-            .order("version", { ascending: false }),
-          ctx.supabase
-            .from("documents")
-            .select("id, name, version, generated_at, generation_status")
-            .eq("entity_type", "quote")
-            .eq("entity_id", input.id)
-            .eq("generation_status", "generated")
-            .is("deleted_at", null)
-            .order("created_at", { ascending: false }),
-          ctx.supabase
-            .from("email_logs")
-            .select("id, to_email, status, error_message, created_at")
-            .eq("entity_type", "quote")
-            .eq("entity_id", input.id)
-            .order("created_at", { ascending: false }),
-        ])
+      const [
+        { data: lines },
+        { data: versions },
+        { data: documents },
+        { data: emails },
+        { data: job },
+      ] = await Promise.all([
+        ctx.supabase
+          .from("quote_items")
+          .select(LINE_COLUMNS)
+          .eq("quote_id", input.id)
+          .order("sort_order"),
+        ctx.supabase
+          .from("quotes")
+          .select("id, version, status, sent_at, created_at")
+          .eq("quote_number", row["quote_number"] as string)
+          .is("deleted_at", null)
+          .order("version", { ascending: false }),
+        ctx.supabase
+          .from("documents")
+          .select("id, name, version, generated_at, generation_status")
+          .eq("entity_type", "quote")
+          .eq("entity_id", input.id)
+          .eq("generation_status", "generated")
+          .is("deleted_at", null)
+          .order("created_at", { ascending: false }),
+        ctx.supabase
+          .from("email_logs")
+          .select("id, to_email, status, error_message, created_at")
+          .eq("entity_type", "quote")
+          .eq("entity_id", input.id)
+          .order("created_at", { ascending: false }),
+        ctx.supabase
+          .from("jobs")
+          .select("id, job_number, status, invoices(id, invoice_number, status, deleted_at)")
+          .eq("quote_id", input.id)
+          .is("deleted_at", null)
+          .maybeSingle(),
+      ])
 
       const mappedLines = (lines ?? []).map((l) => mapLine(l as Record<string, unknown>, showCost))
       const totalCost = showCost
@@ -257,6 +337,21 @@ export const quotesRouter = createTRPCRouter({
           error: e.error_message as string | null,
           createdAt: e.created_at as string,
         })),
+        job: job
+          ? {
+              id: job.id as string,
+              jobNumber: job.job_number as string,
+              status: job.status as string,
+              invoice:
+                ((job.invoices as unknown as Array<Record<string, unknown>> | null) ?? [])
+                  .filter((i) => i["status"] !== "void" && !i["deleted_at"])
+                  .map((i) => ({
+                    id: i["id"] as string,
+                    invoiceNumber: i["invoice_number"] as string | null,
+                    status: i["status"] as string,
+                  }))[0] ?? null,
+            }
+          : null,
         permissions: {
           viewCost: showCost,
           applyDiscount: await hasPermission(ctx, "quotes.apply_discount"),
@@ -272,21 +367,22 @@ export const quotesRouter = createTRPCRouter({
     .mutation(async ({ ctx, input }): Promise<{ id: string }> => {
       if (!ctx.companyId) throw new TRPCError({ code: "UNAUTHORIZED" })
       const sb = ctx.supabase
+      const customerId = input.customerId ?? (await customerForLead(ctx, input.leadId!))
 
       const { data: customer } = await sb
         .from("customers")
         .select("id, preferred_language, billing_street, billing_postal_code, billing_city")
-        .eq("id", input.customerId)
+        .eq("id", customerId)
         .is("deleted_at", null)
         .maybeSingle()
-      if (!customer) throw new TRPCError({ code: "NOT_FOUND", message: "Customer not found" })
+      if (!customer) throw new TRPCError({ code: "NOT_FOUND", message: "Kunde nicht gefunden" })
 
       const lead = input.leadId
         ? (
             await sb
               .from("leads")
               .select(
-                "id, move_type, requested_date, date_flexible, origin_address, origin_postal_code, origin_city, origin_floor, origin_has_elevator, dest_address, dest_postal_code, dest_city, dest_floor, dest_has_elevator",
+                "id, move_type, requested_date, date_flexible, rooms, origin_address, origin_postal_code, origin_city, origin_floor, origin_has_elevator, dest_address, dest_postal_code, dest_city, dest_floor, dest_has_elevator",
               )
               .eq("id", input.leadId)
               .is("deleted_at", null)
@@ -294,7 +390,7 @@ export const quotesRouter = createTRPCRouter({
           ).data
         : null
       if (input.leadId && !lead)
-        throw new TRPCError({ code: "NOT_FOUND", message: "Lead not found" })
+        throw new TRPCError({ code: "NOT_FOUND", message: "Anfrage nicht gefunden" })
 
       const { data: settings } = await sb
         .from("company_settings")
@@ -312,7 +408,7 @@ export const quotesRouter = createTRPCRouter({
         .from("quotes")
         .insert({
           company_id: ctx.companyId,
-          customer_id: input.customerId,
+          customer_id: customerId,
           lead_id: lead?.id ?? null,
           created_by: ctx.user.id,
           quote_number: number,
@@ -321,6 +417,7 @@ export const quotesRouter = createTRPCRouter({
           move_type: lead?.move_type ?? "local",
           scheduled_date: lead?.requested_date ?? null,
           date_flexible: lead?.date_flexible ?? false,
+          rooms: lead?.rooms ?? null,
           origin_address: lead?.origin_address ?? customer.billing_street ?? null,
           origin_postal_code: lead?.origin_postal_code ?? customer.billing_postal_code ?? null,
           origin_city: lead?.origin_city ?? customer.billing_city ?? null,
@@ -338,7 +435,10 @@ export const quotesRouter = createTRPCRouter({
         .select("id")
         .single()
       if (error || !data)
-        throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Failed to create quote" })
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: "Offerte konnte nicht erstellt werden",
+        })
 
       await writeActivityLog(ctx, {
         action: "quote.created",
@@ -376,6 +476,10 @@ export const quotesRouter = createTRPCRouter({
           estimated_hours: input.estimatedHours ?? null,
           deposit_percent: input.depositPercent,
           cost_cap_cents: input.costCapCents ?? null,
+          pricing_kind: input.pricingKind,
+          crew_size: input.crewSize ?? null,
+          rooms: input.rooms ?? null,
+          rate_card_id: input.rateCardId ?? null,
           expires_at: input.validUntil,
           customer_notes: textOrNull(input.customerNotes),
           internal_notes: textOrNull(input.internalNotes),
@@ -399,7 +503,7 @@ export const quotesRouter = createTRPCRouter({
       if (discounted && !(await hasPermission(ctx, "quotes.apply_discount"))) {
         throw new TRPCError({
           code: "FORBIDDEN",
-          message: "Missing permission: quotes.apply_discount",
+          message: "Fehlendes Recht: quotes.apply_discount",
         })
       }
 
@@ -474,14 +578,15 @@ export const quotesRouter = createTRPCRouter({
       const quote = mapQuote(row, null)
 
       const problems: string[] = []
-      if (!quote.customerId) problems.push("Choose a customer.")
-      if (quote.totalAmountCents <= 0) problems.push("Add at least one priced line.")
+      if (!quote.customerId) problems.push("Wähle einen Kunden.")
+      if (quote.totalAmountCents <= 0)
+        problems.push("Füge mindestens eine Position mit Preis hinzu.")
       if (quote.costCapCents !== null && quote.totalAmountCents > quote.costCapCents)
-        problems.push("The total exceeds the cost cap. Lower the prices or raise the cap.")
+        problems.push("Das Total liegt über dem Kostendach. Preise senken oder Kostendach erhöhen.")
       if (!quote.expiresAt || quote.expiresAt.slice(0, 10) <= new Date().toISOString().slice(0, 10))
-        problems.push("Set a validity date in the future.")
+        problems.push("Setze ein Gültigkeitsdatum in der Zukunft.")
       const recipient = input.recipientEmail ?? quote.customerEmail
-      if (input.sendEmail && !recipient) problems.push("The customer has no e-mail address.")
+      if (input.sendEmail && !recipient) problems.push("Der Kunde hat keine E-Mail-Adresse.")
       if (problems.length)
         throw new TRPCError({ code: "PRECONDITION_FAILED", message: problems.join(" ") })
 
@@ -524,13 +629,13 @@ export const quotesRouter = createTRPCRouter({
       if (!["sent", "viewed"].includes(row["status"] as string)) {
         throw new TRPCError({
           code: "BAD_REQUEST",
-          message: "Only sent quotes can be e-mailed again.",
+          message: "Nur gesendete Offerten können erneut gesendet werden.",
         })
       }
       const quote = mapQuote(row, null)
       const recipient = input.recipientEmail ?? quote.customerEmail
       if (!recipient)
-        throw new TRPCError({ code: "PRECONDITION_FAILED", message: "No e-mail address." })
+        throw new TRPCError({ code: "PRECONDITION_FAILED", message: "Keine E-Mail-Adresse." })
 
       const svc = createServiceRoleClient()
       const { data: doc } = await svc
@@ -543,13 +648,13 @@ export const quotesRouter = createTRPCRouter({
         .order("created_at", { ascending: false })
         .limit(1)
         .maybeSingle()
-      if (!doc) throw new TRPCError({ code: "NOT_FOUND", message: "Quote document not found." })
+      if (!doc) throw new TRPCError({ code: "NOT_FOUND", message: "Offerten-PDF nicht gefunden." })
 
       const { data: file, error } = await svc.storage
         .from("documents")
         .download(doc.storage_path as string)
       if (error || !file)
-        throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "PDF not available." })
+        throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "PDF nicht verfügbar." })
 
       const result = await emailQuote(ctx, input.id, recipient, input.message ?? null, {
         documentId: doc.id as string,
@@ -608,7 +713,7 @@ export const quotesRouter = createTRPCRouter({
         if (error.code === "23505") {
           throw new TRPCError({
             code: "CONFLICT",
-            message: "A new version of this quote is already in progress.",
+            message: "Für diese Offerte ist schon eine neue Version in Arbeit.",
           })
         }
         throw toWorkflowError(error)
@@ -635,7 +740,7 @@ export const quotesRouter = createTRPCRouter({
         .eq("entity_id", input.id)
         .maybeSingle()
       if (!doc?.storage_path)
-        throw new TRPCError({ code: "NOT_FOUND", message: "Document not found" })
+        throw new TRPCError({ code: "NOT_FOUND", message: "Dokument nicht gefunden" })
 
       const { data, error } = await createServiceRoleClient()
         .storage.from("documents")

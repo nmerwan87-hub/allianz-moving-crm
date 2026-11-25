@@ -6,12 +6,19 @@ export const employmentTypeEnum = z.enum(["full_time", "part_time", "contractor"
 export const absenceKindEnum = z.enum(["vacation", "sick", "other"])
 
 const optionalText = (max: number) => z.string().max(max).nullable().or(z.literal("")).optional()
-const dateString = z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Use YYYY-MM-DD")
+const dateString = z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Format JJJJ-MM-TT")
 
 const employeeFields = {
-  firstName: z.string().trim().min(1, "First name is required").max(100),
-  lastName: z.string().trim().min(1, "Last name is required").max(100),
-  email: z.string().trim().email("Invalid email").max(255).nullable().or(z.literal("")).optional(),
+  firstName: z.string().trim().min(1, "Vorname fehlt").max(100),
+  lastName: z.string().trim().min(1, "Nachname fehlt").max(100),
+  email: z
+    .string()
+    .trim()
+    .email("Ungültige E-Mail-Adresse")
+    .max(255)
+    .nullable()
+    .or(z.literal(""))
+    .optional(),
   phone: optionalText(50),
   role: employeeRoleEnum,
   status: employeeStatusEnum.default("active"),
@@ -37,7 +44,7 @@ export const createAbsenceInput = z
   })
   .refine((a) => a.endsOn >= a.startsOn, {
     path: ["endsOn"],
-    message: "End must not be before start",
+    message: "Das Ende darf nicht vor dem Beginn liegen",
   })
 
 export const absenceRangeInput = z.object({ from: dateString, to: dateString })

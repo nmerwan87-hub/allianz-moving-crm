@@ -57,17 +57,17 @@ export function SendDialog({
       await utils.quotes.invalidate()
       if (result.emailDelivered === false) {
         toast.error(
-          "Quote saved as sent — e-mail not delivered",
-          `${("emailError" in result && result.emailError) || "Unknown error"}. Download the PDF and send it yourself.`,
+          "Offerte als gesendet gespeichert — E-Mail nicht zugestellt",
+          `${("emailError" in result && result.emailError) || "Unbekannter Fehler"}. Lade das PDF herunter und sende es selbst.`,
         )
       } else if (result.emailDelivered) {
-        toast.success(`Quote e-mailed to ${email.trim()}`)
+        toast.success(`Offerte an ${email.trim()} gesendet`)
       } else {
-        toast.success("Quote marked as sent")
+        toast.success("Offerte als gesendet markiert")
       }
       onClose()
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Failed to send")
+      toast.error(err instanceof Error ? err.message : "Senden fehlgeschlagen")
     }
   }
 
@@ -76,11 +76,14 @@ export function SendDialog({
       <DialogContent>
         <DialogHeader>
           <DialogTitle>
-            {mode === "resend" ? "E-mail quote again" : `Send quote (${formatChf(totalCents)})`}
+            {mode === "resend"
+              ? "Offerte erneut senden"
+              : `Offerte senden (${formatChf(totalCents)})`}
           </DialogTitle>
           {mode === "send" && (
             <DialogDescription>
-              The quote is frozen and its PDF stored. Later changes need a new version.
+              Die Offerte wird fixiert und als PDF gespeichert. Spätere Änderungen gibt es als neue
+              Version.
             </DialogDescription>
           )}
         </DialogHeader>
@@ -92,14 +95,14 @@ export function SendDialog({
                 checked={byEmail}
                 onChange={(e) => setByEmail(e.target.checked)}
               />
-              Send by e-mail with the PDF attached
+              Per E-Mail mit PDF im Anhang senden
             </label>
           )}
           {byEmail && (
             <>
               <div>
                 <FieldLabel htmlFor="send-email" required>
-                  To
+                  An
                 </FieldLabel>
                 <Input
                   id="send-email"
@@ -109,24 +112,24 @@ export function SendDialog({
                 />
               </div>
               <div>
-                <FieldLabel htmlFor="send-message">Personal message</FieldLabel>
+                <FieldLabel htmlFor="send-message">Persönliche Nachricht</FieldLabel>
                 <Textarea
                   id="send-message"
                   rows={3}
                   value={message}
                   onChange={(e) => setMessage(e.target.value)}
                 />
-                <FieldHint>Added to the standard text in the customer&apos;s language.</FieldHint>
+                <FieldHint>Wird zum Standardtext in der Sprache des Kunden hinzugefügt.</FieldHint>
               </div>
             </>
           )}
         </div>
         <DialogFooter>
           <Button variant="secondary" onClick={onClose} disabled={pending}>
-            Cancel
+            Abbrechen
           </Button>
           <Button onClick={submit} disabled={pending || (byEmail && !email.includes("@"))}>
-            {pending ? "Sending..." : byEmail ? "Send e-mail" : "Mark as sent"}
+            {pending ? "Wird gesendet …" : byEmail ? "E-Mail senden" : "Als gesendet markieren"}
           </Button>
         </DialogFooter>
       </DialogContent>

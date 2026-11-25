@@ -131,56 +131,52 @@ function ProfileCard({ profile, canEdit }: { profile: CompanyProfile; canEdit: b
       await update.mutateAsync(parsed.data)
       await Promise.all([utils.company.profile.invalidate(), utils.iam.session.me.invalidate()])
       setDirty(false)
-      toast.success("Company profile saved")
+      toast.success("Firmendaten gespeichert")
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Failed to save profile")
+      toast.error(err instanceof Error ? err.message : "Speichern fehlgeschlagen")
     }
   }
 
   return (
     <Card>
-      <CardHeader>Company</CardHeader>
+      <CardHeader>Firma</CardHeader>
       <CardContent className="space-y-6">
         <div className="grid gap-4 sm:grid-cols-2">
           <TextField
             {...field("name")}
-            label="Display name"
+            label="Anzeigename"
             required
-            hint="Shown in Bivro and on e-mails"
+            hint="In Bivro und in E-Mails"
           />
           <TextField
             {...field("legalName")}
-            label="Legal name"
+            label="Rechtlicher Name"
             required
-            hint="As in the commercial register, e.g. Muster Umzüge GmbH"
+            hint="Wie im Handelsregister, z. B. Muster Umzüge GmbH"
           />
-          <TextField
-            {...field("vatNumber")}
-            label="UID / VAT number"
-            placeholder="CHE-123.456.789"
-          />
+          <TextField {...field("vatNumber")} label="UID / MWST-Nr." placeholder="CHE-123.456.789" />
           <TextField
             {...field("registrationNumber")}
-            label="Commercial register number"
+            label="Handelsregister-Nr."
             placeholder="CH-020.4.012.345-6"
           />
         </div>
 
         <div className="grid gap-4 sm:grid-cols-6">
           <div className="sm:col-span-6">
-            <TextField {...field("addressLine1")} label="Street and number" />
+            <TextField {...field("addressLine1")} label="Strasse und Nr." />
           </div>
           <div className="sm:col-span-6">
-            <TextField {...field("addressLine2")} label="Address line 2" />
+            <TextField {...field("addressLine2")} label="Adresszusatz" />
           </div>
           <div className="sm:col-span-2">
-            <TextField {...field("postalCode")} label="Postal code" />
+            <TextField {...field("postalCode")} label="PLZ" />
           </div>
           <div className="sm:col-span-3">
-            <TextField {...field("city")} label="City" />
+            <TextField {...field("city")} label="Ort" />
           </div>
           <div className="sm:col-span-1">
-            <FieldLabel htmlFor="company-country">Country</FieldLabel>
+            <FieldLabel htmlFor="company-country">Land</FieldLabel>
             <Select
               id="company-country"
               value={form.country}
@@ -197,14 +193,14 @@ function ProfileCard({ profile, canEdit }: { profile: CompanyProfile; canEdit: b
         </div>
 
         <div className="grid gap-4 sm:grid-cols-3">
-          <TextField {...field("email")} label="E-mail" />
-          <TextField {...field("phone")} label="Phone" />
-          <TextField {...field("website")} label="Website" placeholder="www.example.ch" />
+          <TextField {...field("email")} label="E-Mail" />
+          <TextField {...field("phone")} label="Telefon" />
+          <TextField {...field("website")} label="Website" placeholder="www.muster-umzuege.ch" />
         </div>
 
         <div className="border-surface-divider flex flex-wrap items-end gap-4 border-t pt-4">
           <div>
-            <FieldLabel htmlFor="company-accent">Brand colour</FieldLabel>
+            <FieldLabel htmlFor="company-accent">Firmenfarbe</FieldLabel>
             <div className="flex items-center gap-2">
               <input
                 id="company-accent"
@@ -215,7 +211,7 @@ function ProfileCard({ profile, canEdit }: { profile: CompanyProfile; canEdit: b
                 className="border-surface-divider h-9 w-12 cursor-pointer rounded-[var(--radius-md)] border"
               />
               <Input
-                aria-label="Brand colour hex"
+                aria-label="Firmenfarbe als Hex-Wert"
                 className="w-28"
                 value={form.accentColor}
                 placeholder="#4F46E5"
@@ -225,14 +221,14 @@ function ProfileCard({ profile, canEdit }: { profile: CompanyProfile; canEdit: b
               />
             </div>
             <FieldError message={errors["accentColor"]} />
-            <FieldHint>Used on offers and invoices</FieldHint>
+            <FieldHint>Auf Offerten und Rechnungen</FieldHint>
           </div>
         </div>
 
         {canEdit && (
           <div className="flex justify-end">
             <Button onClick={save} disabled={!dirty || update.isPending}>
-              {update.isPending ? "Saving..." : "Save profile"}
+              {update.isPending ? "Speichern …" : "Firmendaten speichern"}
             </Button>
           </div>
         )}
@@ -254,15 +250,15 @@ function LogoCard({ profile, canEdit }: { profile: CompanyProfile; canEdit: bool
 
   function onFile(file: File | undefined) {
     if (!file) return
-    if (file.size > 1024 * 1024) return toast.error("Logo must be 1 MB or smaller")
+    if (file.size > 1024 * 1024) return toast.error("Das Logo darf höchstens 1 MB gross sein")
     const reader = new FileReader()
     reader.onload = async () => {
       try {
         await upload.mutateAsync({ dataUrl: String(reader.result) })
         await refresh()
-        toast.success("Logo updated")
+        toast.success("Logo gespeichert")
       } catch (err) {
-        toast.error(err instanceof Error ? err.message : "Upload failed")
+        toast.error(err instanceof Error ? err.message : "Hochladen fehlgeschlagen")
       }
     }
     reader.readAsDataURL(file)
@@ -288,7 +284,7 @@ function LogoCard({ profile, canEdit }: { profile: CompanyProfile; canEdit: bool
         )}
         <div className="space-y-2">
           <p className="text-text-secondary text-sm">
-            PNG, JPEG or WebP, up to 1 MB. Square logos work best.
+            PNG, JPEG oder WebP, bis 1 MB. Quadratische Logos wirken am besten.
           </p>
           {canEdit && (
             <div className="flex gap-2">
@@ -309,7 +305,7 @@ function LogoCard({ profile, canEdit }: { profile: CompanyProfile; canEdit: bool
                 disabled={upload.isPending}
               >
                 <ImageUp className="h-4 w-4" />
-                {upload.isPending ? "Uploading..." : "Upload logo"}
+                {upload.isPending ? "Wird hochgeladen …" : "Logo hochladen"}
               </Button>
               {profile.logoUrl && (
                 <Button
@@ -319,11 +315,11 @@ function LogoCard({ profile, canEdit }: { profile: CompanyProfile; canEdit: bool
                   onClick={async () => {
                     await remove.mutateAsync()
                     await refresh()
-                    toast.success("Logo removed")
+                    toast.success("Logo entfernt")
                   }}
                 >
                   <Trash2 className="h-4 w-4" />
-                  Remove
+                  Entfernen
                 </Button>
               )}
             </div>
@@ -357,18 +353,20 @@ function BankCard({ profile, canEdit }: { profile: CompanyProfile; canEdit: bool
       const result = await update.mutateAsync(form)
       await utils.company.profile.invalidate()
       setDirty(false)
-      toast.success(result.isQrIban ? "Bank details saved (QR-IBAN)" : "Bank details saved")
+      toast.success(
+        result.isQrIban ? "Bankverbindung gespeichert (QR-IBAN)" : "Bankverbindung gespeichert",
+      )
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Failed to save bank details")
+      toast.error(err instanceof Error ? err.message : "Speichern fehlgeschlagen")
     }
   }
 
   return (
     <Card>
-      <CardHeader>Bank details</CardHeader>
+      <CardHeader>Bankverbindung</CardHeader>
       <CardContent className="space-y-4">
         <p className="text-text-secondary text-sm">
-          Printed on invoices and used for the Swiss QR-bill.
+          Steht auf Rechnungen und wird für den QR-Zahlteil verwendet.
         </p>
         <div className="grid gap-4 sm:grid-cols-2">
           <div className="sm:col-span-2">
@@ -386,7 +384,7 @@ function BankCard({ profile, canEdit }: { profile: CompanyProfile; canEdit: bool
             </div>
           </div>
           <div>
-            <FieldLabel htmlFor="bank-payee">Account holder</FieldLabel>
+            <FieldLabel htmlFor="bank-payee">Kontoinhaber</FieldLabel>
             <Input
               id="bank-payee"
               value={form.bankPayeeName}
@@ -416,13 +414,11 @@ function BankCard({ profile, canEdit }: { profile: CompanyProfile; canEdit: bool
         {canEdit && (
           <div className="flex justify-end">
             <Button onClick={save} disabled={!dirty || update.isPending}>
-              {update.isPending ? "Saving..." : "Save bank details"}
+              {update.isPending ? "Speichern …" : "Bankverbindung speichern"}
             </Button>
           </div>
         )}
-        {!canEdit && (
-          <FieldHint>Changing bank details requires the “Banking” permission.</FieldHint>
-        )}
+        {!canEdit && <FieldHint>Für Änderungen braucht es das Recht «Bankverbindung».</FieldHint>}
       </CardContent>
     </Card>
   )
@@ -436,8 +432,8 @@ export default function CompanySettingsPage() {
   return (
     <div className="space-y-6">
       <PageHeader
-        title="Company profile"
-        description="Your company details as they appear on offers, invoices and e-mails."
+        title="Firmendaten"
+        description="So erscheint eure Firma auf Offerten, Rechnungen und E-Mails."
       />
       {profile.data ? (
         <>

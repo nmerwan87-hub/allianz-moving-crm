@@ -56,8 +56,8 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     return (
       <div className="flex min-h-screen items-center justify-center p-6">
         <ErrorState
-          title="Unable to load your workspace"
-          message="There was a problem loading your session. Please try signing in again."
+          title="Arbeitsbereich konnte nicht geladen werden"
+          message="Deine Sitzung konnte nicht geladen werden. Melde dich bitte neu an."
         />
       </div>
     )

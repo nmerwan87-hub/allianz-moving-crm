@@ -95,7 +95,7 @@ export const permissionGroupsRouter = createTRPCRouter({
         if (error?.code === "23505") {
           throw new TRPCError({
             code: "CONFLICT",
-            message: "A group with this name already exists.",
+            message: "Eine Gruppe mit diesem Namen gibt es schon.",
           })
         }
         throw new TRPCError({ code: "INTERNAL_SERVER_ERROR" })
@@ -165,7 +165,7 @@ export const permissionGroupsRouter = createTRPCRouter({
         if (error.code === "23505") {
           throw new TRPCError({
             code: "CONFLICT",
-            message: "A group with this name already exists.",
+            message: "Eine Gruppe mit diesem Namen gibt es schon.",
           })
         }
         throw new TRPCError({ code: "INTERNAL_SERVER_ERROR" })

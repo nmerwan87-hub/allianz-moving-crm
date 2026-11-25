@@ -1,12 +1,12 @@
 export const QUOTE_STATUS_LABELS: Record<string, string> = {
-  draft: "Draft",
-  sent: "Sent",
-  viewed: "Viewed",
-  accepted: "Accepted",
-  declined: "Declined",
-  expired: "Expired",
-  cancelled: "Cancelled",
-  superseded: "Replaced",
+  draft: "Entwurf",
+  sent: "Gesendet",
+  viewed: "Angesehen",
+  accepted: "Angenommen",
+  declined: "Abgelehnt",
+  expired: "Abgelaufen",
+  cancelled: "Verworfen",
+  superseded: "Ersetzt",
 }
 
 export const QUOTE_STATUS_BADGE: Record<
@@ -24,18 +24,26 @@ export const QUOTE_STATUS_BADGE: Record<
 }
 
 export const PRICING_MODE_LABELS: Record<string, string> = {
-  fixed: "Fixed",
-  hourly: "Per hour",
-  quantity: "Per unit",
-  distance: "Per km",
-  manual: "Amount",
+  fixed: "Pauschal",
+  hourly: "Pro Stunde",
+  quantity: "Pro Stück",
+  distance: "Pro km",
+  manual: "Betrag",
 }
 
 export const LANGUAGE_LABELS: Record<string, string> = {
-  de: "German",
-  fr: "French",
-  it: "Italian",
-  en: "English",
+  de: "Deutsch",
+  fr: "Französisch",
+  it: "Italienisch",
+  en: "Englisch",
+}
+
+export const MOVE_TYPE_LABELS: Record<string, string> = {
+  local: "Privatumzug",
+  long_distance: "Fernumzug",
+  commercial: "Firmenumzug",
+  international: "Auslandumzug",
+  junk_removal: "Räumung / Entsorgung",
 }
 
 export function formatDate(value: string | null | undefined): string {

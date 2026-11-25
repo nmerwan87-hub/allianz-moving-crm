@@ -143,6 +143,7 @@ export function InvoiceEditor({
   const [saving, setSaving] = useState(false)
   const [issueOpen, setIssueOpen] = useState(false)
   const [discardOpen, setDiscardOpen] = useState(false)
+  const [expanded, setExpanded] = useState<string | null>(null)
   useUnsavedChangesGuard(dirty)
 
   const readOnly = !permissions.edit
@@ -187,22 +188,23 @@ export function InvoiceEditor({
   async function save(): Promise<boolean> {
     const problems: string[] = []
     const terms = Math.trunc(num(header.paymentTermsDays))
-    if (!(terms >= 0 && terms <= 365)) problems.push("Payment terms: 0 to 365 days.")
+    if (!(terms >= 0 && terms <= 365)) problems.push("Zahlungsfrist: 0 bis 365 Tage.")
     const payload = lines.map((l, i) => {
       const quantity = l.pricingMode === "manual" ? 1 : num(l.quantity)
       const price = parseToCents(l.price)
-      if (!l.name.trim()) problems.push(`Line ${i + 1}: name is missing.`)
-      if (!(quantity > 0)) problems.push(`Line ${i + 1}: quantity must be greater than zero.`)
-      if (price === null) problems.push(`Line ${i + 1}: enter a price like 150 or 1'250.50.`)
+      if (!l.name.trim()) problems.push(`Position ${i + 1}: Name fehlt.`)
+      if (!(quantity > 0)) problems.push(`Position ${i + 1}: Menge muss grösser als null sein.`)
+      if (price === null)
+        problems.push(`Position ${i + 1}: Preis eingeben, z. B. 150 oder 1'250.50.`)
       const vat = num(l.vat)
-      if (!(vat >= 0 && vat <= 100)) problems.push(`Line ${i + 1}: VAT must be between 0 and 100.`)
+      if (!(vat >= 0 && vat <= 100)) problems.push(`Position ${i + 1}: MWST zwischen 0 und 100.`)
       const discountValue = l.discountType
         ? l.discountType === "fixed"
           ? (parseToCents(l.discountValue) ?? NaN) / 100
           : num(l.discountValue)
         : null
       if (l.discountType && !(Number(discountValue) >= 0))
-        problems.push(`Line ${i + 1}: check the discount.`)
+        problems.push(`Position ${i + 1}: Rabatt prüfen.`)
       return {
         quoteItemId: l.quoteItemId,
         serviceCatalogId: l.serviceCatalogId,
@@ -239,7 +241,7 @@ export function InvoiceEditor({
       setDirty(false)
       return true
     } catch (err) {
-      setErrors([err instanceof Error ? err.message : "Failed to save"])
+      setErrors([err instanceof Error ? err.message : "Speichern fehlgeschlagen"])
       return false
     } finally {
       setSaving(false)
@@ -260,15 +262,15 @@ export function InvoiceEditor({
   })
 
   return (
-    <div className="grid gap-6 xl:grid-cols-[1fr_320px]">
+    <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_280px]">
       <div className="min-w-0 space-y-6">
         {missingPaymentData.length > 0 && (
           <div className="border-warning-600/40 bg-warning-100 text-warning-700 flex gap-2 rounded-[var(--radius-md)] border p-3 text-sm">
             <AlertTriangle className="h-4 w-4 shrink-0" />
             <span>
-              The QR-bill needs your company&apos;s {missingPaymentData.join(", ")}.{" "}
+              Für die QR-Rechnung fehlen in den Firmendaten: {missingPaymentData.join(", ")}.{" "}
               <Link href="/settings/company" className="font-medium underline">
-                Complete company settings
+                Firmendaten ergänzen
               </Link>
             </span>
           </div>
@@ -276,16 +278,16 @@ export function InvoiceEditor({
 
         <Card className="overflow-hidden p-0">
           <div className="flex flex-wrap items-center justify-between gap-2 pr-4">
-            <CardHeader>Services (actual)</CardHeader>
+            <CardHeader>Leistungen</CardHeader>
             {!readOnly && (
               <div className="flex flex-wrap gap-2 py-2 pl-4">
                 <Select
-                  aria-label="Add extra service from catalog"
+                  aria-label="Zusatzleistung aus Katalog hinzufügen"
                   className="h-8 w-48 text-xs"
                   value=""
                   onChange={(e) => addFromService(e.target.value)}
                 >
-                  <option value="">+ Extra from catalog…</option>
+                  <option value="">+ Zusatz aus Katalog …</option>
                   {(services.data ?? [])
                     .filter((s) => s.isActive)
                     .map((s) => (
@@ -316,7 +318,7 @@ export function InvoiceEditor({
                   }
                 >
                   <Plus className="h-4 w-4" />
-                  Custom line
+                  Eigene Position
                 </Button>
               </div>
             )}
@@ -324,7 +326,8 @@ export function InvoiceEditor({
 
           {lines.length === 0 ? (
             <p className="text-text-muted border-surface-divider border-t px-4 py-6 text-sm">
-              No lines yet. This job has no accepted quote — add the services performed.
+              Noch keine Positionen. Dieser Auftrag hat keine angenommene Offerte — erfasse die
+              erbrachten Leistungen.
             </p>
           ) : (
             <ul className="divide-surface-divider border-surface-divider divide-y border-t">
@@ -335,31 +338,25 @@ export function InvoiceEditor({
                   l.pricingMode !== "manual" &&
                   num(l.quantity) !== l.quotedQuantity
                 return (
-                  <li key={l.key} className="grid gap-2 px-4 py-3">
-                    <div className="flex items-start gap-2">
-                      <span className="text-text-muted w-5 pt-2 text-xs">{index + 1}</span>
-                      <div className="flex-1 space-y-1.5">
-                        <Input
-                          aria-label={`Line ${index + 1} name`}
-                          value={l.name}
-                          disabled={readOnly}
-                          placeholder="Service"
-                          onChange={(e) => setLine(l.key, { name: e.target.value })}
-                        />
-                        <Input
-                          aria-label={`Line ${index + 1} description`}
-                          value={l.description}
-                          disabled={readOnly}
-                          placeholder="Description on the invoice (optional)"
-                          className="h-8 text-xs"
-                          onChange={(e) => setLine(l.key, { description: e.target.value })}
-                        />
-                      </div>
+                  <li key={l.key} className="px-4 py-3">
+                    <div className="flex items-center gap-2">
+                      <span className="text-text-muted w-5 shrink-0 text-xs">{index + 1}</span>
+                      <Input
+                        aria-label={`Position ${index + 1} Name`}
+                        value={l.name}
+                        disabled={readOnly}
+                        placeholder="Leistung"
+                        className="flex-1"
+                        onChange={(e) => setLine(l.key, { name: e.target.value })}
+                      />
+                      <span className="text-text-primary w-28 shrink-0 text-right text-sm font-semibold tabular-nums">
+                        {formatCents(result.netCents)}
+                      </span>
                       {!readOnly && (
                         <Button
-                          variant="dangerGhost"
+                          variant="ghost"
                           size="icon"
-                          aria-label={`Remove line ${index + 1}`}
+                          aria-label={`Position ${index + 1} entfernen`}
                           onClick={() => {
                             setLines((ls) => ls.filter((x) => x.key !== l.key))
                             setDirty(true)
@@ -369,102 +366,144 @@ export function InvoiceEditor({
                         </Button>
                       )}
                     </div>
-                    <div className="grid grid-cols-2 gap-2 pl-7 md:grid-cols-12">
-                      <Select
-                        aria-label={`Line ${index + 1} pricing`}
-                        className="md:col-span-2"
-                        value={l.pricingMode}
-                        disabled={readOnly}
-                        onChange={(e) =>
-                          setLine(l.key, { pricingMode: e.target.value as PricingMode })
-                        }
-                      >
-                        {Object.entries(PRICING_MODE_LABELS).map(([v, label]) => (
-                          <option key={v} value={v}>
-                            {label}
-                          </option>
-                        ))}
-                      </Select>
+                    <div className="mt-2 flex flex-wrap items-center gap-2 pl-7 text-sm">
                       {l.pricingMode !== "manual" ? (
-                        <div className="md:col-span-3">
-                          <div className="flex gap-1">
-                            <Input
-                              aria-label={`Line ${index + 1} quantity`}
-                              inputMode="decimal"
-                              value={l.quantity}
-                              disabled={readOnly}
-                              onChange={(e) => setLine(l.key, { quantity: e.target.value })}
-                            />
-                            <Input
-                              aria-label={`Line ${index + 1} unit`}
-                              value={l.unit}
-                              disabled={readOnly}
-                              placeholder="Unit"
-                              className="w-20"
-                              onChange={(e) => setLine(l.key, { unit: e.target.value })}
-                            />
-                          </div>
-                          {l.quotedQuantity !== null && (
-                            <p
-                              className={`mt-0.5 text-xs ${changed ? "text-warning-700" : "text-text-muted"}`}
-                            >
-                              Quoted: {l.quotedQuantity} {l.unit}
-                            </p>
-                          )}
-                        </div>
+                        <>
+                          <Input
+                            aria-label={`Position ${index + 1} Menge`}
+                            inputMode="decimal"
+                            value={l.quantity}
+                            disabled={readOnly}
+                            className="h-8 w-20 text-right"
+                            onChange={(e) => setLine(l.key, { quantity: e.target.value })}
+                          />
+                          <Input
+                            aria-label={`Position ${index + 1} Einheit`}
+                            value={l.unit}
+                            disabled={readOnly}
+                            placeholder="Einheit"
+                            className="h-8 w-20"
+                            onChange={(e) => setLine(l.key, { unit: e.target.value })}
+                          />
+                          <span className="text-text-muted">× CHF</span>
+                          <Input
+                            aria-label={`Position ${index + 1} Preis`}
+                            inputMode="decimal"
+                            value={l.price}
+                            disabled={readOnly}
+                            className="h-8 w-28 text-right"
+                            onChange={(e) => setLine(l.key, { price: e.target.value })}
+                          />
+                        </>
                       ) : (
-                        <div className="md:col-span-3" />
+                        <>
+                          <span className="text-text-muted">Betrag CHF</span>
+                          <Input
+                            aria-label={`Position ${index + 1} Preis`}
+                            inputMode="decimal"
+                            value={l.price}
+                            disabled={readOnly}
+                            className="h-8 w-28 text-right"
+                            onChange={(e) => setLine(l.key, { price: e.target.value })}
+                          />
+                        </>
                       )}
-                      <Input
-                        aria-label={`Line ${index + 1} price`}
-                        className="md:col-span-2"
-                        inputMode="decimal"
-                        value={l.price}
-                        disabled={readOnly}
-                        placeholder={l.pricingMode === "manual" ? "Amount CHF" : "Price CHF"}
-                        onChange={(e) => setLine(l.key, { price: e.target.value })}
-                      />
-                      <div className="flex gap-1 md:col-span-2">
-                        <Select
-                          aria-label={`Line ${index + 1} discount type`}
-                          value={l.discountType}
-                          disabled={readOnly || !permissions.applyDiscount}
-                          className="w-24 shrink-0"
-                          onChange={(e) =>
-                            setLine(l.key, {
-                              discountType: e.target.value as DraftLine["discountType"],
-                            })
+                      {l.quotedQuantity !== null && l.pricingMode !== "manual" && (
+                        <span
+                          className={
+                            changed ? "text-warning-700 text-xs" : "text-text-muted text-xs"
                           }
                         >
-                          <option value="">No discount</option>
-                          <option value="percent">%</option>
-                          <option value="fixed">CHF</option>
-                        </Select>
-                        {l.discountType && (
-                          <Input
-                            aria-label={`Line ${index + 1} discount`}
-                            inputMode="decimal"
-                            value={l.discountValue}
-                            disabled={readOnly || !permissions.applyDiscount}
-                            onChange={(e) => setLine(l.key, { discountValue: e.target.value })}
-                          />
-                        )}
-                      </div>
-                      <div className="flex items-center gap-1 md:col-span-3">
-                        <Input
-                          aria-label={`Line ${index + 1} VAT`}
-                          inputMode="decimal"
-                          value={l.vat}
-                          disabled={readOnly}
-                          className="w-16"
-                          onChange={(e) => setLine(l.key, { vat: e.target.value })}
-                        />
-                        <span className="text-text-muted text-xs">%</span>
-                        <span className="text-text-primary ml-auto text-sm font-medium tabular-nums">
-                          {formatCents(result.netCents)}
+                          offeriert {l.quotedQuantity} {l.unit}
                         </span>
-                      </div>
+                      )}
+                      {result.discountCents > 0 && (
+                        <span className="text-text-muted text-xs">
+                          Rabatt −{formatCents(result.discountCents)}
+                        </span>
+                      )}
+                      <button
+                        type="button"
+                        className="text-signal-600 ml-auto text-xs hover:underline"
+                        onClick={() => setExpanded((k) => (k === l.key ? null : l.key))}
+                      >
+                        {expanded === l.key ? "Weniger" : "Details"}
+                      </button>
                     </div>
+                    {expanded !== l.key && l.description && (
+                      <p className="text-text-muted mt-1 pl-7 text-xs">{l.description}</p>
+                    )}
+                    {expanded === l.key && (
+                      <div className="bg-surface-sunken mt-2 ml-7 grid gap-2 rounded-[var(--radius-md)] p-3 sm:grid-cols-3">
+                        <div className="sm:col-span-3">
+                          <FieldLabel htmlFor={`${l.key}-desc`}>
+                            Beschreibung auf der Rechnung
+                          </FieldLabel>
+                          <Input
+                            id={`${l.key}-desc`}
+                            value={l.description}
+                            disabled={readOnly}
+                            onChange={(e) => setLine(l.key, { description: e.target.value })}
+                          />
+                        </div>
+                        <div>
+                          <FieldLabel htmlFor={`${l.key}-mode`}>Preisart</FieldLabel>
+                          <Select
+                            id={`${l.key}-mode`}
+                            value={l.pricingMode}
+                            disabled={readOnly}
+                            onChange={(e) =>
+                              setLine(l.key, { pricingMode: e.target.value as PricingMode })
+                            }
+                          >
+                            {Object.entries(PRICING_MODE_LABELS).map(([v, label]) => (
+                              <option key={v} value={v}>
+                                {label}
+                              </option>
+                            ))}
+                          </Select>
+                        </div>
+                        <div>
+                          <FieldLabel htmlFor={`${l.key}-disc`}>Rabatt</FieldLabel>
+                          <div className="flex gap-1">
+                            <Select
+                              id={`${l.key}-disc`}
+                              value={l.discountType}
+                              disabled={readOnly || !permissions.applyDiscount}
+                              className="w-24 shrink-0"
+                              onChange={(e) =>
+                                setLine(l.key, {
+                                  discountType: e.target.value as DraftLine["discountType"],
+                                })
+                              }
+                            >
+                              <option value="">Keiner</option>
+                              <option value="percent">%</option>
+                              <option value="fixed">CHF</option>
+                            </Select>
+                            {l.discountType && (
+                              <Input
+                                aria-label={`Position ${index + 1} Rabatt`}
+                                inputMode="decimal"
+                                value={l.discountValue}
+                                disabled={readOnly || !permissions.applyDiscount}
+                                onChange={(e) => setLine(l.key, { discountValue: e.target.value })}
+                              />
+                            )}
+                          </div>
+                        </div>
+                        <div>
+                          <FieldLabel htmlFor={`${l.key}-vat`}>MWST %</FieldLabel>
+                          <Input
+                            id={`${l.key}-vat`}
+                            inputMode="decimal"
+                            value={l.vat}
+                            disabled={readOnly}
+                            onChange={(e) => setLine(l.key, { vat: e.target.value })}
+                          />
+                        </div>
+                      </div>
+                    )}
                   </li>
                 )
               })}
@@ -473,14 +512,14 @@ export function InvoiceEditor({
         </Card>
 
         <Card>
-          <CardHeader>Invoice</CardHeader>
+          <CardHeader>Rechnung</CardHeader>
           <CardContent className="grid gap-4 sm:grid-cols-6">
             <div className="sm:col-span-4">
-              <FieldLabel htmlFor="inv-title">Title on the invoice</FieldLabel>
-              <Input placeholder="e.g. Privatumzug 3.5 Zimmer" {...field("title")} />
+              <FieldLabel htmlFor="inv-title">Titel auf der Rechnung</FieldLabel>
+              <Input placeholder="z. B. Privatumzug 3.5 Zimmer" {...field("title")} />
             </div>
             <div className="sm:col-span-2">
-              <FieldLabel htmlFor="inv-language">Language</FieldLabel>
+              <FieldLabel htmlFor="inv-language">Sprache</FieldLabel>
               <Select {...field("language")}>
                 {Object.entries(LANGUAGE_LABELS).map(([v, label]) => (
                   <option key={v} value={v}>
@@ -490,35 +529,35 @@ export function InvoiceEditor({
               </Select>
             </div>
             <div className="sm:col-span-3">
-              <FieldLabel htmlFor="inv-serviceDate">Date of service</FieldLabel>
+              <FieldLabel htmlFor="inv-serviceDate">Leistungsdatum</FieldLabel>
               <Input type="date" {...field("serviceDate")} />
             </div>
             <div className="sm:col-span-3">
-              <FieldLabel htmlFor="inv-paymentTermsDays">Payment terms (days)</FieldLabel>
+              <FieldLabel htmlFor="inv-paymentTermsDays">Zahlungsfrist (Tage)</FieldLabel>
               <Input inputMode="numeric" {...field("paymentTermsDays")} />
             </div>
             <div className="sm:col-span-3">
-              <FieldLabel htmlFor="inv-notes">Notes on the invoice</FieldLabel>
+              <FieldLabel htmlFor="inv-notes">Bemerkung auf der Rechnung</FieldLabel>
               <Textarea rows={3} {...field("notes")} />
             </div>
             <div className="sm:col-span-3">
-              <FieldLabel htmlFor="inv-internalNotes">Internal notes</FieldLabel>
+              <FieldLabel htmlFor="inv-internalNotes">Interne Notiz</FieldLabel>
               <Textarea rows={3} {...field("internalNotes")} />
             </div>
           </CardContent>
         </Card>
       </div>
 
-      <div className="space-y-4 xl:sticky xl:top-4 xl:self-start">
+      <div className="space-y-4 lg:sticky lg:top-4 lg:self-start">
         <Card>
-          <CardHeader>Settlement</CardHeader>
+          <CardHeader>Abrechnung</CardHeader>
           <CardContent className="space-y-2 text-sm">
-            <Row label="Subtotal" value={formatChf(totals.netCents)} />
+            <Row label="Zwischensumme" value={formatChf(totals.netCents)} />
             {totals.discountCents > 0 && (
-              <Row label="incl. discounts" value={`−${formatChf(totals.discountCents)}`} muted />
+              <Row label="inkl. Rabatte" value={`−${formatChf(totals.discountCents)}`} muted />
             )}
             {totals.vatByRate.map((v) => (
-              <Row key={v.rate} label={`VAT ${v.rate}%`} value={formatChf(v.vatCents)} />
+              <Row key={v.rate} label={`MWST ${v.rate} %`} value={formatChf(v.vatCents)} />
             ))}
             <div className="border-text-primary border-t pt-2">
               <Row label="Total" value={formatChf(totals.totalCents)} strong />
@@ -526,20 +565,20 @@ export function InvoiceEditor({
             {invoice.depositAppliedCents > 0 && (
               <>
                 <Row
-                  label="Deposit received"
+                  label="Erhaltene Anzahlung"
                   value={`−${formatChf(invoice.depositAppliedCents)}`}
                   muted
                 />
-                <Row label="Amount due" value={formatChf(amountDue)} strong />
+                <Row label="Zu bezahlen" value={formatChf(amountDue)} strong />
               </>
             )}
             {invoice.costCapCents !== null && (
               <div className="border-surface-divider mt-2 border-t pt-2">
-                <Row label="Cost cap" value={formatChf(invoice.costCapCents)} muted />
+                <Row label="Kostendach" value={formatChf(invoice.costCapCents)} muted />
                 {!overCap && (
                   <p className="text-success-700 text-xs">
-                    Within the cost cap ({formatChf(invoice.costCapCents - totals.totalCents)}{" "}
-                    left).
+                    Unter dem Kostendach (noch {formatChf(invoice.costCapCents - totals.totalCents)}{" "}
+                    Spielraum).
                   </p>
                 )}
               </div>
@@ -548,18 +587,18 @@ export function InvoiceEditor({
               <div className="bg-danger-100 text-danger-700 mt-2 space-y-2 rounded-[var(--radius-md)] p-2 text-xs">
                 <p className="flex gap-2">
                   <AlertTriangle className="h-4 w-4 shrink-0" />
-                  Total exceeds the agreed cost cap by{" "}
-                  {formatChf(totals.totalCents - (invoice.costCapCents ?? 0))}. Lower the lines or
-                  give a reason (e.g. extra work ordered by the customer).
+                  Total liegt {formatChf(totals.totalCents - (invoice.costCapCents ?? 0))} über dem
+                  vereinbarten Kostendach. Positionen anpassen oder Grund angeben (z. B. Mehraufwand
+                  auf Wunsch des Kunden).
                 </p>
                 <Textarea
-                  aria-label="Reason for exceeding the cost cap"
+                  aria-label="Grund für die Überschreitung des Kostendachs"
                   rows={2}
                   disabled={readOnly}
                   value={header.costCapOverrideReason}
                   onChange={(e) => setH("costCapOverrideReason", e.target.value)}
                 />
-                <FieldHint>Recorded in the activity log.</FieldHint>
+                <FieldHint>Wird im Verlauf festgehalten.</FieldHint>
               </div>
             )}
           </CardContent>
@@ -577,7 +616,7 @@ export function InvoiceEditor({
           <div className="flex flex-col gap-2">
             <Button onClick={save} disabled={saving || !dirty}>
               <Save className="h-4 w-4" />
-              {saving ? "Saving..." : dirty ? "Save settlement" : "Saved"}
+              {saving ? "Speichern …" : dirty ? "Abrechnung speichern" : "Gespeichert"}
             </Button>
             <Button
               variant="secondary"
@@ -585,7 +624,7 @@ export function InvoiceEditor({
               disabled={saving || missingPaymentData.length > 0}
             >
               <Eye className="h-4 w-4" />
-              Preview PDF
+              Vorschau PDF
             </Button>
             <Button
               variant="secondary"
@@ -601,15 +640,15 @@ export function InvoiceEditor({
               }}
             >
               <Receipt className="h-4 w-4" />
-              Issue invoice
+              Rechnung ausstellen
             </Button>
             <Button variant="dangerGhost" onClick={() => setDiscardOpen(true)}>
               <X className="h-4 w-4" />
-              Discard draft
+              Entwurf verwerfen
             </Button>
           </div>
         )}
-        {dirty && <Badge variant="warning">Unsaved changes</Badge>}
+        {dirty && <Badge variant="warning">Ungespeicherte Änderungen</Badge>}
       </div>
 
       {issueOpen && (
@@ -625,18 +664,18 @@ export function InvoiceEditor({
       <ConfirmDialog
         open={discardOpen}
         onOpenChange={setDiscardOpen}
-        title="Discard this settlement draft?"
-        description="The job can be settled again afterwards. Nothing was issued yet."
-        confirmLabel="Discard draft"
+        title="Abrechnungsentwurf verwerfen?"
+        description="Der Auftrag kann danach neu abgerechnet werden. Es wurde noch nichts ausgestellt."
+        confirmLabel="Verwerfen"
         onConfirm={async () => {
           try {
             await discardMutation.mutateAsync({ id: invoice.id })
             setDirty(false)
             await Promise.all([utils.invoices.invalidate(), utils.jobs.invalidate()])
-            toast.success("Draft discarded")
+            toast.success("Entwurf verworfen")
             router.push(`/jobs/${invoice.jobId}`)
           } catch (err) {
-            toast.error(err instanceof Error ? err.message : "Failed to discard")
+            toast.error(err instanceof Error ? err.message : "Verwerfen fehlgeschlagen")
           }
         }}
       />

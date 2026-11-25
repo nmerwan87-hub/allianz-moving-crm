@@ -169,8 +169,11 @@ async function loadInvoiceRow(sb: SupabaseClient, id: string): Promise<Record<st
     .is("deleted_at", null)
     .maybeSingle()
   if (error)
-    throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Failed to load invoice" })
-  if (!data) throw new TRPCError({ code: "NOT_FOUND", message: "Invoice not found" })
+    throw new TRPCError({
+      code: "INTERNAL_SERVER_ERROR",
+      message: "Rechnung konnte nicht geladen werden",
+    })
+  if (!data) throw new TRPCError({ code: "NOT_FOUND", message: "Rechnung nicht gefunden" })
   return data as unknown as Record<string, unknown>
 }
 
@@ -178,7 +181,8 @@ function requireDraft(row: Record<string, unknown>) {
   if (row["status"] !== "draft") {
     throw new TRPCError({
       code: "BAD_REQUEST",
-      message: "This invoice was already issued and cannot be changed. Void it and settle again.",
+      message:
+        "Diese Rechnung ist ausgestellt und kann nicht mehr geändert werden. Storniere sie und rechne neu ab.",
     })
   }
 }
@@ -215,7 +219,7 @@ function paidAtFrom(date: string): string {
 
 function paymentError(error: { message?: string; code?: string }): TRPCError {
   if (error.code === "42501")
-    return new TRPCError({ code: "FORBIDDEN", message: "Not allowed to record this payment." })
+    return new TRPCError({ code: "FORBIDDEN", message: "Du darfst diese Zahlung nicht erfassen." })
   return toWorkflowError(error)
 }
 
@@ -249,7 +253,10 @@ export const invoicesRouter = createTRPCRouter({
           .in("status", [...OPEN_STATUSES]),
       ])
       if (error)
-        throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Failed to fetch invoices" })
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: "Rechnungen konnten nicht geladen werden",
+        })
 
       const total = count ?? 0
       return {
@@ -343,7 +350,7 @@ export const invoicesRouter = createTRPCRouter({
         .eq("id", input.jobId)
         .is("deleted_at", null)
         .maybeSingle()
-      if (!job) throw new TRPCError({ code: "NOT_FOUND", message: "Job not found" })
+      if (!job) throw new TRPCError({ code: "NOT_FOUND", message: "Auftrag nicht gefunden" })
 
       const canViewPayments = await hasPermission(ctx, "payments.view")
       const [{ data: invoices }, { data: deposits }] = await Promise.all([
@@ -404,7 +411,10 @@ export const invoicesRouter = createTRPCRouter({
       })
       if (error) {
         if (error.code === "23505")
-          throw new TRPCError({ code: "CONFLICT", message: "This job already has an invoice." })
+          throw new TRPCError({
+            code: "CONFLICT",
+            message: "Dieser Auftrag hat schon eine Rechnung.",
+          })
         throw toWorkflowError(error)
       }
       await writeActivityLog(ctx, {
@@ -446,7 +456,7 @@ export const invoicesRouter = createTRPCRouter({
       if (discounted && !(await hasPermission(ctx, "quotes.apply_discount"))) {
         throw new TRPCError({
           code: "FORBIDDEN",
-          message: "Missing permission: quotes.apply_discount",
+          message: "Fehlendes Recht: quotes.apply_discount",
         })
       }
 
@@ -513,20 +523,23 @@ export const invoicesRouter = createTRPCRouter({
       const invoice = mapInvoice(row)
 
       const problems: string[] = []
-      if (invoice.totalAmountCents <= 0) problems.push("Add at least one priced line.")
+      if (invoice.totalAmountCents <= 0)
+        problems.push("Füge mindestens eine Position mit Preis hinzu.")
       if (
         invoice.costCapCents !== null &&
         invoice.totalAmountCents > invoice.costCapCents &&
         !invoice.costCapOverrideReason
       )
-        problems.push("The total exceeds the cost cap. Lower the lines or give a reason.")
+        problems.push(
+          "Das Total liegt über dem Kostendach. Positionen anpassen oder Grund angeben.",
+        )
       if (invoice.totalAmountCents - invoice.depositAppliedCents < 0)
-        problems.push("The deposits exceed the invoice total.")
+        problems.push("Die Anzahlungen sind höher als das Rechnungstotal.")
       const missing = ctx.companyId ? await missingPaymentData(ctx.companyId) : []
       if (missing.length)
-        problems.push(`Complete the company details for the QR-bill: ${missing.join(", ")}.`)
+        problems.push(`Für die QR-Rechnung fehlen Firmendaten: ${missing.join(", ")}.`)
       const recipient = input.recipientEmail ?? invoice.customerEmail
-      if (input.sendEmail && !recipient) problems.push("The customer has no e-mail address.")
+      if (input.sendEmail && !recipient) problems.push("Der Kunde hat keine E-Mail-Adresse.")
       if (problems.length)
         throw new TRPCError({ code: "PRECONDITION_FAILED", message: problems.join(" ") })
 
@@ -537,7 +550,7 @@ export const invoicesRouter = createTRPCRouter({
       } catch (err) {
         throw new TRPCError({
           code: "PRECONDITION_FAILED",
-          message: `The invoice cannot be created: ${err instanceof Error ? err.message : "invalid data"}`,
+          message: `Die Rechnung kann nicht erstellt werden: ${err instanceof Error ? err.message : "ungültige Daten"}`,
         })
       }
 
@@ -602,7 +615,7 @@ export const invoicesRouter = createTRPCRouter({
     .mutation(async ({ ctx, input }) => {
       const row = await loadInvoiceRow(ctx.supabase, input.id)
       if (row["status"] === "draft")
-        throw new TRPCError({ code: "BAD_REQUEST", message: "Issue the invoice first." })
+        throw new TRPCError({ code: "BAD_REQUEST", message: "Stelle die Rechnung zuerst aus." })
       const svc = createServiceRoleClient()
       const { data: existing } = await svc
         .from("documents")
@@ -614,7 +627,7 @@ export const invoicesRouter = createTRPCRouter({
         .limit(1)
         .maybeSingle()
       if (existing)
-        throw new TRPCError({ code: "BAD_REQUEST", message: "The invoice PDF already exists." })
+        throw new TRPCError({ code: "BAD_REQUEST", message: "Das Rechnungs-PDF existiert schon." })
       const document = await generateInvoiceDocument(svc, input.id, ctx.user.id)
       return { documentId: document.documentId }
     }),
@@ -625,10 +638,13 @@ export const invoicesRouter = createTRPCRouter({
     .mutation(async ({ ctx, input }) => {
       const invoice = mapInvoice(await loadInvoiceRow(ctx.supabase, input.id))
       if (invoice.status === "draft" || invoice.status === "void")
-        throw new TRPCError({ code: "BAD_REQUEST", message: "Only issued invoices can be sent." })
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: "Nur ausgestellte Rechnungen können gesendet werden.",
+        })
       const recipient = input.recipientEmail ?? invoice.customerEmail
       if (!recipient)
-        throw new TRPCError({ code: "PRECONDITION_FAILED", message: "No e-mail address." })
+        throw new TRPCError({ code: "PRECONDITION_FAILED", message: "Keine E-Mail-Adresse." })
 
       const document = await loadStoredDocument(input.id, null)
       const result = await emailInvoice(
@@ -652,22 +668,25 @@ export const invoicesRouter = createTRPCRouter({
     .mutation(async ({ ctx, input }) => {
       const invoice = mapInvoice(await loadInvoiceRow(ctx.supabase, input.id))
       if (!(OPEN_STATUSES as readonly string[]).includes(invoice.status) || !invoice.dueAt)
-        throw new TRPCError({ code: "BAD_REQUEST", message: "Only open invoices get reminders." })
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: "Mahnungen gibt es nur für offene Rechnungen.",
+        })
       if (new Date(invoice.dueAt) > new Date())
         throw new TRPCError({
           code: "PRECONDITION_FAILED",
-          message: "The invoice is not due yet.",
+          message: "Die Rechnung ist noch nicht fällig.",
         })
       if (invoice.reminderLevel >= 3)
         throw new TRPCError({
           code: "PRECONDITION_FAILED",
-          message: "The third reminder was already sent. Decide on debt collection.",
+          message: "Die 3. Mahnung ist schon gesendet. Entscheide über die Betreibung.",
         })
       const recipient = input.recipientEmail ?? invoice.customerEmail
       if (input.sendEmail && !recipient)
         throw new TRPCError({
           code: "PRECONDITION_FAILED",
-          message: "The customer has no e-mail address.",
+          message: "Der Kunde hat keine E-Mail-Adresse.",
         })
 
       const level = (invoice.reminderLevel + 1) as 1 | 2 | 3
@@ -754,7 +773,7 @@ export const invoicesRouter = createTRPCRouter({
         .eq("entity_id", input.id)
         .maybeSingle()
       if (!doc?.storage_path)
-        throw new TRPCError({ code: "NOT_FOUND", message: "Document not found" })
+        throw new TRPCError({ code: "NOT_FOUND", message: "Dokument nicht gefunden" })
 
       const { data, error } = await createServiceRoleClient()
         .storage.from("documents")
@@ -814,7 +833,7 @@ export const invoicesRouter = createTRPCRouter({
         .eq("id", input.jobId)
         .is("deleted_at", null)
         .maybeSingle()
-      if (!job) throw new TRPCError({ code: "NOT_FOUND", message: "Job not found" })
+      if (!job) throw new TRPCError({ code: "NOT_FOUND", message: "Auftrag nicht gefunden" })
 
       const { data, error } = await ctx.supabase
         .from("payments")
@@ -857,7 +876,7 @@ export const invoicesRouter = createTRPCRouter({
         .eq("id", input.id)
         .is("deleted_at", null)
         .maybeSingle()
-      if (!payment) throw new TRPCError({ code: "NOT_FOUND", message: "Payment not found" })
+      if (!payment) throw new TRPCError({ code: "NOT_FOUND", message: "Zahlung nicht gefunden" })
 
       await transitionStatus(ctx.supabase, "payment", input.id, "cancelled", input.reason)
       await writeActivityLog(ctx, {
@@ -891,13 +910,13 @@ async function loadStoredDocument(invoiceId: string, reminderLevel: number | nul
       ? query.is("notes", null)
       : query.eq("notes", `reminder_level=${reminderLevel}`)
   const { data: doc } = await query.order("created_at", { ascending: false }).limit(1).maybeSingle()
-  if (!doc) throw new TRPCError({ code: "NOT_FOUND", message: "Invoice document not found." })
+  if (!doc) throw new TRPCError({ code: "NOT_FOUND", message: "Rechnungs-PDF nicht gefunden." })
 
   const { data: file, error } = await svc.storage
     .from("documents")
     .download(doc.storage_path as string)
   if (error || !file)
-    throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "PDF not available." })
+    throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "PDF nicht verfügbar." })
   return {
     documentId: doc.id as string,
     fileName: doc.name as string,

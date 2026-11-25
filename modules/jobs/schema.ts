@@ -11,8 +11,8 @@ export const jobStatusEnum = z.enum([
 ])
 
 const optionalText = (max: number) => z.string().max(max).nullable().or(z.literal("")).optional()
-const dateString = z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Use YYYY-MM-DD")
-const timeString = z.string().regex(/^\d{2}:\d{2}$/, "Use HH:MM")
+const dateString = z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Format JJJJ-MM-TT")
+const timeString = z.string().regex(/^\d{2}:\d{2}$/, "Format HH:MM")
 
 export const listJobsInput = z.object({
   from: dateString,
@@ -27,12 +27,12 @@ export const createJobInput = z.object({
   startTime: timeString.nullable().optional(),
   durationHours: z.number().positive().max(24).nullable().optional(),
   crewSizeRequired: z.number().int().min(1).max(30).nullable().optional(),
-  originAddress: z.string().trim().min(1, "From address is required").max(200),
+  originAddress: z.string().trim().min(1, "Adresse «Von» fehlt").max(200),
   originPostalCode: optionalText(20),
-  originCity: z.string().trim().min(1, "From city is required").max(100),
-  destAddress: z.string().trim().min(1, "To address is required").max(200),
+  originCity: z.string().trim().min(1, "Ort «Von» fehlt").max(100),
+  destAddress: z.string().trim().min(1, "Adresse «Nach» fehlt").max(200),
   destPostalCode: optionalText(20),
-  destCity: z.string().trim().min(1, "To city is required").max(100),
+  destCity: z.string().trim().min(1, "Ort «Nach» fehlt").max(100),
   specialInstructions: optionalText(3000),
 })
 
@@ -63,6 +63,7 @@ export const transitionJobInput = z.object({
 })
 
 export const idInput = z.object({ id: z.string().uuid() })
+export const customerJobsInput = z.object({ customerId: z.string().uuid() })
 
 export interface ResourceConflict {
   resourceType: "employee" | "vehicle"

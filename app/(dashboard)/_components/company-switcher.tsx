@@ -73,7 +73,7 @@ export function CompanySwitcher({
     },
     onError: (err) => {
       setSwitchingTo(null)
-      toast.error("Could not switch company", err.message)
+      toast.error("Firma konnte nicht gewechselt werden", err.message)
     },
   })
 
@@ -111,7 +111,7 @@ export function CompanySwitcher({
         <DropdownMenuTrigger asChild>
           <button
             className="hover:bg-surface-sunken -mx-2 flex min-w-0 flex-1 items-center gap-2 rounded-[var(--radius-md)] px-2 py-1.5 transition-colors"
-            aria-label={`Active company: ${active.name}. Switch company`}
+            aria-label={`Aktive Firma: ${active.name}. Firma wechseln`}
             disabled={switchingTo !== null}
           >
             {label}
@@ -123,18 +123,18 @@ export function CompanySwitcher({
           </button>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="start" className="w-64">
-          <DropdownMenuLabel>Switch company</DropdownMenuLabel>
+          <DropdownMenuLabel>Firma wechseln</DropdownMenuLabel>
           {companies.map((company) => (
             <DropdownMenuItem key={company.id} onSelect={() => requestSwitch(company)}>
               <CompanyMark company={company} className="h-6 w-6 text-[10px]" />
               <span className="min-w-0 flex-1">
                 <span className="block truncate">{company.name}</span>
                 <span className="text-text-muted block text-xs">
-                  {company.role === "owner" ? "Owner" : "Office"}
+                  {company.role === "owner" ? "Inhaber" : "Büro"}
                 </span>
               </span>
               {company.id === active.id ? (
-                <Check className="text-signal-600 h-4 w-4 shrink-0" aria-label="Active" />
+                <Check className="text-signal-600 h-4 w-4 shrink-0" aria-label="Aktiv" />
               ) : null}
             </DropdownMenuItem>
           ))}
@@ -146,9 +146,9 @@ export function CompanySwitcher({
         onOpenChange={(open) => {
           if (!open) setPending(null)
         }}
-        title="Discard unsaved changes?"
-        description={`You have unsaved changes in ${active.name}. Switching to ${pending?.name ?? "another company"} will discard them.`}
-        confirmLabel="Discard and switch"
+        title="Ungespeicherte Änderungen verwerfen?"
+        description={`Du hast ungespeicherte Änderungen in ${active.name}. Beim Wechsel zu ${pending?.name ?? "einer anderen Firma"} gehen sie verloren.`}
+        confirmLabel="Verwerfen und wechseln"
         variant="danger"
         onConfirm={() => {
           if (pending) startSwitch(pending)

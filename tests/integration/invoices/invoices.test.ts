@@ -250,12 +250,12 @@ describeWithDb("Invoices, payments and reminders", () => {
     expect(detail.invoice.totalAmountCents).toBe(130125)
     expect(detail.invoice.depositAppliedCents).toBeGreaterThan(0)
 
-    await expect(owner.invoices.createFromJob({ jobId })).rejects.toThrow(/already has an invoice/)
+    await expect(owner.invoices.createFromJob({ jobId })).rejects.toThrow(/hat schon eine Rechnung/)
   })
 
   it("refuses to issue without QR-bill data or above the cost cap without a reason", async () => {
     await expect(owner.invoices.issue({ id: firstInvoice, sendEmail: false })).rejects.toThrow(
-      /QR-bill: IBAN/,
+      /QR-Rechnung fehlen Firmendaten: IBAN/,
     )
     await svc
       .from("companies")
@@ -281,7 +281,7 @@ describeWithDb("Invoices, payments and reminders", () => {
     }))
     await clerk.invoices.saveLines({ id: firstInvoice, lines })
     await expect(owner.invoices.issue({ id: firstInvoice, sendEmail: false })).rejects.toThrow(
-      /cost cap/,
+      /Kostendach/,
     )
     // Even past the API, the database refuses
     await expect(
@@ -328,7 +328,7 @@ describeWithDb("Invoices, payments and reminders", () => {
 
   it("freezes an issued invoice", async () => {
     await expect(owner.invoices.saveLines({ id: firstInvoice, lines: [] })).rejects.toThrow(
-      /already issued/,
+      /ausgestellt/,
     )
     await expect(
       svc.from("invoices").update({ title: "Changed" }).eq("id", firstInvoice).throwOnError(),
@@ -358,7 +358,7 @@ describeWithDb("Invoices, payments and reminders", () => {
         method: "bank_transfer",
         paidOn: inDays(0),
       }),
-    ).rejects.toThrow(/exceeds the open balance/)
+    ).rejects.toThrow(/höher als der offene Betrag/)
 
     const partial = await owner.invoices.recordPayment({
       invoiceId: firstInvoice,
@@ -376,10 +376,10 @@ describeWithDb("Invoices, payments and reminders", () => {
         method: "cash",
         paidOn: inDays(0),
       }),
-    ).rejects.toThrow(/already invoiced/)
+    ).rejects.toThrow(/schon verrechnet/)
     // A partly paid invoice cannot be voided (payments first)
     await expect(owner.invoices.void({ id: firstInvoice, reason: "Fehler" })).rejects.toThrow(
-      /not allowed/,
+      /nicht möglich/,
     )
 
     await owner.invoices.cancelPayment({ id: partial.id, reason: "Falsch erfasst" })
@@ -416,7 +416,7 @@ describeWithDb("Invoices, payments and reminders", () => {
   it("turns overdue, asks for a reminder and creates reminder letters", async () => {
     await expect(
       owner.invoices.sendReminder({ id: secondInvoice, sendEmail: false }),
-    ).rejects.toThrow(/not due yet/)
+    ).rejects.toThrow(/noch nicht fällig/)
 
     await svc
       .from("invoices")
@@ -433,7 +433,7 @@ describeWithDb("Invoices, payments and reminders", () => {
       .eq("entity_id", secondInvoice)
       .eq("rule_key", "invoice.overdue")
     expect(tasks).toEqual([expect.objectContaining({ status: "open" })])
-    expect(tasks?.[0]?.title).toMatch(/send reminder 1/)
+    expect(tasks?.[0]?.title).toMatch(/1\. Mahnung senden/)
 
     const reminder = await owner.invoices.sendReminder({
       id: secondInvoice,
@@ -479,7 +479,7 @@ describeWithDb("Invoices, payments and reminders", () => {
 
     await expect(
       owner.invoices.sendReminder({ id: secondInvoice, sendEmail: false }),
-    ).rejects.toThrow(/Only open invoices/)
+    ).rejects.toThrow(/nur für offene Rechnungen/)
   })
 
   it("creates the same payment references in the database and in TypeScript", async () => {
@@ -505,7 +505,9 @@ describeWithDb("Invoices, payments and reminders", () => {
 
   it("isolates companies", async () => {
     const other = await callerFor(ownerB)
-    await expect(other.invoices.get({ id: secondInvoice })).rejects.toThrow(/Invoice not found/)
+    await expect(other.invoices.get({ id: secondInvoice })).rejects.toThrow(
+      /Rechnung nicht gefunden/,
+    )
     await expect(
       other.invoices.recordPayment({
         invoiceId: secondInvoice,
@@ -513,8 +515,8 @@ describeWithDb("Invoices, payments and reminders", () => {
         method: "cash",
         paidOn: inDays(0),
       }),
-    ).rejects.toThrow(/Invoice not found/)
-    await expect(other.invoices.createFromJob({ jobId })).rejects.toThrow(/not found/i)
+    ).rejects.toThrow(/Rechnung nicht gefunden/)
+    await expect(other.invoices.createFromJob({ jobId })).rejects.toThrow(/nicht gefunden/i)
     const list = await other.invoices.list({})
     expect(list.items).toHaveLength(0)
   })

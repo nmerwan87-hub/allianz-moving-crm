@@ -8,25 +8,26 @@
 
 @theme inline {
   /* ─── Surfaces ─────────────────────────────────────────────── */
-  --color-surface-base: #f8f7f5;
+  --color-surface-base: #f6f9fc;
   --color-surface-raised: #ffffff;
   --color-surface-overlay: #ffffff;
-  --color-surface-sunken: #f1f0ee;
-  --color-surface-divider: #e8e6e2;
+  --color-surface-sunken: #eef4fa;
+  --color-surface-divider: #e1e8ef;
 
   /* ─── Brand: Ink palette ───────────────────────────────────── */
-  --color-ink-900: #1e1d2e;
-  --color-ink-700: #3a3852;
-  --color-ink-500: #6b6880;
-  --color-ink-300: #a8a6b8;
-  --color-ink-100: #e9e8ee;
-  --color-ink-50: #f4f3f8;
+  --color-ink-900: #1c2733;
+  --color-ink-700: #33414f;
+  --color-ink-500: #5d6b79;
+  --color-ink-300: #a3afbb;
+  --color-ink-100: #e6edf4;
+  --color-ink-50: #f3f7fb;
 
   /* ─── Signal (interactive) ─────────────────────────────────── */
-  --color-signal-600: #4f46e5;
-  --color-signal-500: #6366f1;
-  --color-signal-400: #818cf8;
-  --color-signal-100: #e0e0ff;
+  --color-signal-700: #1f6aa5;
+  --color-signal-600: #2b80c5;
+  --color-signal-500: #4a9fe0;
+  --color-signal-400: #89c4f0;
+  --color-signal-100: #e3f1fc;
 
   /* ─── Semantic: Success ────────────────────────────────────── */
   --color-success-700: #15803d;
@@ -53,9 +54,9 @@
   --color-ai-100: #ccfbf1;
 
   /* ─── Text hierarchy ───────────────────────────────────────── */
-  --color-text-primary: #1e1d2e;
-  --color-text-secondary: #6b6880;
-  --color-text-muted: #a8a6b8;
+  --color-text-primary: #1c2733;
+  --color-text-secondary: #5d6b79;
+  --color-text-muted: #9aa7b4;
   --color-text-inverse: #ffffff;
 
   /* ─── Typography ───────────────────────────────────────────── */

@@ -22,10 +22,10 @@ export const registrationInput = z.object({
   website: z.string().url().optional().or(z.literal("")),
   vatNumber: z.string().max(50).optional(),
   termsAccepted: z.literal(true, {
-    errorMap: () => ({ message: "You must accept the Terms of Service" }),
+    errorMap: () => ({ message: "Bitte die AGB akzeptieren" }),
   }),
   privacyAccepted: z.literal(true, {
-    errorMap: () => ({ message: "You must accept the Privacy Policy" }),
+    errorMap: () => ({ message: "Bitte die Datenschutzerklärung akzeptieren" }),
   }),
   registrationIp: z.string().optional(),
 })
@@ -82,7 +82,7 @@ export const register = publicProcedure.input(registrationInput).mutation(async 
 
     throw new TRPCError({
       code: "CONFLICT",
-      message: "An account already exists for this email. Please sign in.",
+      message: "Für diese E-Mail gibt es schon ein Konto. Bitte anmelden.",
     })
   }
 
@@ -137,7 +137,7 @@ export const register = publicProcedure.input(registrationInput).mutation(async 
     await svc.auth.admin.deleteUser(authUserId)
     throw new TRPCError({
       code: "INTERNAL_SERVER_ERROR",
-      message: "Failed to create company record",
+      message: "Firma konnte nicht erstellt werden",
     })
   }
 
@@ -157,7 +157,7 @@ export const register = publicProcedure.input(registrationInput).mutation(async 
     await svc.from("companies").delete().eq("id", company.id)
     throw new TRPCError({
       code: "INTERNAL_SERVER_ERROR",
-      message: "Failed to create user profile",
+      message: "Benutzerprofil konnte nicht erstellt werden",
     })
   }
 

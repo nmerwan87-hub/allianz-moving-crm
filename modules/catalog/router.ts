@@ -98,7 +98,7 @@ function requireCompany(companyId: string | undefined): string {
 /** Postgres unique violation on (company_id, lower(name)) → readable message. */
 function duplicateNameError(error: { code?: string } | null): TRPCError | null {
   return error?.code === "23505"
-    ? new TRPCError({ code: "CONFLICT", message: "A service with this name already exists." })
+    ? new TRPCError({ code: "CONFLICT", message: "Eine Leistung mit diesem Namen gibt es schon." })
     : null
 }
 
@@ -111,7 +111,7 @@ async function loadOwnService(companyId: string, id: string): Promise<Service> {
     .eq("company_id", companyId)
     .is("deleted_at", null)
     .maybeSingle()
-  if (!data) throw new TRPCError({ code: "NOT_FOUND", message: "Service not found." })
+  if (!data) throw new TRPCError({ code: "NOT_FOUND", message: "Leistung nicht gefunden." })
   return mapService(data as Record<string, unknown>)
 }
 
@@ -243,7 +243,7 @@ const servicesRouter = createTRPCRouter({
       ) {
         throw new TRPCError({
           code: "BAD_REQUEST",
-          message: "The order must contain every service of the category exactly once.",
+          message: "Die Reihenfolge muss jede Leistung der Kategorie genau einmal enthalten.",
         })
       }
 
@@ -271,7 +271,7 @@ const servicesRouter = createTRPCRouter({
       if (service.isSystemDefault) {
         throw new TRPCError({
           code: "BAD_REQUEST",
-          message: "Standard services cannot be removed. Deactivate it instead.",
+          message: "Standardleistungen können nicht entfernt werden. Deaktiviere sie stattdessen.",
         })
       }
 
@@ -355,7 +355,8 @@ const rateCardsRouter = createTRPCRouter({
         .is("deleted_at", null)
         .select("id")
       if (error) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR" })
-      if (!data?.length) throw new TRPCError({ code: "NOT_FOUND", message: "Rate not found." })
+      if (!data?.length)
+        throw new TRPCError({ code: "NOT_FOUND", message: "Ansatz nicht gefunden." })
 
       await writeActivityLog(ctx, {
         action: "rate_card.updated",
@@ -379,7 +380,8 @@ const rateCardsRouter = createTRPCRouter({
         .is("deleted_at", null)
         .select("name")
       if (error) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR" })
-      if (!data?.length) throw new TRPCError({ code: "NOT_FOUND", message: "Rate not found." })
+      if (!data?.length)
+        throw new TRPCError({ code: "NOT_FOUND", message: "Ansatz nicht gefunden." })
 
       await writeActivityLog(ctx, {
         action: "rate_card.archived",
@@ -418,7 +420,7 @@ const pricingSettingsRouter = createTRPCRouter({
       .select(Object.values(SETTINGS_MAP).join(", "))
       .maybeSingle()
     if (error) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR" })
-    if (!data) throw new TRPCError({ code: "NOT_FOUND", message: "Company settings missing." })
+    if (!data) throw new TRPCError({ code: "NOT_FOUND", message: "Firmeneinstellungen fehlen." })
 
     const row = data as unknown as Record<string, unknown>
     const result = {} as Record<string, unknown>

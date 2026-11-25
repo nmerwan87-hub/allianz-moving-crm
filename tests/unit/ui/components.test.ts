@@ -5,7 +5,7 @@ import { badgeVariants } from "@/app/(dashboard)/_components/ui/badge"
 describe("Button variants", () => {
   it("returns classes for primary variant", () => {
     const classes = buttonVariants({ variant: "primary" })
-    expect(classes).toContain("bg-ink-900")
+    expect(classes).toContain("bg-signal-600")
     expect(classes).toContain("text-text-inverse")
   })
 
@@ -36,7 +36,7 @@ describe("Button variants", () => {
 
   it("defaults to primary/md", () => {
     const classes = buttonVariants()
-    expect(classes).toContain("bg-ink-900")
+    expect(classes).toContain("bg-signal-600")
     expect(classes).toContain("h-9")
   })
 })

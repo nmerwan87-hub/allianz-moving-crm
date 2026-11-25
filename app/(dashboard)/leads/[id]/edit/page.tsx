@@ -15,7 +15,7 @@ export default function EditLeadPage({ params }: { params: Promise<{ id: string 
   if (query.isLoading) {
     return (
       <div>
-        <PageHeader title="Edit Lead" />
+        <PageHeader title="Anfrage bearbeiten" />
         <div className="space-y-4">
           <Skeleton className="h-64 w-full rounded-[var(--radius-lg)]" />
           <Skeleton className="h-48 w-full rounded-[var(--radius-lg)]" />
@@ -27,11 +27,11 @@ export default function EditLeadPage({ params }: { params: Promise<{ id: string 
   if (query.isError || !query.data) {
     return (
       <div>
-        <PageHeader title="Edit Lead" />
+        <PageHeader title="Anfrage bearbeiten" />
         <WrongCompanyNotice entity="lead" id={id}>
           <ErrorState
-            title="Lead not found"
-            message="This lead may have been archived or you may not have access to it."
+            title="Anfrage nicht gefunden"
+            message="Sie wurde archiviert oder du hast keinen Zugriff."
           />
         </WrongCompanyNotice>
       </div>
@@ -41,8 +41,8 @@ export default function EditLeadPage({ params }: { params: Promise<{ id: string 
   return (
     <div>
       <PageHeader
-        title="Edit Lead"
-        description={`Updating ${query.data.firstName} ${query.data.lastName}`}
+        title="Anfrage bearbeiten"
+        description={`${query.data.firstName} ${query.data.lastName}`}
       />
       <LeadForm mode="edit" lead={query.data} />
     </div>

@@ -17,9 +17,9 @@ export default function CheckEmailPage() {
   return (
     <div className="flex min-h-screen items-center justify-center bg-slate-50 px-6 py-12">
       <div className="w-full max-w-md text-center">
-        <div className="mb-6 inline-flex h-16 w-16 items-center justify-center rounded-full bg-violet-100">
+        <div className="bg-signal-100 mb-6 inline-flex h-16 w-16 items-center justify-center rounded-full">
           <svg
-            className="h-8 w-8 text-violet-600"
+            className="text-signal-600 h-8 w-8"
             fill="none"
             viewBox="0 0 24 24"
             stroke="currentColor"
@@ -33,41 +33,39 @@ export default function CheckEmailPage() {
           </svg>
         </div>
 
-        <h1 className="text-2xl font-bold text-slate-900">Check your email</h1>
+        <h1 className="text-2xl font-bold text-slate-900">Schau in dein Postfach</h1>
         <p className="mt-3 text-sm text-slate-500">
-          We&apos;ve sent a confirmation link to{" "}
-          {email ? <strong className="text-slate-700">{email}</strong> : "your email address"}.
-          Click the link in the email to verify your account and submit your application.
+          Wir haben einen Bestätigungslink gesendet an{" "}
+          {email ? <strong className="text-slate-700">{email}</strong> : "deine E-Mail-Adresse"}.
+          Klicke auf den Link, um dein Konto zu bestätigen.
         </p>
 
         <div className="mt-8 rounded-lg border border-slate-200 bg-white p-6 text-left">
-          <p className="text-sm font-medium text-slate-700">Didn&apos;t receive the email?</p>
+          <p className="text-sm font-medium text-slate-700">Keine E-Mail erhalten?</p>
           <ul className="mt-3 list-inside list-disc space-y-1 text-sm text-slate-500">
-            <li>Check your spam or junk folder</li>
-            <li>Make sure you entered the correct email address</li>
-            <li>Wait a few minutes — it can take up to 5 minutes</li>
+            <li>Spam-Ordner prüfen</li>
+            <li>E-Mail-Adresse prüfen</li>
+            <li>Ein paar Minuten warten — es kann bis zu 5 Minuten dauern</li>
           </ul>
 
           {resent ? (
-            <p className="mt-4 text-sm font-medium text-green-600">
-              Verification email resent. Please check your inbox.
-            </p>
+            <p className="mt-4 text-sm font-medium text-green-600">Bestätigung erneut gesendet.</p>
           ) : (
             <button
               type="button"
               onClick={() => email && resendMutation.mutate({ email })}
               disabled={resendMutation.isPending || !email}
-              className="mt-4 text-sm font-medium text-violet-600 hover:text-violet-700 disabled:opacity-50"
+              className="text-signal-600 hover:text-signal-700 mt-4 text-sm font-medium disabled:opacity-50"
             >
-              {resendMutation.isPending ? "Resending…" : "Resend verification email"}
+              {resendMutation.isPending ? "Wird gesendet …" : "Bestätigung erneut senden"}
             </button>
           )}
         </div>
 
         <p className="mt-6 text-sm text-slate-500">
-          Wrong account?{" "}
-          <a href="/register" className="font-medium text-violet-600 hover:text-violet-700">
-            Start over
+          Falsches Konto?{" "}
+          <a href="/register" className="text-signal-600 hover:text-signal-700 font-medium">
+            Neu beginnen
           </a>
         </p>
       </div>

@@ -19,7 +19,7 @@ export const paymentMethodEnum = z.enum(["bank_transfer", "cash", "card", "other
 
 const cents = z.number().int().min(0).max(100_000_000)
 const optionalText = (max: number) => z.string().max(max).nullable().or(z.literal("")).optional()
-const dateString = z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Use YYYY-MM-DD")
+const dateString = z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Format JJJJ-MM-TT")
 
 // ─── Lines ────────────────────────────────────────────────────────────────────
 
@@ -28,7 +28,7 @@ export const invoiceLineInput = z
     quoteItemId: z.string().uuid().nullable().optional(),
     serviceCatalogId: z.string().uuid().nullable().optional(),
     itemType: lineItemTypeEnum.default("other"),
-    name: z.string().trim().min(1, "Service name is required").max(200),
+    name: z.string().trim().min(1, "Name der Leistung fehlt").max(200),
     description: optionalText(1000),
     pricingMode: linePricingModeEnum,
     quantity: z.number().positive("Quantity must be greater than zero").max(100_000),
@@ -87,7 +87,7 @@ export const issueInvoiceInput = z.object({
 
 export const reasonInput = z.object({
   id: z.string().uuid(),
-  reason: z.string().trim().min(1, "Reason is required").max(500),
+  reason: z.string().trim().min(1, "Grund fehlt").max(500),
 })
 
 const paymentFields = {

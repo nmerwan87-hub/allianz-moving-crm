@@ -4,7 +4,7 @@ import { LeadForm } from "../_components/lead-form"
 export default function NewLeadPage() {
   return (
     <div>
-      <PageHeader title="New Lead" description="Add a potential customer to your sales pipeline." />
+      <PageHeader title="Neue Anfrage" description="Kontakt und Umzugswunsch erfassen." />
       <LeadForm mode="create" />
     </div>
   )

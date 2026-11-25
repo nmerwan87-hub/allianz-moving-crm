@@ -38,7 +38,7 @@ export function ReasonDialog({
         </DialogHeader>
         <div className="py-2">
           <FieldLabel htmlFor="reason-text" required>
-            Reason
+            Grund
           </FieldLabel>
           <Textarea
             id="reason-text"
@@ -49,7 +49,7 @@ export function ReasonDialog({
         </div>
         <DialogFooter>
           <Button variant="secondary" onClick={onClose} disabled={pending}>
-            Back
+            Zurück
           </Button>
           <Button
             variant="danger"

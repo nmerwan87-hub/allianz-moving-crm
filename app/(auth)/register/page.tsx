@@ -9,11 +9,11 @@ import { registrationInput, type RegistrationInput } from "@/modules/iam/router/
 import { getVatFieldConfig, validateVat } from "@/modules/iam/lib/vat"
 
 const COUNTRIES = [
-  { code: "CH", name: "Switzerland" },
-  { code: "DE", name: "Germany" },
-  { code: "AT", name: "Austria" },
-  { code: "FR", name: "France" },
-  { code: "IT", name: "Italy" },
+  { code: "CH", name: "Schweiz" },
+  { code: "DE", name: "Deutschland" },
+  { code: "AT", name: "Österreich" },
+  { code: "FR", name: "Frankreich" },
+  { code: "IT", name: "Italien" },
   { code: "NL", name: "Netherlands" },
   { code: "BE", name: "Belgium" },
   { code: "ES", name: "Spain" },
@@ -29,7 +29,7 @@ const COUNTRIES = [
   { code: "AU", name: "Australia" },
   { code: "NZ", name: "New Zealand" },
   { code: "ZA", name: "South Africa" },
-  { code: "OTHER", name: "Other" },
+  { code: "OTHER", name: "Anderes Land" },
 ]
 
 function passwordStrength(pwd: string): { score: number; label: string; color: string } {
@@ -39,10 +39,10 @@ function passwordStrength(pwd: string): { score: number; label: string; color: s
   if (/[!@#$%^&*()_+\-=[\]{}|;':",.<>?/]/.test(pwd)) score++
   if (pwd.length >= 20) score++
 
-  if (score <= 1) return { score, label: "Weak", color: "bg-red-500" }
-  if (score === 2) return { score, label: "Fair", color: "bg-yellow-500" }
-  if (score === 3) return { score, label: "Strong", color: "bg-green-500" }
-  return { score, label: "Very Strong", color: "bg-emerald-600" }
+  if (score <= 1) return { score, label: "Schwach", color: "bg-red-500" }
+  if (score === 2) return { score, label: "Mittel", color: "bg-yellow-500" }
+  if (score === 3) return { score, label: "Stark", color: "bg-green-500" }
+  return { score, label: "Sehr stark", color: "bg-emerald-600" }
 }
 
 export default function RegisterPage() {
@@ -71,13 +71,13 @@ export default function RegisterPage() {
     onError: (err) => {
       const msg = err.message
       if (msg.includes("already exists")) {
-        setServerError("An account already exists for this email. Please sign in.")
+        setServerError("Für diese E-Mail gibt es schon ein Konto. Bitte anmelden.")
       } else if (msg.includes("previous application")) {
         setServerError(
-          "This email is associated with a previous application. Please contact support@bivro.io.",
+          "Diese E-Mail gehört zu einer früheren Anmeldung. Melde dich bei support@bivro.io.",
         )
       } else {
-        setServerError(msg || "Registration failed. Please try again.")
+        setServerError(msg || "Registrierung fehlgeschlagen. Versuche es nochmals.")
       }
     },
   })
@@ -104,19 +104,19 @@ export default function RegisterPage() {
   return (
     <div className="flex min-h-screen">
       {/* Left branding panel */}
-      <div className="hidden flex-col justify-between bg-slate-900 p-12 text-white lg:flex lg:w-1/2">
+      <div className="bg-signal-700 hidden flex-col justify-between p-12 text-white lg:flex lg:w-1/2">
         <span className="text-xl font-semibold tracking-tight">Bivro</span>
         <div>
           <p className="text-3xl leading-snug font-bold">
-            Start your moving
+            Starte mit deiner
             <br />
-            company&apos;s journey.
+            Umzugsfirma.
           </p>
           <p className="mt-4 text-sm text-slate-400">
             Register your company and get approved within 1 business day.
           </p>
         </div>
-        <p className="text-xs text-slate-500">© 2026 Bivro. All rights reserved.</p>
+        <p className="text-xs text-slate-500">© 2026 Bivro</p>
       </div>
 
       {/* Right form panel */}
@@ -127,11 +127,11 @@ export default function RegisterPage() {
 
         <div className="w-full max-w-md">
           <div className="mb-8">
-            <h1 className="text-2xl font-bold text-slate-900">Register your company</h1>
+            <h1 className="text-2xl font-bold text-slate-900">Firma registrieren</h1>
             <p className="mt-1 text-sm text-slate-500">
               Already have an account?{" "}
-              <a href="/login" className="font-medium text-violet-600 hover:text-violet-700">
-                Sign in
+              <a href="/login" className="text-signal-600 hover:text-signal-700 font-medium">
+                Anmelden
               </a>
             </p>
           </div>
@@ -146,17 +146,17 @@ export default function RegisterPage() {
             {/* Company Information */}
             <div className="space-y-4">
               <h2 className="text-xs font-semibold tracking-wide text-slate-400 uppercase">
-                Company Information
+                Firma
               </h2>
 
               <div>
                 <label className="mb-1 block text-sm font-medium text-slate-700">
-                  Company legal name <span className="text-red-500">*</span>
+                  Rechtlicher Firmenname <span className="text-red-500">*</span>
                 </label>
                 <input
                   type="text"
                   {...register("companyLegalName")}
-                  placeholder="Alpine Moving GmbH"
+                  placeholder="Muster Umzüge GmbH"
                   className={inputClass(!!errors.companyLegalName)}
                 />
                 {errors.companyLegalName ? (
@@ -166,20 +166,20 @@ export default function RegisterPage() {
 
               <div>
                 <label className="mb-1 block text-sm font-medium text-slate-700">
-                  Trading name{" "}
-                  <span className="font-normal text-slate-400">(optional — if different)</span>
+                  Anzeigename{" "}
+                  <span className="font-normal text-slate-400">(optional, falls anders)</span>
                 </label>
                 <input
                   type="text"
                   {...register("tradingName")}
-                  placeholder="Alpine Moving"
+                  placeholder="Muster Umzüge"
                   className={inputClass(false)}
                 />
               </div>
 
               <div>
                 <label className="mb-1 block text-sm font-medium text-slate-700">
-                  Country <span className="text-red-500">*</span>
+                  Land <span className="text-red-500">*</span>
                 </label>
                 <select
                   {...register("country")}
@@ -218,19 +218,19 @@ export default function RegisterPage() {
 
               <div>
                 <label className="mb-1 block text-sm font-medium text-slate-700">
-                  Company website <span className="font-normal text-slate-400">(optional)</span>
+                  Website <span className="font-normal text-slate-400">(optional)</span>
                 </label>
                 <input
                   type="url"
                   {...register("website")}
-                  placeholder="https://yourcompany.com"
+                  placeholder="https://muster-umzuege.ch"
                   className={inputClass(false)}
                 />
               </div>
 
               <div>
                 <label className="mb-1 block text-sm font-medium text-slate-700">
-                  Company phone <span className="font-normal text-slate-400">(optional)</span>
+                  Telefon <span className="font-normal text-slate-400">(optional)</span>
                 </label>
                 <input
                   type="tel"
@@ -244,18 +244,18 @@ export default function RegisterPage() {
             {/* Owner Information */}
             <div className="space-y-4 pt-2">
               <h2 className="text-xs font-semibold tracking-wide text-slate-400 uppercase">
-                Account Owner
+                Inhaber
               </h2>
 
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="mb-1 block text-sm font-medium text-slate-700">
-                    First name <span className="text-red-500">*</span>
+                    Vorname <span className="text-red-500">*</span>
                   </label>
                   <input
                     type="text"
                     {...register("ownerFirstName")}
-                    placeholder="Jane"
+                    placeholder="Vorname"
                     className={inputClass(!!errors.ownerFirstName)}
                     autoComplete="given-name"
                   />
@@ -266,12 +266,12 @@ export default function RegisterPage() {
 
                 <div>
                   <label className="mb-1 block text-sm font-medium text-slate-700">
-                    Last name <span className="text-red-500">*</span>
+                    Nachname <span className="text-red-500">*</span>
                   </label>
                   <input
                     type="text"
                     {...register("ownerLastName")}
-                    placeholder="Smith"
+                    placeholder="Nachname"
                     className={inputClass(!!errors.ownerLastName)}
                     autoComplete="family-name"
                   />
@@ -283,12 +283,12 @@ export default function RegisterPage() {
 
               <div>
                 <label className="mb-1 block text-sm font-medium text-slate-700">
-                  Email address <span className="text-red-500">*</span>
+                  E-Mail <span className="text-red-500">*</span>
                 </label>
                 <input
                   type="email"
                   {...register("email")}
-                  placeholder="jane@alpinemoving.ch"
+                  placeholder="name@firma.ch"
                   className={inputClass(!!errors.email)}
                   autoComplete="email"
                 />
@@ -299,12 +299,12 @@ export default function RegisterPage() {
 
               <div>
                 <label className="mb-1 block text-sm font-medium text-slate-700">
-                  Password <span className="text-red-500">*</span>
+                  Passwort <span className="text-red-500">*</span>
                 </label>
                 <input
                   type="password"
                   {...register("password")}
-                  placeholder="Minimum 12 characters"
+                  placeholder="Mindestens 12 Zeichen"
                   className={inputClass(!!errors.password)}
                   autoComplete="new-password"
                   onChange={(e) => {
@@ -331,7 +331,7 @@ export default function RegisterPage() {
                   <p className="mt-1 text-xs text-red-600">{errors.password.message}</p>
                 ) : null}
                 <p className="mt-1 text-xs text-slate-400">
-                  At least 12 characters, 1 number, and 1 special character
+                  Mindestens 12 Zeichen, 1 Zahl und 1 Sonderzeichen
                 </p>
               </div>
             </div>
@@ -343,12 +343,12 @@ export default function RegisterPage() {
                   id="termsAccepted"
                   type="checkbox"
                   {...register("termsAccepted")}
-                  className="mt-0.5 h-4 w-4 rounded border-slate-300 text-violet-600 focus:ring-violet-500"
+                  className="text-signal-600 focus:ring-signal-500 mt-0.5 h-4 w-4 rounded border-slate-300"
                 />
                 <label htmlFor="termsAccepted" className="text-sm text-slate-600">
-                  I accept the{" "}
-                  <a href="/terms" className="font-medium text-violet-600 hover:text-violet-700">
-                    Terms of Service
+                  Ich akzeptiere die{" "}
+                  <a href="/terms" className="text-signal-600 hover:text-signal-700 font-medium">
+                    AGB
                   </a>{" "}
                   <span className="text-red-500">*</span>
                 </label>
@@ -362,12 +362,12 @@ export default function RegisterPage() {
                   id="privacyAccepted"
                   type="checkbox"
                   {...register("privacyAccepted")}
-                  className="mt-0.5 h-4 w-4 rounded border-slate-300 text-violet-600 focus:ring-violet-500"
+                  className="text-signal-600 focus:ring-signal-500 mt-0.5 h-4 w-4 rounded border-slate-300"
                 />
                 <label htmlFor="privacyAccepted" className="text-sm text-slate-600">
-                  I accept the{" "}
-                  <a href="/privacy" className="font-medium text-violet-600 hover:text-violet-700">
-                    Privacy Policy
+                  Ich akzeptiere die{" "}
+                  <a href="/privacy" className="text-signal-600 hover:text-signal-700 font-medium">
+                    Datenschutzerklärung
                   </a>{" "}
                   <span className="text-red-500">*</span>
                 </label>
@@ -380,11 +380,11 @@ export default function RegisterPage() {
             <button
               type="submit"
               disabled={isSubmitting || registerMutation.isPending}
-              className="mt-2 w-full rounded-md bg-slate-900 px-4 py-2.5 text-sm font-semibold text-white hover:bg-slate-800 focus:ring-2 focus:ring-violet-600/30 focus:ring-offset-2 focus:outline-none disabled:cursor-not-allowed disabled:opacity-50"
+              className="bg-signal-600 hover:bg-signal-700 focus:ring-signal-600/30 mt-2 w-full rounded-md px-4 py-2.5 text-sm font-semibold text-white focus:ring-2 focus:ring-offset-2 focus:outline-none disabled:cursor-not-allowed disabled:opacity-50"
             >
               {isSubmitting || registerMutation.isPending
-                ? "Creating your account…"
-                : "Register company"}
+                ? "Konto wird erstellt …"
+                : "Firma registrieren"}
             </button>
           </form>
         </div>
@@ -396,7 +396,7 @@ export default function RegisterPage() {
 function inputClass(hasError: boolean): string {
   return [
     "block w-full rounded-md border bg-slate-50 px-3 py-2 text-sm text-slate-900 placeholder:text-slate-400",
-    "focus:outline-none focus:ring-2 focus:ring-violet-600/20",
-    hasError ? "border-red-400 focus:border-red-500" : "border-slate-300 focus:border-violet-600",
+    "focus:outline-none focus:ring-2 focus:ring-signal-600/20",
+    hasError ? "border-red-400 focus:border-red-500" : "border-slate-300 focus:border-signal-600",
   ].join(" ")
 }

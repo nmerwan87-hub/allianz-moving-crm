@@ -105,17 +105,17 @@ export const acceptInvitation = publicProcedure
       .maybeSingle()
 
     if (!invitation) {
-      throw new TRPCError({ code: "NOT_FOUND", message: "Invitation not found." })
+      throw new TRPCError({ code: "NOT_FOUND", message: "Einladung nicht gefunden." })
     }
     if (invitation.status !== "pending") {
       throw new TRPCError({
         code: "BAD_REQUEST",
-        message: "This invitation has already been used or revoked.",
+        message: "Diese Einladung wurde schon verwendet oder zurückgezogen.",
       })
     }
     if (new Date(invitation.expires_at as string) < new Date()) {
       await svc.from("user_invitations").update({ status: "expired" }).eq("id", invitation.id)
-      throw new TRPCError({ code: "BAD_REQUEST", message: "This invitation has expired." })
+      throw new TRPCError({ code: "BAD_REQUEST", message: "Diese Einladung ist abgelaufen." })
     }
 
     // 3. New accounts only. An existing account must sign in and use
@@ -129,7 +129,8 @@ export const acceptInvitation = publicProcedure
     if (existingProfile) {
       throw new TRPCError({
         code: "CONFLICT",
-        message: "An account with this email already exists. Sign in to accept the invitation.",
+        message:
+          "Für diese E-Mail gibt es schon ein Konto. Melde dich an, um die Einladung anzunehmen.",
       })
     }
 
@@ -242,17 +243,17 @@ export const joinInvitedCompany = protectedProcedure
       .maybeSingle()
 
     if (!invitation) {
-      throw new TRPCError({ code: "NOT_FOUND", message: "Invitation not found." })
+      throw new TRPCError({ code: "NOT_FOUND", message: "Einladung nicht gefunden." })
     }
     if (invitation.status !== "pending") {
       throw new TRPCError({
         code: "BAD_REQUEST",
-        message: "This invitation has already been used or revoked.",
+        message: "Diese Einladung wurde schon verwendet oder zurückgezogen.",
       })
     }
     if (new Date(invitation.expires_at as string) < new Date()) {
       await svc.from("user_invitations").update({ status: "expired" }).eq("id", invitation.id)
-      throw new TRPCError({ code: "BAD_REQUEST", message: "This invitation has expired." })
+      throw new TRPCError({ code: "BAD_REQUEST", message: "Diese Einladung ist abgelaufen." })
     }
 
     // The invitation belongs to an email address — only that account may use it.
@@ -260,7 +261,7 @@ export const joinInvitedCompany = protectedProcedure
     if (!userEmail || userEmail !== (invitation.email as string).toLowerCase()) {
       throw new TRPCError({
         code: "FORBIDDEN",
-        message: `This invitation was sent to ${invitation.email as string}. Sign in with that account to accept it.`,
+        message: `Diese Einladung ging an ${invitation.email as string}. Melde dich mit diesem Konto an, um sie anzunehmen.`,
       })
     }
 
@@ -333,7 +334,7 @@ export const inviteUser = ownerProcedure
       if (member?.isActive) {
         throw new TRPCError({
           code: "BAD_REQUEST",
-          message: "This person is already a member of your company.",
+          message: "Diese Person gehört schon zu eurer Firma.",
         })
       }
     }
@@ -384,7 +385,7 @@ export const inviteUser = ownerProcedure
     if (inviteError ?? !invitation) {
       throw new TRPCError({
         code: "INTERNAL_SERVER_ERROR",
-        message: "Failed to create invitation",
+        message: "Einladung konnte nicht erstellt werden",
       })
     }
 
@@ -449,12 +450,12 @@ export const revokeInvitation = ownerProcedure
       .maybeSingle()
 
     if (!invitation) {
-      throw new TRPCError({ code: "NOT_FOUND", message: "Invitation not found." })
+      throw new TRPCError({ code: "NOT_FOUND", message: "Einladung nicht gefunden." })
     }
     if (invitation.status !== "pending") {
       throw new TRPCError({
         code: "BAD_REQUEST",
-        message: "Only pending invitations can be revoked.",
+        message: "Nur offene Einladungen können zurückgezogen werden.",
       })
     }
 

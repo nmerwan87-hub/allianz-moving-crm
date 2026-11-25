@@ -45,7 +45,7 @@ export function IssueDialog({
   const [message, setMessage] = useState("")
   const [byEmail, setByEmail] = useState(Boolean(customerEmail) || mode === "resend")
   const pending = issue.isPending || resend.isPending || remind.isPending
-  const nextReminder = REMINDER_LABELS[reminderLevel + 1] ?? "Reminder"
+  const nextReminder = REMINDER_LABELS[reminderLevel + 1] ?? "Mahnung"
 
   async function submit() {
     const recipient = byEmail && email.trim() ? { recipientEmail: email.trim() } : {}
@@ -59,8 +59,8 @@ export function IssueDialog({
           ...recipient,
           message,
         })
-        if (result.documentError) toast.error("Invoice issued", result.documentError)
-        else toast.success(`Invoice ${result.invoiceNumber} issued`)
+        if (result.documentError) toast.error("Rechnung ausgestellt", result.documentError)
+        else toast.success(`Rechnung ${result.invoiceNumber} ausgestellt`)
         delivered = result.emailDelivered
         emailError = result.emailError
       } else if (mode === "resend") {
@@ -78,7 +78,7 @@ export function IssueDialog({
           ...recipient,
           message,
         })
-        toast.success(`${REMINDER_LABELS[result.level]} created`)
+        toast.success(`${REMINDER_LABELS[result.level]} erstellt`)
         delivered = result.emailDelivered
         emailError = result.emailError
       }
@@ -87,24 +87,24 @@ export function IssueDialog({
       await utils.jobs.invalidate()
       if (delivered === false) {
         toast.error(
-          "E-mail not delivered",
-          `${emailError ?? "Unknown error"}. Download the PDF and send it yourself.`,
+          "E-Mail nicht zugestellt",
+          `${emailError ?? "Unbekannter Fehler"}. Lade das PDF herunter und sende es selbst.`,
         )
       } else if (delivered) {
-        toast.success(`E-mailed to ${email.trim()}`)
+        toast.success(`An ${email.trim()} gesendet`)
       }
       onClose()
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Action failed")
+      toast.error(err instanceof Error ? err.message : "Aktion fehlgeschlagen")
     }
   }
 
   const title =
     mode === "issue"
-      ? `Issue invoice (${formatChf(amountCents)})`
+      ? `Rechnung ausstellen (${formatChf(amountCents)})`
       : mode === "resend"
-        ? "E-mail invoice again"
-        : `${nextReminder} (${formatChf(amountCents)} open)`
+        ? "Rechnung erneut senden"
+        : `${nextReminder} (${formatChf(amountCents)} offen)`
 
   return (
     <Dialog open onOpenChange={(open) => !open && onClose()}>
@@ -113,13 +113,13 @@ export function IssueDialog({
           <DialogTitle>{title}</DialogTitle>
           {mode === "issue" && (
             <DialogDescription>
-              The invoice gets its number and QR-bill and is frozen. Corrections afterwards: void it
-              and settle again.
+              Die Rechnung erhält Nummer und QR-Zahlteil und ist danach fixiert. Korrekturen:
+              stornieren und neu abrechnen.
             </DialogDescription>
           )}
           {mode === "reminder" && (
             <DialogDescription>
-              A reminder letter with a new QR-bill for the open balance and 10 days to pay.
+              Ein Mahnschreiben mit neuem QR-Zahlteil über den offenen Betrag und 10 Tagen Frist.
             </DialogDescription>
           )}
         </DialogHeader>
@@ -131,14 +131,14 @@ export function IssueDialog({
                 checked={byEmail}
                 onChange={(e) => setByEmail(e.target.checked)}
               />
-              Send by e-mail with the PDF attached
+              Per E-Mail mit PDF im Anhang senden
             </label>
           )}
           {byEmail && (
             <>
               <div>
                 <FieldLabel htmlFor="issue-email" required>
-                  To
+                  An
                 </FieldLabel>
                 <Input
                   id="issue-email"
@@ -148,34 +148,34 @@ export function IssueDialog({
                 />
               </div>
               <div>
-                <FieldLabel htmlFor="issue-message">Personal message</FieldLabel>
+                <FieldLabel htmlFor="issue-message">Persönliche Nachricht</FieldLabel>
                 <Textarea
                   id="issue-message"
                   rows={3}
                   value={message}
                   onChange={(e) => setMessage(e.target.value)}
                 />
-                <FieldHint>Added to the standard text in the customer&apos;s language.</FieldHint>
+                <FieldHint>Wird zum Standardtext in der Sprache des Kunden hinzugefügt.</FieldHint>
               </div>
             </>
           )}
         </div>
         <DialogFooter>
           <Button variant="secondary" onClick={onClose} disabled={pending}>
-            Cancel
+            Abbrechen
           </Button>
           <Button onClick={submit} disabled={pending || (byEmail && !email.includes("@"))}>
             {pending
-              ? "Working..."
+              ? "Bitte warten …"
               : mode === "issue"
                 ? byEmail
-                  ? "Issue and send"
-                  : "Issue invoice"
+                  ? "Ausstellen und senden"
+                  : "Rechnung ausstellen"
                 : mode === "resend"
-                  ? "Send e-mail"
+                  ? "E-Mail senden"
                   : byEmail
-                    ? "Create and send"
-                    : "Create reminder"}
+                    ? "Erstellen und senden"
+                    : "Mahnung erstellen"}
           </Button>
         </DialogFooter>
       </DialogContent>

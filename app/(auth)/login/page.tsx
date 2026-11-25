@@ -26,7 +26,7 @@ function LoginForm() {
     setLoading(false)
 
     if (signInError) {
-      setError("Incorrect email or password. Please try again.")
+      setError("E-Mail oder Passwort ist falsch.")
       return
     }
 
@@ -45,7 +45,7 @@ function LoginForm() {
 
       <div>
         <label htmlFor="email" className="mb-1 block text-sm font-medium text-slate-700">
-          Email
+          E-Mail
         </label>
         <input
           id="email"
@@ -54,18 +54,18 @@ function LoginForm() {
           required
           value={email}
           onChange={(e) => setEmail(e.target.value)}
-          placeholder="you@yourcompany.com"
-          className="block w-full rounded-md border border-slate-300 bg-slate-50 px-3 py-2 text-sm text-slate-900 placeholder:text-slate-400 focus:border-violet-600 focus:ring-2 focus:ring-violet-600/20 focus:outline-none"
+          placeholder="name@firma.ch"
+          className="focus:border-signal-600 focus:ring-signal-600/20 block w-full rounded-md border border-slate-300 bg-slate-50 px-3 py-2 text-sm text-slate-900 placeholder:text-slate-400 focus:ring-2 focus:outline-none"
         />
       </div>
 
       <div>
         <div className="mb-1 flex items-center justify-between">
           <label htmlFor="password" className="block text-sm font-medium text-slate-700">
-            Password
+            Passwort
           </label>
-          <a href="/forgot-password" className="text-xs text-violet-600 hover:text-violet-700">
-            Forgot password?
+          <a href="/forgot-password" className="text-signal-600 hover:text-signal-700 text-xs">
+            Passwort vergessen?
           </a>
         </div>
         <input
@@ -76,16 +76,16 @@ function LoginForm() {
           value={password}
           onChange={(e) => setPassword(e.target.value)}
           placeholder="••••••••"
-          className="block w-full rounded-md border border-slate-300 bg-slate-50 px-3 py-2 text-sm text-slate-900 placeholder:text-slate-400 focus:border-violet-600 focus:ring-2 focus:ring-violet-600/20 focus:outline-none"
+          className="focus:border-signal-600 focus:ring-signal-600/20 block w-full rounded-md border border-slate-300 bg-slate-50 px-3 py-2 text-sm text-slate-900 placeholder:text-slate-400 focus:ring-2 focus:outline-none"
         />
       </div>
 
       <button
         type="submit"
         disabled={loading}
-        className="mt-2 w-full rounded-md bg-slate-900 px-4 py-2.5 text-sm font-semibold text-white hover:bg-slate-800 focus:ring-2 focus:ring-violet-600/30 focus:ring-offset-2 focus:outline-none disabled:cursor-not-allowed disabled:opacity-50"
+        className="bg-signal-600 hover:bg-signal-700 focus:ring-signal-600/30 mt-2 w-full rounded-md px-4 py-2.5 text-sm font-semibold text-white focus:ring-2 focus:ring-offset-2 focus:outline-none disabled:cursor-not-allowed disabled:opacity-50"
       >
-        {loading ? "Signing in…" : "Sign in"}
+        {loading ? "Anmelden …" : "Anmelden"}
       </button>
     </form>
   )
@@ -95,19 +95,19 @@ export default function LoginPage() {
   return (
     <div className="flex min-h-screen">
       {/* Left branding panel — lg+ only */}
-      <div className="hidden flex-col justify-between bg-slate-900 p-12 text-white lg:flex lg:w-1/2">
+      <div className="bg-signal-700 hidden flex-col justify-between p-12 text-white lg:flex lg:w-1/2">
         <span className="text-xl font-semibold tracking-tight">Bivro</span>
         <div>
           <p className="text-3xl leading-snug font-bold">
-            Moving operations,
+            Umzüge planen,
             <br />
-            intelligently.
+            offerieren, abrechnen.
           </p>
           <p className="mt-4 text-sm text-slate-400">
-            The operating system built for professional moving companies.
+            Das Arbeitswerkzeug für Schweizer Umzugsfirmen.
           </p>
         </div>
-        <p className="text-xs text-slate-500">© 2026 Bivro. All rights reserved.</p>
+        <p className="text-xs text-slate-500">© 2026 Bivro</p>
       </div>
 
       {/* Right form panel */}
@@ -118,9 +118,9 @@ export default function LoginPage() {
 
         <div className="w-full max-w-sm">
           <div className="mb-8">
-            <h1 className="text-2xl font-bold text-slate-900">Sign in</h1>
+            <h1 className="text-2xl font-bold text-slate-900">Anmelden</h1>
             <p className="mt-1 text-sm text-slate-500">
-              Logging into <span className="font-medium text-slate-700">your workspace</span>
+              Bei <span className="font-medium text-slate-700">deinem Arbeitsbereich</span>
             </p>
           </div>
 

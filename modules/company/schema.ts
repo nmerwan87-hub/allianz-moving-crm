@@ -3,8 +3,8 @@ import { z } from "zod"
 const optionalText = (max: number) => z.string().max(max).nullable().or(z.literal("")).optional()
 
 export const companyProfileInput = z.object({
-  name: z.string().trim().min(1, "Display name is required").max(120),
-  legalName: z.string().trim().min(1, "Legal name is required").max(200),
+  name: z.string().trim().min(1, "Anzeigename fehlt").max(120),
+  legalName: z.string().trim().min(1, "Rechtlicher Name fehlt").max(200),
   vatNumber: optionalText(40),
   registrationNumber: optionalText(60),
   addressLine1: optionalText(200),
@@ -12,12 +12,19 @@ export const companyProfileInput = z.object({
   postalCode: optionalText(20),
   city: optionalText(100),
   country: z.string().length(2),
-  email: z.string().trim().email("Invalid email").max(255).nullable().or(z.literal("")).optional(),
+  email: z
+    .string()
+    .trim()
+    .email("Ungültige E-Mail-Adresse")
+    .max(255)
+    .nullable()
+    .or(z.literal(""))
+    .optional(),
   phone: optionalText(50),
   website: optionalText(200),
   accentColor: z
     .string()
-    .regex(/^#[0-9a-fA-F]{6}$/, "Use a colour like #1E40AF")
+    .regex(/^#[0-9a-fA-F]{6}$/, "Farbe wie #1E40AF angeben")
     .nullable()
     .optional(),
 })
@@ -33,7 +40,7 @@ export type CompanyBankInput = z.infer<typeof companyBankInput>
 
 /** Data URL of a PNG, JPEG or WebP image (≤ 1 MB decoded). */
 export const uploadLogoInput = z.object({
-  dataUrl: z.string().max(1_500_000, "Logo must be 1 MB or smaller"),
+  dataUrl: z.string().max(1_500_000, "Logo höchstens 1 MB"),
 })
 
 export interface CompanyProfile {

@@ -31,11 +31,11 @@ import { useHasPermission } from "@/app/(dashboard)/_lib/permissions"
 import { pricingModeEnum, createServiceInput, type Service } from "@/modules/catalog/interface"
 
 const PRICING_MODE_LABELS: Record<Service["defaultPricingMode"], string> = {
-  fixed: "Fixed price",
-  hourly: "Per hour",
-  quantity: "Per unit",
-  distance: "Per km",
-  manual: "Manual",
+  fixed: "Pauschal",
+  hourly: "Pro Stunde",
+  quantity: "Pro Stück",
+  distance: "Pro km",
+  manual: "Betrag frei",
 }
 
 interface DraftService {
@@ -107,9 +107,9 @@ function ServiceDialog({
         const key = String(issue.path[0])
         next[key] =
           key === "defaultUnitPriceCents" || key === "defaultCostPriceCents"
-            ? "Enter an amount like 150 or 1'250.50"
+            ? "Betrag eingeben, z. B. 150 oder 1'250.50"
             : key === "defaultVatRatePercent"
-              ? "Enter a rate between 0 and 100"
+              ? "Satz zwischen 0 und 100 eingeben"
               : issue.message
       }
       setErrors(next)
@@ -120,10 +120,10 @@ function ServiceDialog({
       if (form.id) await updateMutation.mutateAsync({ id: form.id, ...parsed.data })
       else await createMutation.mutateAsync(parsed.data)
       await utils.catalog.services.list.invalidate()
-      toast.success(form.id ? "Service updated" : "Service added")
+      toast.success(form.id ? "Leistung gespeichert" : "Leistung erfasst")
       onClose()
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Failed to save service")
+      toast.error(err instanceof Error ? err.message : "Speichern fehlgeschlagen")
     }
   }
 
@@ -131,7 +131,7 @@ function ServiceDialog({
     <Dialog open onOpenChange={(open) => !open && onClose()}>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>{form.id ? "Edit service" : "Add service"}</DialogTitle>
+          <DialogTitle>{form.id ? "Leistung bearbeiten" : "Leistung erfassen"}</DialogTitle>
         </DialogHeader>
         <div className="grid max-h-[70vh] gap-4 overflow-y-auto py-2 sm:grid-cols-2">
           <div className="sm:col-span-2">
@@ -148,7 +148,7 @@ function ServiceDialog({
           </div>
           <div>
             <FieldLabel required htmlFor="svc-category">
-              Category
+              Kategorie
             </FieldLabel>
             <Input
               id="svc-category"
@@ -165,7 +165,7 @@ function ServiceDialog({
             <FieldError message={errors["category"]} />
           </div>
           <div>
-            <FieldLabel htmlFor="svc-mode">Pricing</FieldLabel>
+            <FieldLabel htmlFor="svc-mode">Preisart</FieldLabel>
             <Select
               id="svc-mode"
               value={form.defaultPricingMode}
@@ -181,7 +181,7 @@ function ServiceDialog({
             </Select>
           </div>
           <div>
-            <FieldLabel htmlFor="svc-price">Price (CHF)</FieldLabel>
+            <FieldLabel htmlFor="svc-price">Preis (CHF)</FieldLabel>
             <Input
               id="svc-price"
               inputMode="decimal"
@@ -192,7 +192,7 @@ function ServiceDialog({
             <FieldError message={errors["defaultUnitPriceCents"]} />
           </div>
           <div>
-            <FieldLabel htmlFor="svc-unit">Unit</FieldLabel>
+            <FieldLabel htmlFor="svc-unit">Einheit</FieldLabel>
             <Input
               id="svc-unit"
               placeholder="Std., m³, Stk., Pauschale"
@@ -201,7 +201,7 @@ function ServiceDialog({
             />
           </div>
           <div>
-            <FieldLabel htmlFor="svc-cost">Cost price (CHF)</FieldLabel>
+            <FieldLabel htmlFor="svc-cost">Einstandspreis (CHF)</FieldLabel>
             <Input
               id="svc-cost"
               inputMode="decimal"
@@ -210,10 +210,10 @@ function ServiceDialog({
               onChange={(e) => set("cost", e.target.value)}
             />
             <FieldError message={errors["defaultCostPriceCents"]} />
-            <FieldHint>Internal, for margin. Never shown to customers.</FieldHint>
+            <FieldHint>Intern für die Marge, nie für Kunden sichtbar.</FieldHint>
           </div>
           <div>
-            <FieldLabel htmlFor="svc-vat">VAT (%)</FieldLabel>
+            <FieldLabel htmlFor="svc-vat">MWST (%)</FieldLabel>
             <Input
               id="svc-vat"
               inputMode="decimal"
@@ -224,7 +224,7 @@ function ServiceDialog({
             <FieldError message={errors["defaultVatRatePercent"]} />
           </div>
           <div className="sm:col-span-2">
-            <FieldLabel htmlFor="svc-customer-desc">Text on offers</FieldLabel>
+            <FieldLabel htmlFor="svc-customer-desc">Text auf der Offerte</FieldLabel>
             <Textarea
               id="svc-customer-desc"
               rows={2}
@@ -233,7 +233,7 @@ function ServiceDialog({
             />
           </div>
           <div className="sm:col-span-2">
-            <FieldLabel htmlFor="svc-desc">Internal note</FieldLabel>
+            <FieldLabel htmlFor="svc-desc">Interne Notiz</FieldLabel>
             <Textarea
               id="svc-desc"
               rows={2}
@@ -244,10 +244,10 @@ function ServiceDialog({
         </div>
         <DialogFooter>
           <Button variant="secondary" onClick={onClose} disabled={saving}>
-            Cancel
+            Abbrechen
           </Button>
           <Button onClick={save} disabled={saving}>
-            {saving ? "Saving..." : "Save"}
+            {saving ? "Speichern …" : "Speichern"}
           </Button>
         </DialogFooter>
       </DialogContent>
@@ -281,7 +281,7 @@ export default function ServicesSettingsPage() {
       await utils.catalog.services.list.invalidate()
       toast.success(success)
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Action failed")
+      toast.error(err instanceof Error ? err.message : "Aktion fehlgeschlagen")
     }
   }
 
@@ -289,19 +289,19 @@ export default function ServicesSettingsPage() {
     const ids = services.map((s) => s.id)
     const [moved] = ids.splice(index, 1)
     ids.splice(index + delta, 0, moved!)
-    void run(() => reorder.mutateAsync({ category, orderedIds: ids }), "Order saved")
+    void run(() => reorder.mutateAsync({ category, orderedIds: ids }), "Reihenfolge gespeichert")
   }
 
   return (
     <div>
       <PageHeader
-        title="Services"
-        description="Prices and units used when you build offers. Changes never alter offers already sent."
+        title="Leistungen"
+        description="Preise und Einheiten für Offerten. Änderungen wirken sich nie auf bereits gesendete Offerten aus."
         actions={
           canEdit ? (
             <Button onClick={() => setEditing(toDraft())}>
               <Plus className="h-4 w-4" />
-              Add service
+              Leistung erfassen
             </Button>
           ) : undefined
         }
@@ -310,11 +310,14 @@ export default function ServicesSettingsPage() {
       {query.isLoading ? (
         <Skeleton className="h-96 w-full rounded-[var(--radius-lg)]" />
       ) : query.isError ? (
-        <ErrorState title="Couldn't load services" message="Please try again." />
+        <ErrorState
+          title="Leistungen konnten nicht geladen werden"
+          message="Versuche es nochmals."
+        />
       ) : grouped.length === 0 ? (
         <Card className="p-8 text-center">
           <Package className="text-text-muted mx-auto h-8 w-8" />
-          <p className="text-text-secondary mt-2 text-sm">No services yet.</p>
+          <p className="text-text-secondary mt-2 text-sm">Noch keine Leistungen.</p>
         </Card>
       ) : (
         <div className="space-y-6">
@@ -324,10 +327,10 @@ export default function ServicesSettingsPage() {
               <div className="overflow-x-auto">
                 <table className="w-full border-collapse text-sm">
                   <thead>
-                    <tr className="border-surface-divider text-text-muted border-b text-left text-xs font-semibold tracking-wide uppercase">
-                      <th className="px-4 py-2.5">Service</th>
-                      <th className="hidden px-4 py-2.5 md:table-cell">Pricing</th>
-                      <th className="px-4 py-2.5 text-right">Price</th>
+                    <tr className="border-surface-divider text-text-muted border-b text-left text-xs font-medium">
+                      <th className="px-4 py-2.5">Leistung</th>
+                      <th className="hidden px-4 py-2.5 md:table-cell">Preisart</th>
+                      <th className="px-4 py-2.5 text-right">Preis</th>
                       <th className="hidden px-4 py-2.5 text-right sm:table-cell">VAT</th>
                       <th className="px-4 py-2.5">Status</th>
                       {canEdit && <th className="px-4 py-2.5" />}
@@ -347,7 +350,7 @@ export default function ServicesSettingsPage() {
                             {s.name}
                           </div>
                           {!s.isSystemDefault && (
-                            <div className="text-text-muted text-xs">Custom</div>
+                            <div className="text-text-muted text-xs">Eigene</div>
                           )}
                         </td>
                         <td className="text-text-secondary hidden px-4 py-3 md:table-cell">
@@ -368,21 +371,21 @@ export default function ServicesSettingsPage() {
                               type="button"
                               role="switch"
                               aria-checked={s.isActive}
-                              aria-label={`${s.name} ${s.isActive ? "active" : "inactive"}`}
+                              aria-label={`${s.name} ${s.isActive ? "aktiv" : "inaktiv"}`}
                               onClick={() =>
                                 void run(
                                   () => setActive.mutateAsync({ id: s.id, isActive: !s.isActive }),
-                                  s.isActive ? "Service deactivated" : "Service activated",
+                                  s.isActive ? "Leistung deaktiviert" : "Leistung aktiviert",
                                 )
                               }
                             >
                               <Badge variant={s.isActive ? "success" : "neutral"}>
-                                {s.isActive ? "Active" : "Inactive"}
+                                {s.isActive ? "Aktiv" : "Inaktiv"}
                               </Badge>
                             </button>
                           ) : (
                             <Badge variant={s.isActive ? "success" : "neutral"}>
-                              {s.isActive ? "Active" : "Inactive"}
+                              {s.isActive ? "Aktiv" : "Inaktiv"}
                             </Badge>
                           )}
                         </td>
@@ -392,7 +395,7 @@ export default function ServicesSettingsPage() {
                               <Button
                                 variant="ghost"
                                 size="icon"
-                                aria-label="Move up"
+                                aria-label="Nach oben"
                                 disabled={index === 0 || reorder.isPending}
                                 onClick={() => move(category, services, index, -1)}
                               >
@@ -401,7 +404,7 @@ export default function ServicesSettingsPage() {
                               <Button
                                 variant="ghost"
                                 size="icon"
-                                aria-label="Move down"
+                                aria-label="Nach unten"
                                 disabled={index === services.length - 1 || reorder.isPending}
                                 onClick={() => move(category, services, index, 1)}
                               >
@@ -410,7 +413,7 @@ export default function ServicesSettingsPage() {
                               <Button
                                 variant="ghost"
                                 size="icon"
-                                aria-label={`Edit ${s.name}`}
+                                aria-label={`${s.name} bearbeiten`}
                                 onClick={() => setEditing(toDraft(s))}
                               >
                                 <Pencil className="h-4 w-4" />
@@ -419,7 +422,7 @@ export default function ServicesSettingsPage() {
                                 <Button
                                   variant="dangerGhost"
                                   size="icon"
-                                  aria-label={`Remove ${s.name}`}
+                                  aria-label={`${s.name} entfernen`}
                                   onClick={() => setRemoving(s)}
                                 >
                                   <Trash2 className="h-4 w-4" />
@@ -449,17 +452,18 @@ export default function ServicesSettingsPage() {
       <ConfirmDialog
         open={removing !== null}
         onOpenChange={(open) => !open && setRemoving(null)}
-        title={`Remove ${removing?.name ?? "service"}?`}
-        description="If the service was used on an offer it is archived instead, so existing offers stay unchanged."
-        confirmLabel="Remove"
+        title={`${removing?.name ?? "Leistung"} entfernen?`}
+        description="Wurde die Leistung schon in einer Offerte verwendet, wird sie archiviert und bestehende Offerten bleiben unverändert."
+        confirmLabel="Entfernen"
         onConfirm={() => {
           if (removing) {
             const target = removing
             setRemoving(null)
             void run(async () => {
               const { result } = await remove.mutateAsync({ id: target.id })
-              if (result === "archived") toast.info("Used on offers — archived instead of deleted")
-            }, "Service removed")
+              if (result === "archived")
+                toast.info("In Offerten verwendet — archiviert statt gelöscht")
+            }, "Leistung entfernt")
           }
         }}
       />

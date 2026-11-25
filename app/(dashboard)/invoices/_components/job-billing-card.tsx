@@ -43,13 +43,13 @@ export function JobBillingCard({ jobId }: { jobId: string }) {
       await Promise.all([utils.invoices.invalidate(), utils.jobs.invalidate()])
       router.push(`/invoices/${id}`)
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Could not create the settlement")
+      toast.error(err instanceof Error ? err.message : "Abrechnung konnte nicht erstellt werden")
     }
   }
 
   return (
     <Card>
-      <CardHeader>Billing</CardHeader>
+      <CardHeader>Abrechnung</CardHeader>
       <CardContent className="space-y-3 text-sm">
         {billing.invoice ? (
           <Link
@@ -58,7 +58,7 @@ export function JobBillingCard({ jobId }: { jobId: string }) {
           >
             <div className="flex items-center justify-between gap-2">
               <span className="text-text-primary font-medium">
-                {billing.invoice.invoiceNumber ?? "Settlement draft"}
+                {billing.invoice.invoiceNumber ?? "Abrechnungsentwurf"}
               </span>
               <Badge variant={INVOICE_STATUS_BADGE[billing.invoice.status] ?? "neutral"}>
                 {INVOICE_STATUS_LABELS[billing.invoice.status]}
@@ -67,12 +67,12 @@ export function JobBillingCard({ jobId }: { jobId: string }) {
             <div className="text-text-muted mt-1 flex justify-between text-xs">
               <span>Total {formatChf(billing.invoice.totalAmountCents)}</span>
               {billing.invoice.status !== "draft" && (
-                <span>Open {formatChf(billing.invoice.balanceDueCents)}</span>
+                <span>Offen {formatChf(billing.invoice.balanceDueCents)}</span>
               )}
             </div>
             {billing.invoice.dueAt && (
               <div className="text-text-muted text-xs">
-                Due {formatDate(swissDay(billing.invoice.dueAt))}
+                Fällig {formatDate(swissDay(billing.invoice.dueAt))}
               </div>
             )}
           </Link>
@@ -80,21 +80,23 @@ export function JobBillingCard({ jobId }: { jobId: string }) {
           billing.permissions.create && (
             <Button className="w-full" onClick={createSettlement} disabled={settle.isPending}>
               <Calculator className="h-4 w-4" />
-              {settle.isPending ? "Creating..." : "Create final settlement"}
+              {settle.isPending ? "Wird erstellt …" : "Schlussabrechnung erstellen"}
             </Button>
           )
         ) : (
-          <p className="text-text-muted">The final settlement is made once the move has started.</p>
+          <p className="text-text-muted">
+            Die Schlussabrechnung ist möglich, sobald der Umzug begonnen hat.
+          </p>
         )}
 
         {billing.voidedInvoices.length > 0 && (
           <p className="text-text-muted text-xs">
-            Voided:{" "}
+            Storniert:{" "}
             {billing.voidedInvoices.map((v, i) => (
               <span key={v.id}>
                 {i > 0 && ", "}
                 <Link href={`/invoices/${v.id}`} className="hover:underline">
-                  {v.invoiceNumber ?? "draft"}
+                  {v.invoiceNumber ?? "Entwurf"}
                 </Link>
               </span>
             ))}
@@ -104,7 +106,7 @@ export function JobBillingCard({ jobId }: { jobId: string }) {
         {billing.permissions.viewPayments && (
           <div className="border-surface-divider space-y-2 border-t pt-3">
             <div className="flex justify-between">
-              <span className="text-text-muted">Deposit</span>
+              <span className="text-text-muted">Anzahlung</span>
               <span className="tabular-nums">
                 {formatChf(received)}
                 {billing.depositExpectedCents > 0 && (
@@ -133,7 +135,7 @@ export function JobBillingCard({ jobId }: { jobId: string }) {
                     d.status === "completed" && (
                       <button
                         type="button"
-                        aria-label="Cancel deposit"
+                        aria-label="Anzahlung stornieren"
                         className="text-text-muted hover:text-danger-700"
                         onClick={() => setCancelId(d.id)}
                       >
@@ -151,7 +153,7 @@ export function JobBillingCard({ jobId }: { jobId: string }) {
                 onClick={() => setDepositOpen(true)}
               >
                 <Wallet className="h-4 w-4" />
-                Record deposit
+                Anzahlung erfassen
               </Button>
             )}
           </div>
@@ -170,19 +172,19 @@ export function JobBillingCard({ jobId }: { jobId: string }) {
       )}
       {cancelId && (
         <ReasonDialog
-          title="Cancel this deposit?"
-          description="For deposits recorded by mistake. It stays visible as cancelled."
-          confirmLabel="Cancel deposit"
+          title="Anzahlung stornieren?"
+          description="Für irrtümlich erfasste Anzahlungen. Sie bleibt als storniert sichtbar."
+          confirmLabel="Stornieren"
           pending={cancelPayment.isPending}
           onClose={() => setCancelId(null)}
           onConfirm={async (reason) => {
             try {
               await cancelPayment.mutateAsync({ id: cancelId, reason })
               await Promise.all([utils.invoices.invalidate(), utils.jobs.invalidate()])
-              toast.success("Deposit cancelled")
+              toast.success("Anzahlung storniert")
               setCancelId(null)
             } catch (err) {
-              toast.error(err instanceof Error ? err.message : "Failed to cancel")
+              toast.error(err instanceof Error ? err.message : "Stornieren fehlgeschlagen")
             }
           }}
         />

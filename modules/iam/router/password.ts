@@ -21,7 +21,7 @@ export const forgotPassword = publicProcedure
 
     return {
       success: true,
-      message: "If this email is registered, you'll receive a reset link.",
+      message: "Ist diese E-Mail registriert, erhältst du einen Link zum Zurücksetzen.",
     }
   })
 
@@ -50,7 +50,7 @@ export const changePassword = protectedProcedure
     })
 
     if (signInError) {
-      throw new TRPCError({ code: "BAD_REQUEST", message: "Current password is incorrect." })
+      throw new TRPCError({ code: "BAD_REQUEST", message: "Das aktuelle Passwort ist falsch." })
     }
 
     // Update password
@@ -61,7 +61,7 @@ export const changePassword = protectedProcedure
     if (updateError) {
       throw new TRPCError({
         code: "INTERNAL_SERVER_ERROR",
-        message: "Failed to update password. Please try again.",
+        message: "Passwort konnte nicht geändert werden. Versuche es nochmals.",
       })
     }
 

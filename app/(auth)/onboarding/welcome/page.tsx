@@ -4,7 +4,7 @@ import { createClient } from "@/lib/supabase/server"
 import { getJwtAppMetadata } from "@/lib/supabase/jwt"
 
 export const metadata: Metadata = {
-  title: "Welcome to Bivro",
+  title: "Willkommen bei Bivro",
 }
 
 export default async function OnboardingWelcomePage() {
@@ -37,9 +37,9 @@ export default async function OnboardingWelcomePage() {
   return (
     <div className="flex min-h-screen items-center justify-center bg-slate-50 px-6 py-12">
       <div className="w-full max-w-lg text-center">
-        <div className="mb-6 inline-flex h-20 w-20 items-center justify-center rounded-full bg-violet-100">
+        <div className="bg-signal-100 mb-6 inline-flex h-20 w-20 items-center justify-center rounded-full">
           <svg
-            className="h-10 w-10 text-violet-600"
+            className="text-signal-600 h-10 w-10"
             fill="none"
             viewBox="0 0 24 24"
             stroke="currentColor"
@@ -53,16 +53,14 @@ export default async function OnboardingWelcomePage() {
           </svg>
         </div>
 
-        <h1 className="text-3xl font-bold text-slate-900">Welcome, {firstName}!</h1>
-        <p className="mt-3 text-base text-slate-500">
-          Your Bivro account is ready. Let&apos;s get you set up.
-        </p>
+        <h1 className="text-3xl font-bold text-slate-900">Willkommen, {firstName}</h1>
+        <p className="mt-3 text-base text-slate-500">Dein Bivro-Konto ist bereit.</p>
 
         <div className="mt-10 grid gap-4 text-left sm:grid-cols-2">
           <div className="rounded-lg border border-slate-200 bg-white p-5">
-            <div className="mb-3 flex h-9 w-9 items-center justify-center rounded-md bg-violet-100">
+            <div className="bg-signal-100 mb-3 flex h-9 w-9 items-center justify-center rounded-md">
               <svg
-                className="h-5 w-5 text-violet-600"
+                className="text-signal-600 h-5 w-5"
                 fill="none"
                 viewBox="0 0 24 24"
                 stroke="currentColor"
@@ -75,16 +73,16 @@ export default async function OnboardingWelcomePage() {
                 />
               </svg>
             </div>
-            <h3 className="font-semibold text-slate-900">Your profile</h3>
+            <h3 className="font-semibold text-slate-900">Dein Profil</h3>
             <p className="mt-1 text-sm text-slate-500">
-              Review your account details and set your preferences.
+              Kontodaten prüfen und Einstellungen wählen.
             </p>
           </div>
 
           <div className="rounded-lg border border-slate-200 bg-white p-5">
-            <div className="mb-3 flex h-9 w-9 items-center justify-center rounded-md bg-violet-100">
+            <div className="bg-signal-100 mb-3 flex h-9 w-9 items-center justify-center rounded-md">
               <svg
-                className="h-5 w-5 text-violet-600"
+                className="text-signal-600 h-5 w-5"
                 fill="none"
                 viewBox="0 0 24 24"
                 stroke="currentColor"
@@ -97,27 +95,25 @@ export default async function OnboardingWelcomePage() {
                 />
               </svg>
             </div>
-            <h3 className="font-semibold text-slate-900">Dashboard</h3>
-            <p className="mt-1 text-sm text-slate-500">
-              See an overview of your company&apos;s activity.
-            </p>
+            <h3 className="font-semibold text-slate-900">Übersicht</h3>
+            <p className="mt-1 text-sm text-slate-500">Alles, was heute in deiner Firma ansteht.</p>
           </div>
         </div>
 
         {role === "office" ? (
           <p className="mt-8 text-sm text-slate-400">
-            Your access has been configured by your administrator.{" "}
-            <a href="/settings/profile" className="text-violet-600 hover:text-violet-700">
-              View your permissions
+            Deine Rechte hat der Inhaber festgelegt.{" "}
+            <a href="/settings/profile" className="text-signal-600 hover:text-signal-700">
+              Rechte ansehen
             </a>
           </p>
         ) : null}
 
         <a
           href="/dashboard"
-          className="mt-8 inline-block rounded-md bg-slate-900 px-8 py-3 text-sm font-semibold text-white hover:bg-slate-800 focus:ring-2 focus:ring-violet-600/30 focus:ring-offset-2 focus:outline-none"
+          className="bg-signal-600 hover:bg-signal-700 focus:ring-signal-600/30 mt-8 inline-block rounded-md px-8 py-3 text-sm font-semibold text-white focus:ring-2 focus:ring-offset-2 focus:outline-none"
         >
-          Go to dashboard →
+          Zur Übersicht →
         </a>
       </div>
     </div>

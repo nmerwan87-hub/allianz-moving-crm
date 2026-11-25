@@ -275,19 +275,19 @@ describeWithDb("Jobs, dispatch, crew and fleet", () => {
         leadEmployeeId: anna,
         vehicleIds: [],
       }),
-    ).rejects.toThrow(/crew lead must be part of the crew/)
+    ).rejects.toThrow(/Teamleitung muss zum Team/)
     await expect(
       owner.jobs.assign({ id: jobMorning, employeeIds: [foreignEmployee], vehicleIds: [] }),
-    ).rejects.toThrow(/Employee or vehicle not found/)
+    ).rejects.toThrow(/Mitarbeiter oder Fahrzeug nicht gefunden/)
   })
 
   it("guards status changes", async () => {
     const empty = await newJob(day(20), "08:00", 4)
     await owner.jobs.transition({ id: empty, to: "confirmed" })
     await expect(owner.jobs.transition({ id: empty, to: "in_progress" })).rejects.toThrow(
-      /crew assignment/,
+      /mindestens eine Person/,
     )
-    await expect(owner.jobs.transition({ id: empty, to: "cancelled" })).rejects.toThrow(/reason/)
+    await expect(owner.jobs.transition({ id: empty, to: "cancelled" })).rejects.toThrow(/Grund/)
     await owner.jobs.transition({ id: empty, to: "cancelled", reason: "Kunde hat abgesagt" })
     expect((await owner.jobs.get({ id: empty })).cancellationReason).toBe("Kunde hat abgesagt")
 
@@ -304,16 +304,16 @@ describeWithDb("Jobs, dispatch, crew and fleet", () => {
     const viewer = await callerFor(viewerA)
     await expect(
       viewer.jobs.assign({ id: jobAfternoon, employeeIds: [], vehicleIds: [] }),
-    ).rejects.toThrow(/Missing permission: jobs.assign/)
+    ).rejects.toThrow(/Fehlendes Recht: jobs.assign/)
     await expect(
       viewer.jobs.transition({ id: jobAfternoon, to: "cancelled", reason: "x" }),
-    ).rejects.toThrow(/Missing permission: jobs.cancel/)
+    ).rejects.toThrow(/Fehlendes Recht: jobs.cancel/)
 
     const other = await callerFor(ownerB)
-    await expect(other.jobs.get({ id: jobAfternoon })).rejects.toThrow(/Job not found/)
+    await expect(other.jobs.get({ id: jobAfternoon })).rejects.toThrow(/Auftrag nicht gefunden/)
     await expect(
       other.jobs.assign({ id: jobAfternoon, employeeIds: [], vehicleIds: [] }),
-    ).rejects.toThrow(/Job not found/)
+    ).rejects.toThrow(/Auftrag nicht gefunden/)
     expect(await other.jobs.list({ from: day(0), to: day(30) })).toEqual([])
   })
 

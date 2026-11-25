@@ -29,10 +29,10 @@ import { createVehicleInput, vehicleTypeEnum, type Vehicle } from "@/modules/fle
 import { VEHICLE_TYPE_LABELS, formatDate, isoDate, addDays } from "../jobs/_lib/labels"
 
 const STATUS_LABELS: Record<string, string> = {
-  available: "Available",
-  in_use: "In use",
-  maintenance: "Maintenance",
-  retired: "Retired",
+  available: "Verfügbar",
+  in_use: "Im Einsatz",
+  maintenance: "In Wartung",
+  retired: "Ausser Betrieb",
 }
 
 function VehicleDialog({ vehicle, onClose }: { vehicle?: Vehicle; onClose: () => void }) {
@@ -67,15 +67,15 @@ function VehicleDialog({ vehicle, onClose }: { vehicle?: Vehicle; onClose: () =>
       nextInspectionOn: form.nextInspectionOn || null,
       insuranceExpiry: form.insuranceExpiry || null,
     })
-    if (!parsed.success) return setError(parsed.error.issues[0]?.message ?? "Check the form")
+    if (!parsed.success) return setError(parsed.error.issues[0]?.message ?? "Angaben prüfen")
     try {
       if (vehicle) await update.mutateAsync({ id: vehicle.id, ...parsed.data })
       else await create.mutateAsync(parsed.data)
       await Promise.all([utils.fleet.list.invalidate(), utils.jobs.invalidate()])
-      toast.success("Vehicle saved")
+      toast.success("Fahrzeug gespeichert")
       onClose()
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to save")
+      setError(err instanceof Error ? err.message : "Speichern fehlgeschlagen")
     }
   }
 
@@ -83,17 +83,17 @@ function VehicleDialog({ vehicle, onClose }: { vehicle?: Vehicle; onClose: () =>
     <Dialog open onOpenChange={(o) => !o && onClose()}>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>{vehicle ? "Edit vehicle" : "Add vehicle"}</DialogTitle>
+          <DialogTitle>{vehicle ? "Fahrzeug bearbeiten" : "Fahrzeug erfassen"}</DialogTitle>
         </DialogHeader>
         <div className="grid max-h-[65vh] gap-3 overflow-y-auto py-1 sm:grid-cols-2">
           <div>
             <FieldLabel htmlFor="ve-name" required>
-              Name
+              Bezeichnung
             </FieldLabel>
             <Input id="ve-name" placeholder="LKW 1" value={form.name} onChange={set("name")} />
           </div>
           <div>
-            <FieldLabel htmlFor="ve-plate">Licence plate</FieldLabel>
+            <FieldLabel htmlFor="ve-plate">Kontrollschild</FieldLabel>
             <Input
               id="ve-plate"
               placeholder="ZH 123456"
@@ -102,7 +102,7 @@ function VehicleDialog({ vehicle, onClose }: { vehicle?: Vehicle; onClose: () =>
             />
           </div>
           <div>
-            <FieldLabel htmlFor="ve-type">Type</FieldLabel>
+            <FieldLabel htmlFor="ve-type">Typ</FieldLabel>
             <Select id="ve-type" value={form.type} onChange={set("type")}>
               {vehicleTypeEnum.options.map((t) => (
                 <option key={t} value={t}>
@@ -122,7 +122,7 @@ function VehicleDialog({ vehicle, onClose }: { vehicle?: Vehicle; onClose: () =>
             </Select>
           </div>
           <div>
-            <FieldLabel htmlFor="ve-m3">Load volume (m³)</FieldLabel>
+            <FieldLabel htmlFor="ve-m3">Ladevolumen (m³)</FieldLabel>
             <Input
               id="ve-m3"
               inputMode="decimal"
@@ -131,7 +131,7 @@ function VehicleDialog({ vehicle, onClose }: { vehicle?: Vehicle; onClose: () =>
             />
           </div>
           <div>
-            <FieldLabel htmlFor="ve-kg">Payload (kg)</FieldLabel>
+            <FieldLabel htmlFor="ve-kg">Nutzlast (kg)</FieldLabel>
             <Input
               id="ve-kg"
               inputMode="numeric"
@@ -140,7 +140,7 @@ function VehicleDialog({ vehicle, onClose }: { vehicle?: Vehicle; onClose: () =>
             />
           </div>
           <div>
-            <FieldLabel htmlFor="ve-mfk">Next inspection (MFK)</FieldLabel>
+            <FieldLabel htmlFor="ve-mfk">Nächste MFK</FieldLabel>
             <Input
               id="ve-mfk"
               type="date"
@@ -149,7 +149,7 @@ function VehicleDialog({ vehicle, onClose }: { vehicle?: Vehicle; onClose: () =>
             />
           </div>
           <div>
-            <FieldLabel htmlFor="ve-ins">Insurance valid until</FieldLabel>
+            <FieldLabel htmlFor="ve-ins">Versicherung gültig bis</FieldLabel>
             <Input
               id="ve-ins"
               type="date"
@@ -158,15 +158,15 @@ function VehicleDialog({ vehicle, onClose }: { vehicle?: Vehicle; onClose: () =>
             />
           </div>
           <div>
-            <FieldLabel htmlFor="ve-make">Make</FieldLabel>
+            <FieldLabel htmlFor="ve-make">Marke</FieldLabel>
             <Input id="ve-make" value={form.make} onChange={set("make")} />
           </div>
           <div>
-            <FieldLabel htmlFor="ve-model">Model</FieldLabel>
+            <FieldLabel htmlFor="ve-model">Modell</FieldLabel>
             <Input id="ve-model" value={form.model} onChange={set("model")} />
           </div>
           <div className="sm:col-span-2">
-            <FieldLabel htmlFor="ve-notes">Notes</FieldLabel>
+            <FieldLabel htmlFor="ve-notes">Notiz</FieldLabel>
             <Textarea id="ve-notes" rows={2} value={form.notes} onChange={set("notes")} />
           </div>
           {error && (
@@ -177,10 +177,10 @@ function VehicleDialog({ vehicle, onClose }: { vehicle?: Vehicle; onClose: () =>
         </div>
         <DialogFooter>
           <Button variant="secondary" onClick={onClose}>
-            Cancel
+            Abbrechen
           </Button>
           <Button onClick={save} disabled={create.isPending || update.isPending}>
-            Save
+            Speichern
           </Button>
         </DialogFooter>
       </DialogContent>
@@ -198,13 +198,13 @@ export default function VehiclesPage() {
   return (
     <div>
       <PageHeader
-        title="Vehicles"
-        description="Your fleet with inspection (MFK) and insurance dates."
+        title="Fahrzeuge"
+        description="Eure Fahrzeuge mit MFK- und Versicherungsdaten."
         actions={
           canCreate ? (
             <Button onClick={() => setEditing("new")}>
               <Plus className="h-4 w-4" />
-              Add vehicle
+              Fahrzeug erfassen
             </Button>
           ) : undefined
         }
@@ -215,19 +215,19 @@ export default function VehiclesPage() {
       ) : (vehicles.data ?? []).length === 0 ? (
         <EmptyState
           icon={Car}
-          title="No vehicles yet"
-          description="Add vans and trucks to plan them on jobs."
+          title="Noch keine Fahrzeuge"
+          description="Erfasse Lieferwagen und LKW, um sie in Aufträgen einzuplanen."
         />
       ) : (
         <Card className="overflow-hidden p-0">
           <table className="w-full border-collapse text-sm">
             <thead>
-              <tr className="border-surface-divider text-text-muted border-b text-left text-xs font-semibold tracking-wide uppercase">
-                <th className="px-4 py-2.5">Vehicle</th>
-                <th className="hidden px-4 py-2.5 md:table-cell">Type</th>
-                <th className="hidden px-4 py-2.5 md:table-cell">Volume</th>
+              <tr className="border-surface-divider text-text-muted border-b text-left text-xs font-medium">
+                <th className="px-4 py-2.5">Fahrzeug</th>
+                <th className="hidden px-4 py-2.5 md:table-cell">Typ</th>
+                <th className="hidden px-4 py-2.5 md:table-cell">Volumen</th>
                 <th className="px-4 py-2.5">MFK</th>
-                <th className="hidden px-4 py-2.5 lg:table-cell">Insurance</th>
+                <th className="hidden px-4 py-2.5 lg:table-cell">Versicherung</th>
                 <th className="px-4 py-2.5">Status</th>
                 {canEdit && <th className="px-4 py-2.5" />}
               </tr>
@@ -273,7 +273,7 @@ export default function VehiclesPage() {
                       <Button
                         variant="ghost"
                         size="icon"
-                        aria-label={`Edit ${v.name}`}
+                        aria-label={`${v.name} bearbeiten`}
                         onClick={() => setEditing(v)}
                       >
                         <Pencil className="h-4 w-4" />

@@ -18,13 +18,9 @@ import {
 import { Card, CardContent, CardHeader } from "@/app/(dashboard)/_components/ui/card"
 import { useToast } from "@/app/(dashboard)/_components/ui/toast"
 import { useUnsavedChangesGuard } from "@/app/(dashboard)/_lib/active-company"
-import {
-  createLeadInput,
-  moveTypeEnum,
-  propertySizeEnum,
-  acquisitionSourceEnum,
-} from "@/modules/leads/interface"
+import { createLeadInput, moveTypeEnum, acquisitionSourceEnum } from "@/modules/leads/interface"
 import type { Lead } from "@/modules/leads/interface"
+import { labelOf } from "@/app/(dashboard)/_lib/labels"
 
 // Reuse the create schema shape for editing (omit nothing — all fields are optional in edit mode)
 const formSchema = createLeadInput
@@ -45,11 +41,12 @@ const EMPTY: FormValues = {
   requestedDate: "",
   dateFlexible: false,
   propertySize: null,
+  rooms: null,
   originAddress: "",
   originCity: "",
   originState: "",
   originPostalCode: "",
-  originCountry: "US",
+  originCountry: "CH",
   originFloor: null,
   originHasElevator: false,
   originHasStairs: false,
@@ -58,7 +55,7 @@ const EMPTY: FormValues = {
   destCity: "",
   destState: "",
   destPostalCode: "",
-  destCountry: "US",
+  destCountry: "CH",
   destFloor: null,
   destHasElevator: false,
   destHasStairs: false,
@@ -83,11 +80,12 @@ function leadToFormValues(lead: Lead): FormValues {
     requestedDate: lead.requestedDate ?? "",
     dateFlexible: lead.dateFlexible,
     propertySize: lead.propertySize as FormValues["propertySize"],
+    rooms: lead.rooms,
     originAddress: lead.originAddress ?? "",
     originCity: lead.originCity ?? "",
     originState: lead.originState ?? "",
     originPostalCode: lead.originPostalCode ?? "",
-    originCountry: lead.originCountry ?? "US",
+    originCountry: lead.originCountry ?? "CH",
     originFloor: lead.originFloor,
     originHasElevator: lead.originHasElevator,
     originHasStairs: lead.originHasStairs,
@@ -96,7 +94,7 @@ function leadToFormValues(lead: Lead): FormValues {
     destCity: lead.destCity ?? "",
     destState: lead.destState ?? "",
     destPostalCode: lead.destPostalCode ?? "",
-    destCountry: lead.destCountry ?? "US",
+    destCountry: lead.destCountry ?? "CH",
     destFloor: lead.destFloor,
     destHasElevator: lead.destHasElevator,
     destHasStairs: lead.destHasStairs,
@@ -133,100 +131,56 @@ export function LeadForm({ mode, lead }: LeadFormProps) {
     try {
       if (mode === "create") {
         const result = await createMutation.mutateAsync(values)
-        toast.success("Lead created successfully")
+        toast.success("Anfrage erfasst")
         router.push(`/leads/${result.id}`)
       } else if (mode === "edit" && lead) {
         await updateMutation.mutateAsync({ id: lead.id, ...values })
-        toast.success("Lead updated successfully")
+        toast.success("Anfrage gespeichert")
         router.push(`/leads/${lead.id}`)
       }
     } catch (err) {
-      const message = err instanceof Error ? err.message : "Something went wrong"
+      const message = err instanceof Error ? err.message : "Etwas ist schiefgelaufen"
       toast.error(message)
     }
   })
 
   return (
-    <form onSubmit={onSubmit} className="space-y-6">
-      {/* Contact */}
+    <form onSubmit={onSubmit} className="space-y-4">
       <Card>
-        <CardHeader>Contact Information</CardHeader>
+        <CardHeader>Kontakt</CardHeader>
         <CardContent className="grid gap-4 sm:grid-cols-2">
           <div>
             <FieldLabel required htmlFor="firstName">
-              First name
+              Vorname
             </FieldLabel>
             <Input id="firstName" hasError={!!errors.firstName} {...register("firstName")} />
             <FieldError message={errors.firstName?.message} />
           </div>
           <div>
             <FieldLabel required htmlFor="lastName">
-              Last name
+              Nachname
             </FieldLabel>
             <Input id="lastName" hasError={!!errors.lastName} {...register("lastName")} />
             <FieldError message={errors.lastName?.message} />
           </div>
           <div>
-            <FieldLabel htmlFor="email">Email</FieldLabel>
+            <FieldLabel htmlFor="email">E-Mail</FieldLabel>
             <Input id="email" type="email" hasError={!!errors.email} {...register("email")} />
             <FieldError message={errors.email?.message} />
           </div>
           <div>
-            <FieldLabel htmlFor="phone">Phone</FieldLabel>
-            <Input id="phone" type="tel" {...register("phone")} />
+            <FieldLabel htmlFor="phone">Telefon</FieldLabel>
+            <Input id="phone" type="tel" placeholder="079 123 45 67" {...register("phone")} />
             <FieldError message={errors.phone?.message} />
           </div>
         </CardContent>
       </Card>
 
-      {/* Move details */}
       <Card>
-        <CardHeader>Move Details</CardHeader>
+        <CardHeader>Umzug</CardHeader>
         <CardContent className="grid gap-4 sm:grid-cols-2">
           <div>
-            <FieldLabel htmlFor="moveType">Move type</FieldLabel>
-            <Controller
-              control={control}
-              name="moveType"
-              render={({ field }) => (
-                <Select
-                  id="moveType"
-                  value={field.value ?? ""}
-                  onChange={(e) => field.onChange(e.target.value === "" ? null : e.target.value)}
-                >
-                  <option value="">Select type...</option>
-                  {moveTypeEnum.options.map((opt) => (
-                    <option key={opt} value={opt}>
-                      {opt.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase())}
-                    </option>
-                  ))}
-                </Select>
-              )}
-            />
-          </div>
-          <div>
-            <FieldLabel htmlFor="propertySize">Property size</FieldLabel>
-            <Controller
-              control={control}
-              name="propertySize"
-              render={({ field }) => (
-                <Select
-                  id="propertySize"
-                  value={field.value ?? ""}
-                  onChange={(e) => field.onChange(e.target.value === "" ? null : e.target.value)}
-                >
-                  <option value="">Select size...</option>
-                  {propertySizeEnum.options.map((opt) => (
-                    <option key={opt} value={opt}>
-                      {opt.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase())}
-                    </option>
-                  ))}
-                </Select>
-              )}
-            />
-          </div>
-          <div>
-            <FieldLabel htmlFor="requestedDate">Requested moving date</FieldLabel>
+            <FieldLabel htmlFor="requestedDate">Gewünschtes Datum</FieldLabel>
             <Input
               id="requestedDate"
               type="date"
@@ -234,235 +188,158 @@ export function LeadForm({ mode, lead }: LeadFormProps) {
               {...register("requestedDate")}
             />
             <FieldError message={errors.requestedDate?.message} />
-          </div>
-          <div className="flex items-end">
-            <label className="text-text-secondary flex items-center gap-2 text-sm">
-              <input
-                type="checkbox"
-                className="border-surface-divider h-4 w-4 rounded"
-                {...register("dateFlexible")}
-              />
-              Date is flexible
+            <label className="text-text-secondary mt-2 flex items-center gap-2 text-sm">
+              <input type="checkbox" className="h-4 w-4" {...register("dateFlexible")} />
+              Datum flexibel
             </label>
           </div>
-          <div>
-            <FieldLabel htmlFor="estimatedVolumeCuft">Estimated volume (cu ft)</FieldLabel>
-            <Input
-              id="estimatedVolumeCuft"
-              type="number"
-              step="any"
-              hasError={!!errors.estimatedVolumeCuft}
-              {...register("estimatedVolumeCuft", {
-                setValueAs: (v) => (v === "" || v === null ? null : Number(v)),
-              })}
-            />
-            <FieldError message={errors.estimatedVolumeCuft?.message} />
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <FieldLabel htmlFor="moveType">Art</FieldLabel>
+              <Controller
+                control={control}
+                name="moveType"
+                render={({ field }) => (
+                  <Select
+                    id="moveType"
+                    value={field.value ?? ""}
+                    onChange={(e) => field.onChange(e.target.value === "" ? null : e.target.value)}
+                  >
+                    <option value="">—</option>
+                    {moveTypeEnum.options.map((opt) => (
+                      <option key={opt} value={opt}>
+                        {labelOf(opt)}
+                      </option>
+                    ))}
+                  </Select>
+                )}
+              />
+            </div>
+            <div>
+              <FieldLabel htmlFor="rooms">Anzahl Zimmer</FieldLabel>
+              <Controller
+                control={control}
+                name="rooms"
+                render={({ field }) => (
+                  <Select
+                    id="rooms"
+                    value={field.value == null ? "" : String(field.value)}
+                    onChange={(e) =>
+                      field.onChange(e.target.value === "" ? null : Number(e.target.value))
+                    }
+                  >
+                    <option value="">—</option>
+                    {Array.from({ length: 16 }, (_, i) => 1 + i * 0.5).map((r) => (
+                      <option key={r} value={String(r)}>
+                        {r}
+                      </option>
+                    ))}
+                  </Select>
+                )}
+              />
+            </div>
           </div>
-          <div>
-            <FieldLabel htmlFor="estimatedDistanceMiles">Estimated distance (miles)</FieldLabel>
-            <Input
-              id="estimatedDistanceMiles"
-              type="number"
-              step="any"
-              hasError={!!errors.estimatedDistanceMiles}
-              {...register("estimatedDistanceMiles", {
-                setValueAs: (v) => (v === "" || v === null ? null : Number(v)),
-              })}
-            />
-            <FieldError message={errors.estimatedDistanceMiles?.message} />
-          </div>
+
+          {(["origin", "dest"] as const).map((side) => (
+            <div key={side} className="space-y-2">
+              <p className="text-text-primary text-xs font-semibold tracking-wide uppercase">
+                {side === "origin" ? "Von" : "Nach"}
+              </p>
+              <Input
+                aria-label={side === "origin" ? "Von Strasse" : "Nach Strasse"}
+                placeholder="Strasse und Nr."
+                {...register(`${side}Address`)}
+              />
+              <div className="grid grid-cols-[90px_minmax(0,1fr)] gap-2">
+                <Input
+                  aria-label={side === "origin" ? "Von PLZ" : "Nach PLZ"}
+                  placeholder="PLZ"
+                  {...register(`${side}PostalCode`)}
+                />
+                <Input
+                  aria-label={side === "origin" ? "Von Ort" : "Nach Ort"}
+                  placeholder="Ort"
+                  {...register(`${side}City`)}
+                />
+              </div>
+              <div className="flex items-center gap-3">
+                <Controller
+                  control={control}
+                  name={`${side}Floor`}
+                  render={({ field }) => (
+                    <Select
+                      aria-label={side === "origin" ? "Von Stockwerk" : "Nach Stockwerk"}
+                      className="w-40"
+                      value={
+                        field.value === null || field.value === undefined ? "" : String(field.value)
+                      }
+                      onChange={(e) =>
+                        field.onChange(e.target.value === "" ? null : Number(e.target.value))
+                      }
+                    >
+                      <option value="">Stockwerk …</option>
+                      <option value="0">Erdgeschoss</option>
+                      {Array.from({ length: 12 }, (_, i) => i + 1).map((f) => (
+                        <option key={f} value={String(f)}>
+                          {f}. Stock
+                        </option>
+                      ))}
+                    </Select>
+                  )}
+                />
+                <label className="text-text-secondary flex items-center gap-1.5 text-sm">
+                  <input type="checkbox" className="h-4 w-4" {...register(`${side}HasElevator`)} />
+                  Lift
+                </label>
+              </div>
+            </div>
+          ))}
         </CardContent>
       </Card>
 
-      {/* Origin address */}
       <Card>
-        <CardHeader>Origin Address</CardHeader>
-        <CardContent className="grid gap-4 sm:grid-cols-2">
-          <div className="sm:col-span-2">
-            <FieldLabel htmlFor="originAddress">Street address</FieldLabel>
-            <Input id="originAddress" {...register("originAddress")} />
-          </div>
-          <div>
-            <FieldLabel htmlFor="originCity">City</FieldLabel>
-            <Input id="originCity" {...register("originCity")} />
-          </div>
-          <div>
-            <FieldLabel htmlFor="originState">State / Province</FieldLabel>
-            <Input id="originState" {...register("originState")} />
-          </div>
-          <div>
-            <FieldLabel htmlFor="originPostalCode">Postal code</FieldLabel>
-            <Input id="originPostalCode" {...register("originPostalCode")} />
-          </div>
-          <div>
-            <FieldLabel htmlFor="originCountry">Country (2-letter)</FieldLabel>
-            <Input id="originCountry" maxLength={2} {...register("originCountry")} />
-          </div>
-          <div>
-            <FieldLabel htmlFor="originFloor">Floor</FieldLabel>
-            <Input
-              id="originFloor"
-              type="number"
-              min={0}
-              hasError={!!errors.originFloor}
-              {...register("originFloor", {
-                setValueAs: (v) => (v === "" || v === null ? null : Number(v)),
-              })}
-            />
-          </div>
-          <div className="flex items-end gap-6">
-            <label className="text-text-secondary flex items-center gap-2 text-sm">
-              <input
-                type="checkbox"
-                className="border-surface-divider h-4 w-4 rounded"
-                {...register("originHasElevator")}
-              />
-              Has elevator
-            </label>
-            <label className="text-text-secondary flex items-center gap-2 text-sm">
-              <input
-                type="checkbox"
-                className="border-surface-divider h-4 w-4 rounded"
-                {...register("originHasStairs")}
-              />
-              Has stairs
-            </label>
-          </div>
-          <div className="sm:col-span-2">
-            <FieldLabel htmlFor="originParkingNotes">Parking notes</FieldLabel>
-            <Textarea id="originParkingNotes" rows={2} {...register("originParkingNotes")} />
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Destination address */}
-      <Card>
-        <CardHeader>Destination Address</CardHeader>
-        <CardContent className="grid gap-4 sm:grid-cols-2">
-          <div className="sm:col-span-2">
-            <FieldLabel htmlFor="destAddress">Street address</FieldLabel>
-            <Input id="destAddress" {...register("destAddress")} />
-          </div>
-          <div>
-            <FieldLabel htmlFor="destCity">City</FieldLabel>
-            <Input id="destCity" {...register("destCity")} />
-          </div>
-          <div>
-            <FieldLabel htmlFor="destState">State / Province</FieldLabel>
-            <Input id="destState" {...register("destState")} />
-          </div>
-          <div>
-            <FieldLabel htmlFor="destPostalCode">Postal code</FieldLabel>
-            <Input id="destPostalCode" {...register("destPostalCode")} />
-          </div>
-          <div>
-            <FieldLabel htmlFor="destCountry">Country (2-letter)</FieldLabel>
-            <Input id="destCountry" maxLength={2} {...register("destCountry")} />
-          </div>
-          <div>
-            <FieldLabel htmlFor="destFloor">Floor</FieldLabel>
-            <Input
-              id="destFloor"
-              type="number"
-              min={0}
-              hasError={!!errors.destFloor}
-              {...register("destFloor", {
-                setValueAs: (v) => (v === "" || v === null ? null : Number(v)),
-              })}
-            />
-          </div>
-          <div className="flex items-end gap-6">
-            <label className="text-text-secondary flex items-center gap-2 text-sm">
-              <input
-                type="checkbox"
-                className="border-surface-divider h-4 w-4 rounded"
-                {...register("destHasElevator")}
-              />
-              Has elevator
-            </label>
-            <label className="text-text-secondary flex items-center gap-2 text-sm">
-              <input
-                type="checkbox"
-                className="border-surface-divider h-4 w-4 rounded"
-                {...register("destHasStairs")}
-              />
-              Has stairs
-            </label>
-          </div>
-          <div className="sm:col-span-2">
-            <FieldLabel htmlFor="destParkingNotes">Parking notes</FieldLabel>
-            <Textarea id="destParkingNotes" rows={2} {...register("destParkingNotes")} />
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Acquisition */}
-      <Card>
-        <CardHeader>Acquisition &amp; Marketing</CardHeader>
+        <CardHeader>Weitere Angaben</CardHeader>
         <CardContent className="grid gap-4 sm:grid-cols-2">
           <div>
-            <FieldLabel htmlFor="source">Lead source</FieldLabel>
+            <FieldLabel htmlFor="source">Quelle</FieldLabel>
             <Controller
               control={control}
               name="source"
               render={({ field }) => (
                 <Select
                   id="source"
-                  value={field.value ?? ""}
-                  onChange={(e) => field.onChange(e.target.value === "" ? null : e.target.value)}
+                  value={field.value ?? "manual"}
+                  onChange={(e) => field.onChange(e.target.value)}
                 >
                   {acquisitionSourceEnum.options.map((opt) => (
                     <option key={opt} value={opt}>
-                      {opt.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase())}
+                      {labelOf(opt)}
                     </option>
                   ))}
                 </Select>
               )}
             />
-            <FieldHint>How this lead found your company</FieldHint>
-          </div>
-          <div>
-            <FieldLabel htmlFor="utmSource">UTM source</FieldLabel>
-            <Input id="utmSource" {...register("utmSource")} />
-          </div>
-          <div>
-            <FieldLabel htmlFor="utmMedium">UTM medium</FieldLabel>
-            <Input id="utmMedium" {...register("utmMedium")} />
-          </div>
-          <div>
-            <FieldLabel htmlFor="utmCampaign">UTM campaign</FieldLabel>
-            <Input id="utmCampaign" {...register("utmCampaign")} />
+            <FieldHint>Wie die Anfrage zu euch kam</FieldHint>
           </div>
           <div className="sm:col-span-2">
-            <FieldLabel htmlFor="referrerUrl">Referrer URL</FieldLabel>
-            <Input id="referrerUrl" {...register("referrerUrl")} />
+            <FieldLabel htmlFor="internalNotes">Interne Notiz</FieldLabel>
+            <Textarea id="internalNotes" rows={3} {...register("internalNotes")} />
+            <FieldHint>Nur für euer Team sichtbar</FieldHint>
           </div>
         </CardContent>
       </Card>
 
-      {/* Notes */}
-      <Card>
-        <CardHeader>Additional Information</CardHeader>
-        <CardContent>
-          <FieldLabel htmlFor="internalNotes">Internal notes</FieldLabel>
-          <Textarea id="internalNotes" rows={4} {...register("internalNotes")} />
-          <FieldHint>Visible to your team only, never shown to the customer</FieldHint>
-        </CardContent>
-      </Card>
-
-      {/* Actions */}
-      <div className="flex items-center justify-end gap-3">
-        <Button
-          type="button"
-          variant="secondary"
-          onClick={() => router.back()}
-          disabled={isSubmitting}
-        >
+      <div className="flex justify-end gap-2">
+        <Button type="button" variant="secondary" onClick={() => router.back()}>
           <ArrowLeft className="h-4 w-4" />
-          Cancel
+          Abbrechen
         </Button>
         <Button type="submit" disabled={isSubmitting}>
-          {isSubmitting ? "Saving..." : mode === "create" ? "Create Lead" : "Save Changes"}
+          {isSubmitting
+            ? "Speichern …"
+            : mode === "create"
+              ? "Anfrage erfassen"
+              : "Änderungen speichern"}
         </Button>
       </div>
     </form>

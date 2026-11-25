@@ -1,12 +1,12 @@
 export const INVOICE_STATUS_LABELS: Record<string, string> = {
-  draft: "Draft",
-  sent: "Open",
-  viewed: "Open",
-  partially_paid: "Partially paid",
-  paid: "Paid",
-  overdue: "Overdue",
-  void: "Void",
-  write_off: "Written off",
+  draft: "Entwurf",
+  sent: "Offen",
+  viewed: "Offen",
+  partially_paid: "Teilbezahlt",
+  paid: "Bezahlt",
+  overdue: "Überfällig",
+  void: "Storniert",
+  write_off: "Abgeschrieben",
 }
 
 export const INVOICE_STATUS_BADGE: Record<
@@ -24,23 +24,23 @@ export const INVOICE_STATUS_BADGE: Record<
 }
 
 export const PAYMENT_METHOD_LABELS: Record<string, string> = {
-  bank_transfer: "Bank transfer",
-  cash: "Cash",
-  card: "Card / TWINT",
-  other: "Other",
-  ach: "Bank transfer",
-  check: "Cheque",
+  bank_transfer: "Überweisung",
+  cash: "Bar",
+  card: "Karte / TWINT",
+  other: "Andere",
+  ach: "Überweisung",
+  check: "Check",
 }
 
 export const PAYMENT_TYPE_LABELS: Record<string, string> = {
-  deposit: "Deposit",
-  partial: "Partial payment",
-  balance: "Payment",
-  refund: "Refund",
-  adjustment: "Adjustment",
+  deposit: "Anzahlung",
+  partial: "Teilzahlung",
+  balance: "Zahlung",
+  refund: "Rückerstattung",
+  adjustment: "Korrektur",
 }
 
-export const REMINDER_LABELS = ["", "Payment reminder", "Second reminder", "Final reminder"]
+export const REMINDER_LABELS = ["", "Zahlungserinnerung", "2. Mahnung", "3. Mahnung"]
 
 /** Swiss calendar day of a timestamp (due dates end at 23:59:59 Swiss time). */
 export function swissDay(timestamp: string | null | undefined): string | null {

@@ -1,18 +1,18 @@
 export const LANGUAGE_LABELS: Record<string, string> = {
-  de: "German",
-  fr: "French",
-  it: "Italian",
-  en: "English",
+  de: "Deutsch",
+  fr: "Französisch",
+  it: "Italienisch",
+  en: "Englisch",
 }
 
 export const SALUTATION_LABELS: Record<string, string> = {
-  mr: "Mr",
-  ms: "Ms",
+  mr: "Herr",
+  ms: "Frau",
 }
 
 export const CUSTOMER_TYPE_LABELS: Record<string, string> = {
-  private: "Private",
-  business: "Business",
+  private: "Privat",
+  business: "Firma",
 }
 
 export function formatAddress(parts: {

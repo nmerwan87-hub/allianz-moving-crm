@@ -1,7 +1,7 @@
 import { cn } from "@/app/(dashboard)/_lib/cn"
 
 export function ErrorState({
-  title = "Something went wrong",
+  title = "Etwas ist schiefgelaufen",
   message,
   action,
   className,

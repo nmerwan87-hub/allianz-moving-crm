@@ -1,7 +1,7 @@
 import type { Metadata } from "next"
 
 export const metadata: Metadata = {
-  title: "Account Archived — Bivro",
+  title: "Konto archiviert — Bivro",
 }
 
 export default function ArchivedPage() {
@@ -24,22 +24,22 @@ export default function ArchivedPage() {
           </svg>
         </div>
 
-        <h1 className="text-2xl font-bold text-slate-900">Account no longer active</h1>
+        <h1 className="text-2xl font-bold text-slate-900">Konto nicht mehr aktiv</h1>
         <p className="mt-3 text-sm text-slate-500">
-          This Bivro account has been archived. No operational data is accessible.
+          Dieses Bivro-Konto wurde archiviert. Es sind keine Daten mehr zugänglich.
         </p>
 
         <div className="mt-6 rounded-lg border border-slate-200 bg-white p-6 text-left">
-          <p className="text-sm font-medium text-slate-700">Need your data?</p>
+          <p className="text-sm font-medium text-slate-700">Brauchst du deine Daten?</p>
           <p className="mt-2 text-sm text-slate-500">
-            Your data is retained in accordance with our data retention policy. You can request a
-            data export by contacting us.
+            Deine Daten werden gemäss unseren Aufbewahrungsregeln aufbewahrt. Einen Export kannst du
+            bei uns anfordern.
           </p>
           <a
             href="mailto:support@bivro.io?subject=Data%20Export%20Request"
-            className="mt-3 inline-block text-sm font-medium text-violet-600 hover:text-violet-700"
+            className="text-signal-600 hover:text-signal-700 mt-3 inline-block text-sm font-medium"
           >
-            Request data export →
+            Datenexport anfordern →
           </a>
         </div>
 
@@ -47,7 +47,7 @@ export default function ArchivedPage() {
           Questions?{" "}
           <a
             href="mailto:support@bivro.io"
-            className="font-medium text-violet-600 hover:text-violet-700"
+            className="text-signal-600 hover:text-signal-700 font-medium"
           >
             support@bivro.io
           </a>

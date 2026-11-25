@@ -40,7 +40,7 @@ export function DialogContent({
         {children}
         <DialogPrimitive.Close className="text-text-muted hover:bg-surface-sunken hover:text-text-primary absolute top-4 right-4 rounded-[var(--radius-sm)] p-1">
           <X className="h-4 w-4" />
-          <span className="sr-only">Close</span>
+          <span className="sr-only">Schliessen</span>
         </DialogPrimitive.Close>
       </DialogPrimitive.Content>
     </DialogPrimitive.Portal>
