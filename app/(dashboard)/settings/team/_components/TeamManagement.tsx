@@ -1,5 +1,6 @@
 "use client"
 
+import { actionLabel, resourceLabel } from "./permission-labels"
 import { useState, useTransition } from "react"
 import { trpc } from "@/lib/trpc/client"
 import type { AppRouter } from "@/lib/trpc/router"
@@ -93,7 +94,7 @@ function GroupModal({ group, definitions, onClose, onSaved }: GroupModalProps) {
         onClose()
       })
     } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : "Something went wrong."
+      const msg = err instanceof Error ? err.message : "Etwas ist schiefgelaufen."
       setError(msg)
     }
   }
@@ -106,13 +107,13 @@ function GroupModal({ group, definitions, onClose, onSaved }: GroupModalProps) {
         {/* Header */}
         <div className="flex items-center justify-between border-b border-slate-200 px-6 py-4">
           <h2 className="text-base font-semibold text-slate-900">
-            {isEdit ? "Edit group" : "Create permission group"}
+            {isEdit ? "Gruppe bearbeiten" : "Rechtegruppe erstellen"}
           </h2>
           <button
             type="button"
             onClick={onClose}
             className="rounded-md p-1 text-slate-400 hover:bg-slate-100 hover:text-slate-600"
-            aria-label="Close"
+            aria-label="Schliessen"
           >
             ✕
           </button>
@@ -127,11 +128,11 @@ function GroupModal({ group, definitions, onClose, onSaved }: GroupModalProps) {
           ) : null}
 
           <div>
-            <label className="mb-1 block text-sm font-medium text-slate-700">Group name</label>
+            <label className="mb-1 block text-sm font-medium text-slate-700">Gruppenname</label>
             <input
               value={name}
               onChange={(e) => setName(e.target.value)}
-              placeholder="e.g. Dispatcher"
+              placeholder="z. B. Disposition"
               className="block w-full rounded-md border border-slate-300 bg-slate-50 px-3 py-2 text-sm text-slate-900 placeholder:text-slate-400 focus:border-violet-600 focus:ring-2 focus:ring-violet-600/20 focus:outline-none"
             />
           </div>
@@ -143,14 +144,14 @@ function GroupModal({ group, definitions, onClose, onSaved }: GroupModalProps) {
             <input
               value={description}
               onChange={(e) => setDescription(e.target.value)}
-              placeholder="What is this group for?"
+              placeholder="Wofür ist diese Gruppe?"
               className="block w-full rounded-md border border-slate-300 bg-slate-50 px-3 py-2 text-sm text-slate-900 placeholder:text-slate-400 focus:border-violet-600 focus:ring-2 focus:ring-violet-600/20 focus:outline-none"
             />
           </div>
 
           {/* Permission matrix */}
           <div>
-            <p className="mb-3 text-sm font-medium text-slate-700">Permissions</p>
+            <p className="mb-3 text-sm font-medium text-slate-700">Rechte</p>
             <div className="max-h-80 space-y-4 overflow-y-auto rounded-lg border border-slate-200 p-4">
               {[...byResource.entries()].map(([resource, defs]) => {
                 const keys = defs.map((d) => d.key)
@@ -169,7 +170,7 @@ function GroupModal({ group, definitions, onClose, onSaved }: GroupModalProps) {
                         {allOn ? "✓" : someOn ? "−" : ""}
                       </span>
                       <span className="text-xs font-semibold tracking-wide text-slate-600 uppercase">
-                        {resource}
+                        {resourceLabel(resource)}
                       </span>
                     </button>
                     <div className="ml-6 grid grid-cols-2 gap-1">
@@ -185,7 +186,7 @@ function GroupModal({ group, definitions, onClose, onSaved }: GroupModalProps) {
                           >
                             {selectedPerms.has(def.key) ? "✓" : ""}
                           </span>
-                          <span className="text-xs text-slate-700">{def.action}</span>
+                          <span className="text-xs text-slate-700">{actionLabel(def.action)}</span>
                         </button>
                       ))}
                     </div>
@@ -198,14 +199,14 @@ function GroupModal({ group, definitions, onClose, onSaved }: GroupModalProps) {
 
         {/* Footer */}
         <div className="flex items-center justify-between border-t border-slate-200 px-6 py-4">
-          <span className="text-xs text-slate-400">{selectedPerms.size} permissions selected</span>
+          <span className="text-xs text-slate-400">{selectedPerms.size} Rechte ausgewählt</span>
           <div className="flex gap-3">
             <button
               type="button"
               onClick={onClose}
               className="rounded-md border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50"
             >
-              Cancel
+              Abbrechen
             </button>
             <button
               type="button"
@@ -213,7 +214,7 @@ function GroupModal({ group, definitions, onClose, onSaved }: GroupModalProps) {
               disabled={isPending || !name.trim()}
               className="rounded-md bg-slate-900 px-4 py-2 text-sm font-semibold text-white hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-50"
             >
-              {isPending ? "Saving…" : isEdit ? "Save changes" : "Create group"}
+              {isPending ? "Speichern …" : isEdit ? "Änderungen speichern" : "Gruppe erstellen"}
             </button>
           </div>
         </div>
@@ -308,7 +309,7 @@ function UserDrawer({ member, allGroups, definitions, onClose, onSaved }: UserDr
             type="button"
             onClick={onClose}
             className="rounded-md p-1 text-slate-400 hover:bg-slate-100 hover:text-slate-600"
-            aria-label="Close"
+            aria-label="Schliessen"
           >
             ✕
           </button>
@@ -323,7 +324,7 @@ function UserDrawer({ member, allGroups, definitions, onClose, onSaved }: UserDr
               onClick={() => setActiveTab(tab)}
               className={`px-5 py-3 text-sm font-medium capitalize ${activeTab === tab ? "border-b-2 border-violet-600 text-violet-700" : "text-slate-500 hover:text-slate-700"}`}
             >
-              {tab}
+              {tab === "groups" ? "Gruppen" : "Ausnahmen"}
             </button>
           ))}
         </div>
@@ -339,10 +340,10 @@ function UserDrawer({ member, allGroups, definitions, onClose, onSaved }: UserDr
           {activeTab === "groups" && (
             <div className="space-y-2 p-5">
               <p className="mb-3 text-xs font-semibold tracking-wide text-slate-400 uppercase">
-                Permission groups
+                Rechtegruppen
               </p>
               {allGroups.length === 0 ? (
-                <p className="text-sm text-slate-400">No permission groups yet.</p>
+                <p className="text-sm text-slate-400">Noch keine Rechtegruppen.</p>
               ) : (
                 allGroups.map((group) => {
                   const assigned = assignedGroupIds.has(group.id)
@@ -374,7 +375,7 @@ function UserDrawer({ member, allGroups, definitions, onClose, onSaved }: UserDr
                         }}
                         className={`rounded-md px-3 py-1.5 text-xs font-medium transition-colors ${assigned ? "border border-slate-200 text-slate-600 hover:border-red-200 hover:bg-red-50 hover:text-red-700" : "bg-violet-50 text-violet-700 hover:bg-violet-100"} disabled:opacity-50`}
                       >
-                        {assigned ? "Remove" : "Assign"}
+                        {assigned ? "Entfernen" : "Zuteilen"}
                       </button>
                     </div>
                   )
@@ -387,20 +388,20 @@ function UserDrawer({ member, allGroups, definitions, onClose, onSaved }: UserDr
           {activeTab === "overrides" && (
             <div className="p-5">
               <p className="mb-1 text-xs font-semibold tracking-wide text-slate-400 uppercase">
-                Individual overrides
+                Einzelne Ausnahmen
               </p>
               <p className="mb-4 text-xs text-slate-500">
-                Grant or deny individual permissions on top of group memberships. Deny always wins.
+                Einzelne Rechte zusätzlich erlauben oder verbieten. Verbieten hat immer Vorrang.
               </p>
 
               {overridesLoading ? (
-                <p className="text-sm text-slate-400">Loading…</p>
+                <p className="text-sm text-slate-400">Wird geladen …</p>
               ) : (
                 <div className="space-y-4">
                   {[...byResource.entries()].map(([resource, defs]) => (
                     <div key={resource}>
                       <p className="mb-2 text-xs font-semibold tracking-wide text-slate-500 uppercase">
-                        {resource}
+                        {resourceLabel(resource)}
                       </p>
                       <div className="space-y-1">
                         {defs.map((def) => {
@@ -410,12 +411,14 @@ function UserDrawer({ member, allGroups, definitions, onClose, onSaved }: UserDr
                               key={def.key}
                               className="flex items-center justify-between rounded-md px-3 py-1.5 hover:bg-slate-50"
                             >
-                              <span className="text-xs text-slate-700">{def.key}</span>
+                              <span className="text-xs text-slate-700">
+                                {actionLabel(def.action)}
+                              </span>
                               <div className="flex gap-1">
                                 {/* Grant button */}
                                 <button
                                   type="button"
-                                  title="Grant this permission (override)"
+                                  title="Dieses Recht erlauben (Ausnahme)"
                                   onClick={() => {
                                     setError(null)
                                     if (current === "grant") {
@@ -438,7 +441,7 @@ function UserDrawer({ member, allGroups, definitions, onClose, onSaved }: UserDr
                                 {/* Deny button */}
                                 <button
                                   type="button"
-                                  title="Deny this permission (override)"
+                                  title="Dieses Recht verbieten (Ausnahme)"
                                   onClick={() => {
                                     setError(null)
                                     if (current === "deny") {
@@ -521,7 +524,7 @@ export default function TeamManagement({ initialMembers, initialGroups, definiti
             onClick={() => setActiveSection(tab)}
             className={`rounded-md px-4 py-1.5 text-sm font-medium capitalize transition-colors ${activeSection === tab ? "bg-slate-900 text-white" : "text-slate-600 hover:bg-slate-50"}`}
           >
-            {tab === "team" ? "Team members" : "Permission groups"}
+            {tab === "team" ? "Teammitglieder" : "Rechtegruppen"}
           </button>
         ))}
       </div>
@@ -533,7 +536,7 @@ export default function TeamManagement({ initialMembers, initialGroups, definiti
           {ownerMembers.length > 0 && (
             <div className="mb-4">
               <p className="mb-2 text-xs font-semibold tracking-wide text-slate-400 uppercase">
-                Owner
+                Inhaber
               </p>
               {ownerMembers.map((m) => (
                 <div
@@ -547,7 +550,7 @@ export default function TeamManagement({ initialMembers, initialGroups, definiti
                     <p className="text-xs text-slate-400">{m.email}</p>
                   </div>
                   <span className="rounded-full bg-slate-100 px-2 py-0.5 text-xs font-medium text-slate-600">
-                    Owner — unrestricted
+                    Inhaber — alle Rechte
                   </span>
                 </div>
               ))}
@@ -555,12 +558,10 @@ export default function TeamManagement({ initialMembers, initialGroups, definiti
           )}
 
           {/* Office member rows */}
-          <p className="mb-2 text-xs font-semibold tracking-wide text-slate-400 uppercase">
-            Office staff
-          </p>
+          <p className="mb-2 text-xs font-semibold tracking-wide text-slate-400 uppercase">Büro</p>
           {officeMembers.length === 0 ? (
             <div className="rounded-lg border border-dashed border-slate-300 bg-white px-6 py-8 text-center">
-              <p className="text-sm text-slate-500">No office staff yet.</p>
+              <p className="text-sm text-slate-500">Noch keine Büro-Mitarbeitenden.</p>
               <p className="mt-1 text-xs text-slate-400">
                 Invite team members from Settings → Invitations.
               </p>
@@ -574,10 +575,10 @@ export default function TeamManagement({ initialMembers, initialGroups, definiti
                       Name
                     </th>
                     <th className="px-5 py-3 text-left text-xs font-semibold tracking-wide text-slate-400 uppercase">
-                      Groups
+                      Gruppen
                     </th>
                     <th className="px-5 py-3 text-left text-xs font-semibold tracking-wide text-slate-400 uppercase">
-                      Overrides
+                      Ausnahmen
                     </th>
                     <th className="px-5 py-3 text-left text-xs font-semibold tracking-wide text-slate-400 uppercase">
                       Status
@@ -597,7 +598,7 @@ export default function TeamManagement({ initialMembers, initialGroups, definiti
                       <td className="px-5 py-4">
                         <div className="flex flex-wrap gap-1">
                           {m.groups.length === 0 ? (
-                            <span className="text-xs text-slate-400">None</span>
+                            <span className="text-xs text-slate-400">Keine</span>
                           ) : (
                             m.groups.map((g) => (
                               <span
@@ -621,7 +622,7 @@ export default function TeamManagement({ initialMembers, initialGroups, definiti
                         <span
                           className={`inline-flex rounded-full px-2 py-0.5 text-xs font-medium ${m.isActive ? "bg-emerald-50 text-emerald-700" : "bg-slate-100 text-slate-500"}`}
                         >
-                          {m.isActive ? "Active" : "Inactive"}
+                          {m.isActive ? "Aktiv" : "Inaktiv"}
                         </span>
                       </td>
                       <td className="px-5 py-4 text-right">
@@ -630,7 +631,7 @@ export default function TeamManagement({ initialMembers, initialGroups, definiti
                           onClick={() => setSelectedMember(m)}
                           className="rounded-md border border-slate-200 px-3 py-1.5 text-xs font-medium text-slate-600 hover:border-violet-200 hover:bg-violet-50 hover:text-violet-700"
                         >
-                          Manage
+                          Verwalten
                         </button>
                       </td>
                     </tr>
@@ -654,13 +655,13 @@ export default function TeamManagement({ initialMembers, initialGroups, definiti
               onClick={() => setGroupModal({ open: true, group: null })}
               className="rounded-md bg-slate-900 px-4 py-2 text-sm font-semibold text-white hover:bg-slate-800"
             >
-              Create group
+              Gruppe erstellen
             </button>
           </div>
 
           {groups.length === 0 ? (
             <div className="rounded-lg border border-dashed border-slate-300 bg-white px-6 py-10 text-center">
-              <p className="text-sm text-slate-500">No permission groups yet.</p>
+              <p className="text-sm text-slate-500">Noch keine Rechtegruppen.</p>
             </div>
           ) : (
             <div className="space-y-3">
@@ -675,7 +676,7 @@ export default function TeamManagement({ initialMembers, initialGroups, definiti
                         <p className="font-medium text-slate-900">{group.name}</p>
                         {group.isDefault ? (
                           <span className="rounded-full bg-slate-100 px-2 py-0.5 text-xs text-slate-500">
-                            Default
+                            Standard
                           </span>
                         ) : null}
                       </div>
@@ -694,7 +695,7 @@ export default function TeamManagement({ initialMembers, initialGroups, definiti
                         onClick={() => setGroupModal({ open: true, group })}
                         className="rounded-md border border-slate-200 px-3 py-1.5 text-xs font-medium text-slate-600 hover:bg-slate-50"
                       >
-                        Edit
+                        Bearbeiten
                       </button>
                       {!group.isDefault && (
                         <button
@@ -703,7 +704,7 @@ export default function TeamManagement({ initialMembers, initialGroups, definiti
                           onClick={() => {
                             if (group.memberCount > 0) {
                               alert(
-                                `This group has ${group.memberCount} member${group.memberCount !== 1 ? "s" : ""}. Remove all members before deleting.`,
+                                `Diese Gruppe hat ${group.memberCount} Mitglied${group.memberCount !== 1 ? "er" : ""}. Entferne zuerst alle Mitglieder.`,
                               )
                               return
                             }
@@ -712,7 +713,7 @@ export default function TeamManagement({ initialMembers, initialGroups, definiti
                           }}
                           className="rounded-md border border-slate-200 px-3 py-1.5 text-xs font-medium text-red-600 hover:border-red-200 hover:bg-red-50 disabled:opacity-50"
                         >
-                          Delete
+                          Löschen
                         </button>
                       )}
                     </div>

@@ -3,7 +3,7 @@ import { createClient } from "@/lib/supabase/server"
 import { createServiceRoleClient } from "@/lib/supabase/service-role"
 
 export const metadata: Metadata = {
-  title: "Account Suspended — Bivro",
+  title: "Konto gesperrt — Bivro",
 }
 
 export default async function SuspendedPage() {
@@ -50,20 +50,18 @@ export default async function SuspendedPage() {
           </svg>
         </div>
 
-        <h1 className="text-2xl font-bold text-slate-900">Account suspended</h1>
-        <p className="mt-3 text-sm text-slate-500">
-          Your Bivro account has been temporarily suspended.
-        </p>
+        <h1 className="text-2xl font-bold text-slate-900">Konto gesperrt</h1>
+        <p className="mt-3 text-sm text-slate-500">Dein Bivro-Konto ist vorübergehend gesperrt.</p>
 
         {suspendedReason ? (
           <div className="mt-6 rounded-lg border border-red-200 bg-red-50 p-4 text-left">
-            <p className="text-sm font-medium text-red-800">Reason</p>
+            <p className="text-sm font-medium text-red-800">Grund</p>
             <p className="mt-1 text-sm text-red-700">{suspendedReason}</p>
           </div>
         ) : null}
 
         <p className="mt-6 text-sm text-slate-500">
-          To resolve this, please contact{" "}
+          Melde dich zur Klärung bei{" "}
           <a
             href="mailto:support@bivro.io"
             className="font-medium text-violet-600 hover:text-violet-700"

@@ -8,7 +8,7 @@ export const buttonVariants = cva(
     variants: {
       variant: {
         primary:
-          "rounded-[var(--radius-md)] bg-ink-900 px-4 py-2 text-sm text-text-inverse hover:bg-ink-700",
+          "rounded-[var(--radius-md)] bg-signal-600 px-4 py-2 text-sm text-text-inverse hover:bg-signal-700",
         secondary:
           "rounded-[var(--radius-md)] border border-surface-divider bg-surface-raised px-4 py-2 text-sm text-text-primary hover:bg-surface-sunken",
         ghost:
@@ -23,7 +23,7 @@ export const buttonVariants = cva(
         sm: "h-8 px-3 text-[length:var(--text-body-sm)]",
         md: "h-9 px-4 text-[length:var(--text-body)]",
         lg: "h-10 px-5 text-[length:var(--text-body)]",
-        icon: "h-9 w-9",
+        icon: "h-9 w-9 shrink-0 p-0",
       },
     },
     defaultVariants: {

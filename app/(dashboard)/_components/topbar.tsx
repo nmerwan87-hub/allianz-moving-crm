@@ -18,7 +18,7 @@ export function TopBar({ firstName, lastName, email, role, onMobileMenuToggle }:
       <button
         onClick={onMobileMenuToggle}
         className="text-text-secondary hover:bg-surface-sunken rounded-[var(--radius-md)] p-1.5 lg:hidden"
-        aria-label="Toggle navigation menu"
+        aria-label="Menü ein- oder ausblenden"
       >
         <Menu className="h-5 w-5" />
       </button>
@@ -31,10 +31,10 @@ export function TopBar({ firstName, lastName, email, role, onMobileMenuToggle }:
         />
         <input
           type="search"
-          placeholder="Search..."
+          placeholder="Suchen …"
           disabled
           className="border-surface-divider bg-surface-sunken text-text-muted placeholder:text-text-muted h-9 w-full rounded-[var(--radius-md)] border pr-3 pl-9 text-sm"
-          aria-label="Global search (coming soon)"
+          aria-label="Suche (folgt)"
         />
       </div>
 
@@ -42,10 +42,10 @@ export function TopBar({ firstName, lastName, email, role, onMobileMenuToggle }:
         {/* Notifications placeholder */}
         <button
           className="text-text-secondary hover:bg-surface-sunken relative rounded-[var(--radius-md)] p-2"
-          aria-label="Notifications"
+          aria-label="Benachrichtigungen"
         >
           <Bell className="h-4 w-4" />
-          <span className="sr-only">Notifications</span>
+          <span className="sr-only">Benachrichtigungen</span>
         </button>
 
         {/* User menu */}

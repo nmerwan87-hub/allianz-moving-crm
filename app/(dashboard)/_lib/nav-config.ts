@@ -1,18 +1,15 @@
 import type { LucideIcon } from "lucide-react"
 import {
-  LayoutDashboard,
-  Funnel,
-  Users,
-  Calendar,
-  FileText,
+  House,
+  List,
+  User,
+  CalendarDays,
+  Tag,
   Truck,
+  CreditCard,
   UserCog,
   Car,
-  Receipt,
-  FileStack,
-  CheckSquare,
-  Mail,
-  Settings,
+  CircleUser,
   UsersRound,
 } from "lucide-react"
 
@@ -31,71 +28,38 @@ export interface NavSection {
   items: NavItem[]
 }
 
+/** Structure follows Bixin: the daily work first (no heading), then operations and account. */
 export const navSections: NavSection[] = [
   {
-    label: "Main",
+    label: "",
     items: [
-      { label: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
-      { label: "Leads", href: "/leads", icon: Funnel, permission: "leads.view" },
+      { label: "Übersicht", href: "/dashboard", icon: House },
+      { label: "Anfragen", href: "/leads", icon: List, permission: "leads.view" },
+      { label: "Kunden", href: "/customers", icon: User, permission: "customers.view" },
+      { label: "Kalender", href: "/calendar", icon: CalendarDays, permission: "leads.view" },
+      { label: "Offerten", href: "/quotes", icon: Tag, permission: "quotes.view" },
+      { label: "Aufträge", href: "/jobs", icon: Truck, permission: "jobs.view" },
       {
-        label: "Customers",
-        href: "/customers",
-        icon: Users,
-        permission: "customers.view",
-      },
-      { label: "Calendar", href: "/calendar", icon: Calendar, future: true },
-      { label: "Quotes", href: "/quotes", icon: FileText, permission: "quotes.view" },
-      { label: "Jobs", href: "/jobs", icon: Truck, permission: "jobs.view" },
-    ],
-  },
-  {
-    label: "Operations",
-    items: [
-      {
-        label: "Employees",
-        href: "/employees",
-        icon: UserCog,
-        permission: "employees.view",
-      },
-      {
-        label: "Vehicles",
-        href: "/vehicles",
-        icon: Car,
-        permission: "vehicles.view",
-      },
-    ],
-  },
-  {
-    label: "Finance",
-    items: [
-      {
-        label: "Invoices",
+        label: "Zahlungsübersicht",
         href: "/invoices",
-        icon: Receipt,
+        icon: CreditCard,
         permission: "invoices.view",
       },
     ],
   },
   {
-    label: "Workspace",
+    label: "Betrieb",
     items: [
-      {
-        label: "Documents",
-        href: "/documents",
-        icon: FileStack,
-        permission: "documents.view",
-        future: true,
-      },
-      { label: "Tasks", href: "/tasks", icon: CheckSquare, future: true },
-      { label: "Communications", href: "/communications", icon: Mail, future: true },
+      { label: "Mitarbeitende", href: "/employees", icon: UserCog, permission: "employees.view" },
+      { label: "Fahrzeuge", href: "/vehicles", icon: Car, permission: "vehicles.view" },
     ],
   },
   {
-    label: "Settings",
+    label: "Account",
     items: [
       // Visible to everyone; the settings page lists only the sections the user may open
-      { label: "Settings", href: "/settings", icon: Settings },
-      { label: "Team & Permissions", href: "/settings/team", icon: UsersRound },
+      { label: "Profil & Einstellungen", href: "/settings", icon: CircleUser },
+      { label: "Team und Rechte", href: "/settings/team", icon: UsersRound },
     ],
   },
 ]

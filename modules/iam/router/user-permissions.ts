@@ -65,12 +65,13 @@ export const userPermissionsRouter = createTRPCRouter({
           .maybeSingle(),
       ])
 
-      if (!profile) throw new TRPCError({ code: "NOT_FOUND", message: "User not found." })
-      if (!group) throw new TRPCError({ code: "NOT_FOUND", message: "Permission group not found." })
+      if (!profile) throw new TRPCError({ code: "NOT_FOUND", message: "Benutzer nicht gefunden." })
+      if (!group)
+        throw new TRPCError({ code: "NOT_FOUND", message: "Rechtegruppe nicht gefunden." })
       if (profile.role === "owner") {
         throw new TRPCError({
           code: "BAD_REQUEST",
-          message: "Cannot assign permission groups to owner.",
+          message: "Dem Inhaber können keine Gruppen zugeteilt werden.",
         })
       }
 
@@ -85,7 +86,7 @@ export const userPermissionsRouter = createTRPCRouter({
         if (error.code === "23505") {
           throw new TRPCError({
             code: "CONFLICT",
-            message: "User is already a member of this group.",
+            message: "Der Benutzer ist schon in dieser Gruppe.",
           })
         }
         throw new TRPCError({ code: "INTERNAL_SERVER_ERROR" })
@@ -126,8 +127,9 @@ export const userPermissionsRouter = createTRPCRouter({
           .maybeSingle(),
       ])
 
-      if (!profile) throw new TRPCError({ code: "NOT_FOUND", message: "User not found." })
-      if (!group) throw new TRPCError({ code: "NOT_FOUND", message: "Permission group not found." })
+      if (!profile) throw new TRPCError({ code: "NOT_FOUND", message: "Benutzer nicht gefunden." })
+      if (!group)
+        throw new TRPCError({ code: "NOT_FOUND", message: "Rechtegruppe nicht gefunden." })
 
       const { error } = await svc
         .from("user_permission_groups")
@@ -190,11 +192,11 @@ export const userPermissionsRouter = createTRPCRouter({
 
       const profile = await getCompanyMember(svc, ctx.companyId, input.userId)
 
-      if (!profile) throw new TRPCError({ code: "NOT_FOUND", message: "User not found." })
+      if (!profile) throw new TRPCError({ code: "NOT_FOUND", message: "Benutzer nicht gefunden." })
       if (profile.role === "owner") {
         throw new TRPCError({
           code: "BAD_REQUEST",
-          message: "Cannot set permission overrides for owner.",
+          message: "Für den Inhaber gibt es keine Ausnahmen.",
         })
       }
 
@@ -255,7 +257,7 @@ export const userPermissionsRouter = createTRPCRouter({
 
       const profile = await getCompanyMember(svc, ctx.companyId, input.userId)
 
-      if (!profile) throw new TRPCError({ code: "NOT_FOUND", message: "User not found." })
+      if (!profile) throw new TRPCError({ code: "NOT_FOUND", message: "Benutzer nicht gefunden." })
 
       const { data: existing } = await svc
         .from("user_permission_overrides")
@@ -265,7 +267,7 @@ export const userPermissionsRouter = createTRPCRouter({
         .eq("company_id", ctx.companyId)
         .maybeSingle()
 
-      if (!existing) throw new TRPCError({ code: "NOT_FOUND", message: "Override not found." })
+      if (!existing) throw new TRPCError({ code: "NOT_FOUND", message: "Ausnahme nicht gefunden." })
 
       const { error } = await svc
         .from("user_permission_overrides")

@@ -240,24 +240,25 @@ export function QuoteEditor({
   /** Validates locally, then saves header and lines. Returns false on any problem. */
   async function save(): Promise<boolean> {
     const problems: string[] = []
-    if (!header.validUntil) problems.push("Set a validity date.")
+    if (!header.validUntil) problems.push("Gültigkeitsdatum setzen.")
     if (header.costCap.trim() && costCapCents === null)
-      problems.push("Cost cap: enter an amount like 2'000.")
+      problems.push("Kostendach als Betrag eingeben, z. B. 2'000.")
     const payload = lines.map((l, i) => {
       const quantity = l.pricingMode === "manual" ? 1 : num(l.quantity)
       const price = parseToCents(l.price)
-      if (!l.name.trim()) problems.push(`Line ${i + 1}: name is missing.`)
-      if (!(quantity > 0)) problems.push(`Line ${i + 1}: quantity must be greater than zero.`)
-      if (price === null) problems.push(`Line ${i + 1}: enter a price like 150 or 1'250.50.`)
+      if (!l.name.trim()) problems.push(`Position ${i + 1}: Name fehlt.`)
+      if (!(quantity > 0)) problems.push(`Position ${i + 1}: Menge muss grösser als null sein.`)
+      if (price === null)
+        problems.push(`Position ${i + 1}: Preis eingeben, z. B. 150 oder 1'250.50.`)
       const vat = num(l.vat)
-      if (!(vat >= 0 && vat <= 100)) problems.push(`Line ${i + 1}: VAT must be between 0 and 100.`)
+      if (!(vat >= 0 && vat <= 100)) problems.push(`Position ${i + 1}: MWST zwischen 0 und 100.`)
       const discountValue = l.discountType
         ? l.discountType === "fixed"
           ? (parseToCents(l.discountValue) ?? NaN) / 100
           : num(l.discountValue)
         : null
       if (l.discountType && !(Number(discountValue) >= 0))
-        problems.push(`Line ${i + 1}: check the discount.`)
+        problems.push(`Position ${i + 1}: Rabatt prüfen.`)
       return {
         ...(l.id ? { id: l.id } : {}),
         serviceCatalogId: l.serviceCatalogId,
@@ -300,6 +301,10 @@ export function QuoteEditor({
         estimatedHours: optionalNum(header.estimatedHours),
         depositPercent: num(header.depositPercent) || 0,
         costCapCents,
+        pricingKind: quote.pricingKind,
+        crewSize: quote.crewSize,
+        rooms: quote.rooms,
+        rateCardId: quote.rateCardId,
         validUntil: header.validUntil,
         customerNotes: header.customerNotes,
         internalNotes: header.internalNotes,
@@ -309,7 +314,7 @@ export function QuoteEditor({
       setDirty(false)
       return true
     } catch (err) {
-      setErrors([err instanceof Error ? err.message : "Failed to save"])
+      setErrors([err instanceof Error ? err.message : "Speichern fehlgeschlagen"])
       return false
     } finally {
       setSaving(false)
@@ -330,17 +335,17 @@ export function QuoteEditor({
   })
 
   return (
-    <div className="grid gap-6 xl:grid-cols-[1fr_320px]">
+    <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_280px]">
       <div className="min-w-0 space-y-6">
         <Card>
-          <CardHeader>Move</CardHeader>
+          <CardHeader>Umzug</CardHeader>
           <CardContent className="grid gap-4 sm:grid-cols-6">
             <div className="sm:col-span-4">
-              <FieldLabel htmlFor="q-title">Title on the quote</FieldLabel>
-              <Input placeholder="e.g. Privatumzug 3.5 Zimmer" {...field("title")} />
+              <FieldLabel htmlFor="q-title">Titel auf der Offerte</FieldLabel>
+              <Input placeholder="z. B. Privatumzug 3.5 Zimmer" {...field("title")} />
             </div>
             <div className="sm:col-span-2">
-              <FieldLabel htmlFor="q-language">Language</FieldLabel>
+              <FieldLabel htmlFor="q-language">Sprache</FieldLabel>
               <Select {...field("language")}>
                 {Object.entries(LANGUAGE_LABELS).map(([v, label]) => (
                   <option key={v} value={v}>
@@ -350,7 +355,7 @@ export function QuoteEditor({
               </Select>
             </div>
             <div className="sm:col-span-2">
-              <FieldLabel htmlFor="q-moveType">Type</FieldLabel>
+              <FieldLabel htmlFor="q-moveType">Art</FieldLabel>
               <Select {...field("moveType")}>
                 {moveTypeEnum.options.map((v) => (
                   <option key={v} value={v}>
@@ -360,7 +365,7 @@ export function QuoteEditor({
               </Select>
             </div>
             <div className="sm:col-span-2">
-              <FieldLabel htmlFor="q-scheduledDate">Moving date</FieldLabel>
+              <FieldLabel htmlFor="q-scheduledDate">Umzugsdatum</FieldLabel>
               <Input type="date" {...field("scheduledDate")} />
             </div>
             <label className="text-text-primary flex items-end gap-2 pb-2 text-sm sm:col-span-2">
@@ -370,7 +375,7 @@ export function QuoteEditor({
                 checked={header.dateFlexible}
                 onChange={(e) => setH("dateFlexible", e.target.checked)}
               />
-              Date is flexible
+              Datum flexibel
             </label>
 
             {(["origin", "dest"] as const).map((side) => (
@@ -379,30 +384,30 @@ export function QuoteEditor({
                 className="border-surface-divider grid gap-3 border-t pt-4 sm:col-span-6 sm:grid-cols-6"
               >
                 <p className="text-text-primary text-sm font-semibold sm:col-span-6">
-                  {side === "origin" ? "From" : "To"}
+                  {side === "origin" ? "Von" : "Nach"}
                 </p>
                 <div className="sm:col-span-6">
                   <Input
                     aria-label={`${side} street`}
-                    placeholder="Street and number"
+                    placeholder="Strasse und Nr."
                     {...field(`${side}Address`)}
                   />
                 </div>
                 <div className="sm:col-span-2">
                   <Input
                     aria-label={`${side} postal code`}
-                    placeholder="Postal code"
+                    placeholder="PLZ"
                     {...field(`${side}PostalCode`)}
                   />
                 </div>
                 <div className="sm:col-span-4">
-                  <Input aria-label={`${side} city`} placeholder="City" {...field(`${side}City`)} />
+                  <Input aria-label={`${side} city`} placeholder="Ort" {...field(`${side}City`)} />
                 </div>
                 <div className="sm:col-span-2">
                   <Input
                     aria-label={`${side} floor`}
                     type="number"
-                    placeholder="Floor (0 = ground)"
+                    placeholder="Stock (0 = EG)"
                     {...field(`${side}Floor`)}
                   />
                 </div>
@@ -413,18 +418,18 @@ export function QuoteEditor({
                     checked={header[`${side}HasElevator`]}
                     onChange={(e) => setH(`${side}HasElevator`, e.target.checked)}
                   />
-                  Lift available
+                  Lift vorhanden
                 </label>
               </div>
             ))}
 
             <div className="border-surface-divider grid gap-3 border-t pt-4 sm:col-span-6 sm:grid-cols-6">
               <div className="sm:col-span-3">
-                <FieldLabel htmlFor="q-distanceKm">Distance (km)</FieldLabel>
+                <FieldLabel htmlFor="q-distanceKm">Distanz (km)</FieldLabel>
                 <Input inputMode="decimal" {...field("distanceKm")} />
               </div>
               <div className="sm:col-span-3">
-                <FieldLabel htmlFor="q-estimatedHours">Estimated hours</FieldLabel>
+                <FieldLabel htmlFor="q-estimatedHours">Geschätzte Stunden</FieldLabel>
                 <Input inputMode="decimal" {...field("estimatedHours")} />
               </div>
             </div>
@@ -433,16 +438,16 @@ export function QuoteEditor({
 
         <Card className="overflow-hidden p-0">
           <div className="flex flex-wrap items-center justify-between gap-2 pr-4">
-            <CardHeader>Services</CardHeader>
+            <CardHeader>Positionen</CardHeader>
             {!readOnly && (
               <div className="flex flex-wrap gap-2 py-2 pl-4">
                 <Select
-                  aria-label="Add service from catalog"
+                  aria-label="Leistung aus Katalog hinzufügen"
                   className="h-8 w-48 text-xs"
                   value=""
                   onChange={(e) => addFromService(e.target.value)}
                 >
-                  <option value="">+ From catalog…</option>
+                  <option value="">+ Aus Katalog …</option>
                   {(services.data ?? [])
                     .filter((s) => s.isActive)
                     .map((s) => (
@@ -453,12 +458,12 @@ export function QuoteEditor({
                 </Select>
                 {(rateCards.data ?? []).some((r) => r.isActive) && (
                   <Select
-                    aria-label="Add team rate"
+                    aria-label="Teamansatz hinzufügen"
                     className="h-8 w-48 text-xs"
                     value=""
                     onChange={(e) => addFromRate(e.target.value)}
                   >
-                    <option value="">+ Team rate…</option>
+                    <option value="">+ Teamansatz …</option>
                     {(rateCards.data ?? [])
                       .filter((r) => r.isActive)
                       .map((r) => (
@@ -489,7 +494,7 @@ export function QuoteEditor({
                   }
                 >
                   <Plus className="h-4 w-4" />
-                  Custom line
+                  Eigene Position
                 </Button>
               </div>
             )}
@@ -497,7 +502,8 @@ export function QuoteEditor({
 
           {lines.length === 0 ? (
             <p className="text-text-muted border-surface-divider border-t px-4 py-6 text-sm">
-              No services yet. Add them from your catalog, a team rate, or as a custom line.
+              Noch keine Positionen. Aus dem Katalog, als Teamansatz oder als eigene Position
+              hinzufügen.
             </p>
           ) : (
             <ul className="divide-surface-divider border-surface-divider divide-y border-t">
@@ -509,17 +515,17 @@ export function QuoteEditor({
                       <span className="text-text-muted w-5 pt-2 text-xs">{index + 1}</span>
                       <div className="flex-1 space-y-1.5">
                         <Input
-                          aria-label={`Line ${index + 1} name`}
+                          aria-label={`Position ${index + 1} Name`}
                           value={l.name}
                           disabled={readOnly}
-                          placeholder="Service"
+                          placeholder="Leistung"
                           onChange={(e) => setLine(l.key, { name: e.target.value })}
                         />
                         <Input
-                          aria-label={`Line ${index + 1} description`}
+                          aria-label={`Position ${index + 1} Beschreibung`}
                           value={l.description}
                           disabled={readOnly}
-                          placeholder="Description on the quote (optional)"
+                          placeholder="Beschreibung auf der Offerte (optional)"
                           className="h-8 text-xs"
                           onChange={(e) => setLine(l.key, { description: e.target.value })}
                         />
@@ -528,7 +534,7 @@ export function QuoteEditor({
                         <Button
                           variant="dangerGhost"
                           size="icon"
-                          aria-label={`Remove line ${index + 1}`}
+                          aria-label={`Position ${index + 1} entfernen`}
                           onClick={() => {
                             setLines((ls) => ls.filter((x) => x.key !== l.key))
                             setDirty(true)
@@ -540,7 +546,7 @@ export function QuoteEditor({
                     </div>
                     <div className="grid grid-cols-2 gap-2 pl-7 sm:col-span-12 sm:grid-cols-6">
                       <Select
-                        aria-label={`Line ${index + 1} pricing`}
+                        aria-label={`Position ${index + 1} Preisart`}
                         value={l.pricingMode}
                         disabled={readOnly}
                         onChange={(e) =>
@@ -556,17 +562,17 @@ export function QuoteEditor({
                       {l.pricingMode !== "manual" ? (
                         <div className="flex gap-1">
                           <Input
-                            aria-label={`Line ${index + 1} quantity`}
+                            aria-label={`Position ${index + 1} Menge`}
                             inputMode="decimal"
                             value={l.quantity}
                             disabled={readOnly}
                             onChange={(e) => setLine(l.key, { quantity: e.target.value })}
                           />
                           <Input
-                            aria-label={`Line ${index + 1} unit`}
+                            aria-label={`Position ${index + 1} Einheit`}
                             value={l.unit}
                             disabled={readOnly}
-                            placeholder="Unit"
+                            placeholder="Einheit"
                             className="w-20"
                             onChange={(e) => setLine(l.key, { unit: e.target.value })}
                           />
@@ -575,20 +581,20 @@ export function QuoteEditor({
                         <div />
                       )}
                       <Input
-                        aria-label={`Line ${index + 1} price`}
+                        aria-label={`Position ${index + 1} Preis`}
                         inputMode="decimal"
                         value={l.price}
                         disabled={readOnly}
-                        placeholder={l.pricingMode === "manual" ? "Amount CHF" : "Price CHF"}
+                        placeholder={l.pricingMode === "manual" ? "Betrag CHF" : "Preis CHF"}
                         onChange={(e) => setLine(l.key, { price: e.target.value })}
                       />
                       {permissions.viewCost ? (
                         <Input
-                          aria-label={`Line ${index + 1} cost`}
+                          aria-label={`Position ${index + 1} Einstand`}
                           inputMode="decimal"
                           value={l.cost}
                           disabled={readOnly}
-                          placeholder="Cost CHF"
+                          placeholder="Einstand CHF"
                           onChange={(e) => setLine(l.key, { cost: e.target.value })}
                         />
                       ) : (
@@ -596,7 +602,7 @@ export function QuoteEditor({
                       )}
                       <div className="flex gap-1">
                         <Select
-                          aria-label={`Line ${index + 1} discount type`}
+                          aria-label={`Position ${index + 1} Rabattart`}
                           value={l.discountType}
                           disabled={readOnly || !permissions.applyDiscount}
                           className="w-20"
@@ -606,13 +612,13 @@ export function QuoteEditor({
                             })
                           }
                         >
-                          <option value="">No disc.</option>
+                          <option value="">Kein Rabatt</option>
                           <option value="percent">%</option>
                           <option value="fixed">CHF</option>
                         </Select>
                         {l.discountType && (
                           <Input
-                            aria-label={`Line ${index + 1} discount`}
+                            aria-label={`Position ${index + 1} Rabatt`}
                             inputMode="decimal"
                             value={l.discountValue}
                             disabled={readOnly || !permissions.applyDiscount}
@@ -622,7 +628,7 @@ export function QuoteEditor({
                       </div>
                       <div className="flex items-center gap-1">
                         <Input
-                          aria-label={`Line ${index + 1} VAT`}
+                          aria-label={`Position ${index + 1} MWST`}
                           inputMode="decimal"
                           value={l.vat}
                           disabled={readOnly}
@@ -643,72 +649,72 @@ export function QuoteEditor({
         </Card>
 
         <Card>
-          <CardHeader>Notes</CardHeader>
+          <CardHeader>Bemerkungen</CardHeader>
           <CardContent className="grid gap-4 sm:grid-cols-2">
             <div>
-              <FieldLabel htmlFor="q-customerNotes">Notes on the quote</FieldLabel>
+              <FieldLabel htmlFor="q-customerNotes">Bemerkung auf der Offerte</FieldLabel>
               <Textarea rows={4} {...field("customerNotes")} />
             </div>
             <div>
-              <FieldLabel htmlFor="q-internalNotes">Internal notes</FieldLabel>
+              <FieldLabel htmlFor="q-internalNotes">Interne Notiz</FieldLabel>
               <Textarea rows={4} {...field("internalNotes")} />
             </div>
           </CardContent>
         </Card>
       </div>
 
-      <div className="space-y-4 xl:sticky xl:top-4 xl:self-start">
+      <div className="space-y-4 lg:sticky lg:top-4 lg:self-start">
         <Card>
           <CardHeader>Total</CardHeader>
           <CardContent className="space-y-2 text-sm">
-            <Row label="Subtotal" value={formatChf(totals.netCents)} />
+            <Row label="Zwischensumme" value={formatChf(totals.netCents)} />
             {totals.discountCents > 0 && (
-              <Row label="incl. discounts" value={`−${formatChf(totals.discountCents)}`} muted />
+              <Row label="inkl. Rabatte" value={`−${formatChf(totals.discountCents)}`} muted />
             )}
             {totals.vatByRate.map((v) => (
-              <Row key={v.rate} label={`VAT ${v.rate}%`} value={formatChf(v.vatCents)} />
+              <Row key={v.rate} label={`MWST ${v.rate} %`} value={formatChf(v.vatCents)} />
             ))}
             <div className="border-text-primary border-t pt-2">
               <Row label="Total" value={formatChf(totals.totalCents)} strong />
             </div>
             {totals.depositCents > 0 && (
               <Row
-                label={`Deposit ${header.depositPercent}%`}
+                label={`Anzahlung ${header.depositPercent} %`}
                 value={formatChf(totals.depositCents)}
                 muted
               />
             )}
             {permissions.viewCost && (
               <div className="border-surface-divider mt-2 border-t pt-2">
-                <Row label="Cost" value={formatChf(totals.costCents)} muted />
-                <Row label="Margin" value={margin === null ? "—" : `${margin}%`} muted />
+                <Row label="Einstand" value={formatChf(totals.costCents)} muted />
+                <Row label="Marge" value={margin === null ? "—" : `${margin}%`} muted />
               </div>
             )}
             {overCap && (
               <p className="bg-danger-100 text-danger-700 mt-2 flex gap-2 rounded-[var(--radius-md)] p-2 text-xs">
                 <AlertTriangle className="h-4 w-4 shrink-0" />
-                Total exceeds the cost cap by {formatChf(totals.totalCents - (costCapCents ?? 0))}.
-                The quote cannot be sent like this.
+                Total liegt {formatChf(totals.totalCents - (costCapCents ?? 0))} über dem
+                Kostendach. So kann die Offerte nicht gesendet werden.
               </p>
             )}
           </CardContent>
         </Card>
 
         <Card>
-          <CardHeader>Terms</CardHeader>
+          <CardHeader>Bedingungen</CardHeader>
           <CardContent className="space-y-3">
             <div>
               <FieldLabel htmlFor="q-validUntil" required>
-                Valid until
+                Gültig bis
               </FieldLabel>
               <Input type="date" {...field("validUntil")} />
             </div>
             <div>
-              <FieldLabel htmlFor="q-costCap">Cost cap incl. VAT (CHF)</FieldLabel>
+              <FieldLabel htmlFor="q-costCap">Kostendach inkl. MWST (CHF)</FieldLabel>
               <Input inputMode="decimal" placeholder="optional" {...field("costCap")} />
             </div>
             <div>
-              <FieldLabel htmlFor="q-depositPercent">Deposit (%)</FieldLabel>
+              <FieldLabel htmlFor="q-depositPercent">Anzahlung (%)</FieldLabel>
               <Input inputMode="decimal" {...field("depositPercent")} />
             </div>
           </CardContent>
@@ -726,11 +732,11 @@ export function QuoteEditor({
           <div className="flex flex-col gap-2">
             <Button onClick={save} disabled={saving || !dirty}>
               <Save className="h-4 w-4" />
-              {saving ? "Saving..." : dirty ? "Save draft" : "Saved"}
+              {saving ? "Speichern …" : dirty ? "Entwurf speichern" : "Gespeichert"}
             </Button>
             <Button variant="secondary" onClick={preview} disabled={saving}>
               <Eye className="h-4 w-4" />
-              Preview PDF
+              Vorschau PDF
             </Button>
             {permissions.send && (
               <Button
@@ -742,16 +748,16 @@ export function QuoteEditor({
                 }}
               >
                 <Send className="h-4 w-4" />
-                Send quote
+                Offerte senden
               </Button>
             )}
             <Button variant="dangerGhost" onClick={() => setCancelOpen(true)}>
               <X className="h-4 w-4" />
-              Cancel draft
+              Entwurf verwerfen
             </Button>
           </div>
         )}
-        {dirty && <Badge variant="warning">Unsaved changes</Badge>}
+        {dirty && <Badge variant="warning">Ungespeicherte Änderungen</Badge>}
       </div>
 
       {sendOpen && (
@@ -766,18 +772,18 @@ export function QuoteEditor({
       <ConfirmDialog
         open={cancelOpen}
         onOpenChange={setCancelOpen}
-        title="Cancel this draft?"
-        description="The draft is kept for reference but can no longer be sent."
-        confirmLabel="Cancel draft"
+        title="Entwurf verwerfen?"
+        description="Der Entwurf bleibt zur Nachverfolgung erhalten, kann aber nicht mehr gesendet werden."
+        confirmLabel="Verwerfen"
         onConfirm={async () => {
           try {
             await cancelMutation.mutateAsync({ id: quote.id })
             setDirty(false)
             await utils.quotes.invalidate()
-            toast.success("Draft cancelled")
+            toast.success("Entwurf verworfen")
             router.push("/quotes")
           } catch (err) {
-            toast.error(err instanceof Error ? err.message : "Failed to cancel")
+            toast.error(err instanceof Error ? err.message : "Verwerfen fehlgeschlagen")
           }
         }}
       />

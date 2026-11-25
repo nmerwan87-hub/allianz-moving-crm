@@ -24,7 +24,7 @@ export const protectedProcedure = t.procedure.use(({ ctx, next }) => {
 
 export const ownerProcedure = protectedProcedure.use(({ ctx, next }) => {
   if (ctx.role !== "owner") {
-    throw new TRPCError({ code: "FORBIDDEN", message: "Owner access required" })
+    throw new TRPCError({ code: "FORBIDDEN", message: "Nur für den Inhaber" })
   }
   return next({ ctx })
 })
@@ -49,7 +49,7 @@ export const permissionProcedure = (key: string) =>
     }
     const perms = await getCachedPermissions(ctx.user.id, ctx.companyId)
     if (!hasPermission(perms, key)) {
-      throw new TRPCError({ code: "FORBIDDEN", message: `Missing permission: ${key}` })
+      throw new TRPCError({ code: "FORBIDDEN", message: `Fehlendes Recht: ${key}` })
     }
     return next({ ctx })
   })

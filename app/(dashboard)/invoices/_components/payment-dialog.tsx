@@ -52,27 +52,27 @@ export function PaymentDialog({
 
   async function submit() {
     const cents = parseToCents(amount)
-    if (!cents || cents <= 0) return setError("Enter an amount like 450 or 1'250.50.")
+    if (!cents || cents <= 0) return setError("Betrag eingeben, z. B. 450 oder 1'250.50.")
     if (target.kind === "invoice" && cents > target.balanceCents)
-      return setError(`The open balance is ${formatChf(target.balanceCents)}.`)
-    if (!paidOn) return setError("Enter the payment date.")
+      return setError(`Offen sind noch ${formatChf(target.balanceCents)}.`)
+    if (!paidOn) return setError("Zahlungsdatum eingeben.")
     const fields = { amountCents: cents, method, paidOn, reference, notes }
     try {
       if (target.kind === "invoice") {
         const result = await recordPayment.mutateAsync({ invoiceId: target.invoiceId, ...fields })
         toast.success(
           result.balanceDueCents === 0
-            ? "Payment recorded — invoice fully paid"
-            : `Payment recorded — ${formatChf(result.balanceDueCents)} still open`,
+            ? "Zahlung erfasst — Rechnung vollständig bezahlt"
+            : `Zahlung erfasst — noch ${formatChf(result.balanceDueCents)} offen`,
         )
       } else {
         await recordDeposit.mutateAsync({ jobId: target.jobId, ...fields })
-        toast.success("Deposit recorded")
+        toast.success("Anzahlung erfasst")
       }
       await Promise.all([utils.invoices.invalidate(), utils.jobs.invalidate()])
       onClose()
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to record the payment")
+      setError(err instanceof Error ? err.message : "Zahlung konnte nicht erfasst werden")
     }
   }
 
@@ -81,18 +81,20 @@ export function PaymentDialog({
       <DialogContent>
         <DialogHeader>
           <DialogTitle>
-            {target.kind === "invoice" ? `Record payment — ${target.label}` : "Record deposit"}
+            {target.kind === "invoice"
+              ? `Zahlung erfassen — ${target.label}`
+              : "Anzahlung erfassen"}
           </DialogTitle>
           <DialogDescription>
             {target.kind === "invoice"
-              ? `Open balance ${formatChf(target.balanceCents)}. Partial payments are fine.`
-              : "Deposits are deducted on the final invoice."}
+              ? `Offen: ${formatChf(target.balanceCents)}. Teilzahlungen sind möglich.`
+              : "Anzahlungen werden auf der Schlussrechnung abgezogen."}
           </DialogDescription>
         </DialogHeader>
         <div className="grid gap-3 py-2 sm:grid-cols-2">
           <div>
             <FieldLabel htmlFor="pay-amount" required>
-              Amount (CHF)
+              Betrag (CHF)
             </FieldLabel>
             <Input
               id="pay-amount"
@@ -103,7 +105,7 @@ export function PaymentDialog({
           </div>
           <div>
             <FieldLabel htmlFor="pay-date" required>
-              Received on
+              Erhalten am
             </FieldLabel>
             <Input
               id="pay-date"
@@ -113,7 +115,7 @@ export function PaymentDialog({
             />
           </div>
           <div>
-            <FieldLabel htmlFor="pay-method">Method</FieldLabel>
+            <FieldLabel htmlFor="pay-method">Zahlungsart</FieldLabel>
             <Select
               id="pay-method"
               value={method}
@@ -127,18 +129,18 @@ export function PaymentDialog({
             </Select>
           </div>
           <div>
-            <FieldLabel htmlFor="pay-ref">Reference</FieldLabel>
+            <FieldLabel htmlFor="pay-ref">Referenz</FieldLabel>
             <Input
               id="pay-ref"
-              placeholder="e.g. bank booking text"
+              placeholder="z. B. Buchungstext der Bank"
               value={reference}
               onChange={(e) => setReference(e.target.value)}
             />
           </div>
           <div className="sm:col-span-2">
-            <FieldLabel htmlFor="pay-notes">Notes</FieldLabel>
+            <FieldLabel htmlFor="pay-notes">Notiz</FieldLabel>
             <Input id="pay-notes" value={notes} onChange={(e) => setNotes(e.target.value)} />
-            <FieldHint>Internal only.</FieldHint>
+            <FieldHint>Nur intern sichtbar.</FieldHint>
           </div>
           {error && (
             <div className="sm:col-span-2">
@@ -148,10 +150,10 @@ export function PaymentDialog({
         </div>
         <DialogFooter>
           <Button variant="secondary" onClick={onClose} disabled={pending}>
-            Cancel
+            Abbrechen
           </Button>
           <Button onClick={submit} disabled={pending}>
-            {pending ? "Saving..." : "Record payment"}
+            {pending ? "Speichern …" : "Zahlung erfassen"}
           </Button>
         </DialogFooter>
       </DialogContent>

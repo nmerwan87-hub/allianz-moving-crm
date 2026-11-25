@@ -78,7 +78,7 @@ describe("QR-bill", () => {
   it("lists missing company data", () => {
     expect(missingQrBillData({ iban: "", creditor: { ...creditor, street: null } })).toEqual([
       "IBAN",
-      "company street",
+      "Strasse",
     ])
     expect(missingQrBillData({ iban: IBAN, creditor })).toEqual([])
   })

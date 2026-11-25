@@ -4,7 +4,7 @@ export function Card({ className, children, ...props }: React.HTMLAttributes<HTM
   return (
     <div
       className={cn(
-        "border-surface-divider bg-surface-raised rounded-[var(--radius-lg)] border shadow-[var(--shadow-elevation-1)]",
+        "border-surface-divider bg-surface-raised rounded-[var(--radius-lg)] border",
         className,
       )}
       {...props}
@@ -22,7 +22,7 @@ export function CardHeader({
   return (
     <div
       className={cn(
-        "border-surface-divider border-b px-5 py-4 text-[length:var(--text-display-md)] font-semibold",
+        "border-surface-divider text-text-primary border-b px-5 py-3.5 text-sm font-semibold",
         className,
       )}
       {...props}

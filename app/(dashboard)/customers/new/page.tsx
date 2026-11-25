@@ -4,7 +4,7 @@ import { CustomerForm } from "../_components/customer-form"
 export default function NewCustomerPage() {
   return (
     <div>
-      <PageHeader title="New customer" description="Add a private or business customer." />
+      <PageHeader title="Neuer Kunde" description="Privatperson oder Firma erfassen." />
       <CustomerForm mode="create" />
     </div>
   )

@@ -28,7 +28,7 @@ export const lineItemTypeEnum = z.enum([
 
 const cents = z.number().int().min(0).max(100_000_000)
 const optionalText = (max: number) => z.string().max(max).nullable().or(z.literal("")).optional()
-const dateString = z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Use YYYY-MM-DD")
+const dateString = z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Format JJJJ-MM-TT")
 
 // ─── Lines ────────────────────────────────────────────────────────────────────
 
@@ -38,7 +38,7 @@ export const quoteLineInput = z
     id: z.string().uuid().optional(),
     serviceCatalogId: z.string().uuid().nullable().optional(),
     itemType: lineItemTypeEnum.default("other"),
-    name: z.string().trim().min(1, "Service name is required").max(200),
+    name: z.string().trim().min(1, "Name der Leistung fehlt").max(200),
     description: optionalText(1000),
     pricingMode: linePricingModeEnum,
     quantity: z.number().positive("Quantity must be greater than zero").max(100_000),
@@ -65,10 +65,13 @@ export const saveLinesInput = z.object({
 
 // ─── Header ───────────────────────────────────────────────────────────────────
 
-export const createQuoteInput = z.object({
-  customerId: z.string().uuid(),
-  leadId: z.string().uuid().nullable().optional(),
-})
+/** For a customer — or from a lead (its customer is created when missing). */
+export const createQuoteInput = z
+  .object({
+    customerId: z.string().uuid().optional(),
+    leadId: z.string().uuid().nullable().optional(),
+  })
+  .refine((v) => v.customerId || v.leadId, { message: "Kunde oder Anfrage angeben" })
 
 export const updateQuoteInput = z.object({
   id: z.string().uuid(),
@@ -91,6 +94,10 @@ export const updateQuoteInput = z.object({
   estimatedHours: z.number().min(0).max(99).nullable().optional(),
   depositPercent: z.number().min(0).max(100),
   costCapCents: z.number().int().positive().max(100_000_000).nullable().optional(),
+  pricingKind: z.enum(["hourly", "flat"]).default("hourly"),
+  crewSize: z.number().int().min(1).max(30).nullable().optional(),
+  rooms: z.number().positive().max(30).nullable().optional(),
+  rateCardId: z.string().uuid().nullable().optional(),
   validUntil: dateString,
   customerNotes: optionalText(3000),
   internalNotes: optionalText(3000),
@@ -101,6 +108,7 @@ export const listQuotesInput = z.object({
   search: z.string().max(200).optional(),
   status: quoteStatusEnum.optional(),
   customerId: z.string().uuid().optional(),
+  leadId: z.string().uuid().optional(),
   page: z.number().int().min(1).default(1),
   pageSize: z.number().int().min(1).max(100).default(25),
 })
@@ -116,7 +124,7 @@ export const sendQuoteInput = z.object({
 
 export const declineQuoteInput = z.object({
   id: z.string().uuid(),
-  reason: z.string().trim().min(1, "Reason is required").max(500),
+  reason: z.string().trim().min(1, "Grund fehlt").max(500),
 })
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -182,6 +190,10 @@ export interface Quote extends QuoteSummary {
   depositPercent: number
   depositAmountCents: number
   costCapCents: number | null
+  pricingKind: "hourly" | "flat"
+  crewSize: number | null
+  rooms: number | null
+  rateCardId: string | null
   customerNotes: string | null
   internalNotes: string | null
   acceptedAt: string | null

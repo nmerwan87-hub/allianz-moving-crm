@@ -13,6 +13,7 @@ import {
   assignJobInput,
   transitionJobInput,
   idInput,
+  customerJobsInput,
   type Job,
   type JobCard,
   type ResourceConflict,
@@ -90,7 +91,7 @@ async function conflictsFor(
   })
   if (error) {
     if (error.message.includes("not_found"))
-      throw new TRPCError({ code: "NOT_FOUND", message: "Job not found" })
+      throw new TRPCError({ code: "NOT_FOUND", message: "Auftrag nicht gefunden" })
     throw new TRPCError({ code: "INTERNAL_SERVER_ERROR" })
   }
   const rows = (data ?? []) as Array<Record<string, unknown>>
@@ -135,8 +136,12 @@ async function loadJob(sb: SupabaseClient, id: string): Promise<Record<string, u
     .eq("id", id)
     .is("deleted_at", null)
     .maybeSingle()
-  if (error) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Failed to load job" })
-  if (!data) throw new TRPCError({ code: "NOT_FOUND", message: "Job not found" })
+  if (error)
+    throw new TRPCError({
+      code: "INTERNAL_SERVER_ERROR",
+      message: "Auftrag konnte nicht geladen werden",
+    })
+  if (!data) throw new TRPCError({ code: "NOT_FOUND", message: "Auftrag nicht gefunden" })
   return data as unknown as Record<string, unknown>
 }
 
@@ -145,7 +150,7 @@ const CLOSED = new Set(["completed", "cancelled"])
 async function requirePermission(ctx: Ctx, key: string) {
   if (ctx.role === "owner") return
   if (!ctx.companyId || !(await getCachedPermissions(ctx.user.id, ctx.companyId)).keys.has(key)) {
-    throw new TRPCError({ code: "FORBIDDEN", message: `Missing permission: ${key}` })
+    throw new TRPCError({ code: "FORBIDDEN", message: `Fehlendes Recht: ${key}` })
   }
 }
 
@@ -179,7 +184,10 @@ export const jobsRouter = createTRPCRouter({
         .order("scheduled_start_time", { nullsFirst: false })
         .limit(500)
       if (error)
-        throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Failed to load jobs" })
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: "Aufträge konnten nicht geladen werden",
+        })
 
       const rows = (data ?? []) as unknown as Array<Record<string, unknown>>
       const counts = await Promise.all(
@@ -190,6 +198,34 @@ export const jobsRouter = createTRPCRouter({
         ),
       )
       return rows.map((r, i) => mapCard(r, counts[i]!))
+    }),
+
+  /** All jobs of a customer (customer page), newest first. */
+  forCustomer: permissionProcedure("jobs.view")
+    .input(customerJobsInput)
+    .query(async ({ ctx, input }) => {
+      const { data, error } = await ctx.supabase
+        .from("jobs")
+        .select(
+          "id, job_number, status, scheduled_date, scheduled_start_time, origin_city, dest_city, total_amount_cents",
+        )
+        .eq("customer_id", input.customerId)
+        .is("deleted_at", null)
+        .order("scheduled_date", { ascending: false })
+      if (error)
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: "Aufträge konnten nicht geladen werden",
+        })
+      return (data ?? []).map((j) => ({
+        id: j.id as string,
+        jobNumber: j.job_number as string,
+        status: j.status as string,
+        date: j.scheduled_date as string,
+        startTime: (j.scheduled_start_time as string | null)?.slice(0, 5) ?? null,
+        route: [j.origin_city, j.dest_city].filter(Boolean).join(" → "),
+        totalAmountCents: j.total_amount_cents as number,
+      }))
     }),
 
   get: permissionProcedure("jobs.view")
@@ -236,7 +272,7 @@ export const jobsRouter = createTRPCRouter({
         .eq("id", input.customerId)
         .is("deleted_at", null)
         .maybeSingle()
-      if (!customer) throw new TRPCError({ code: "NOT_FOUND", message: "Customer not found" })
+      if (!customer) throw new TRPCError({ code: "NOT_FOUND", message: "Kunde nicht gefunden" })
 
       const { data: number, error: numberError } = await createServiceRoleClient().rpc(
         "generate_sequence_number",
@@ -271,7 +307,10 @@ export const jobsRouter = createTRPCRouter({
         .select("id")
         .single()
       if (error || !data)
-        throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Failed to create job" })
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: "Auftrag konnte nicht erstellt werden",
+        })
 
       await writeActivityLog(ctx, {
         action: "job.created",
@@ -290,7 +329,7 @@ export const jobsRouter = createTRPCRouter({
       if (CLOSED.has(before["status"] as string)) {
         throw new TRPCError({
           code: "BAD_REQUEST",
-          message: "Completed or cancelled jobs cannot be rescheduled.",
+          message: "Erledigte oder abgesagte Aufträge können nicht verschoben werden.",
         })
       }
 
@@ -305,7 +344,8 @@ export const jobsRouter = createTRPCRouter({
           internal_notes: textOrNull(input.internalNotes),
         })
         .eq("id", input.id)
-      if (error) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Failed to save" })
+      if (error)
+        throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Speichern fehlgeschlagen" })
 
       if (before["scheduled_date"] !== input.scheduledDate) {
         await writeActivityLog(ctx, {
@@ -332,13 +372,13 @@ export const jobsRouter = createTRPCRouter({
       if (CLOSED.has(job["status"] as string)) {
         throw new TRPCError({
           code: "BAD_REQUEST",
-          message: "Completed or cancelled jobs cannot be changed.",
+          message: "Erledigte oder abgesagte Aufträge können nicht geändert werden.",
         })
       }
       if (input.leadEmployeeId && !input.employeeIds.includes(input.leadEmployeeId)) {
         throw new TRPCError({
           code: "BAD_REQUEST",
-          message: "The crew lead must be part of the crew.",
+          message: "Die Teamleitung muss zum Team gehören.",
         })
       }
 
@@ -358,7 +398,10 @@ export const jobsRouter = createTRPCRouter({
         (employees ?? []).length !== employeeIds.length ||
         (vehicles ?? []).length !== vehicleIds.length
       ) {
-        throw new TRPCError({ code: "NOT_FOUND", message: "Employee or vehicle not found" })
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "Mitarbeiter oder Fahrzeug nicht gefunden",
+        })
       }
 
       const conflicts = await conflictsFor(ctx.supabase, input.id, employeeIds, vehicleIds)
@@ -389,7 +432,10 @@ export const jobsRouter = createTRPCRouter({
           })),
         )
         if (error)
-          throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Failed to assign crew" })
+          throw new TRPCError({
+            code: "INTERNAL_SERVER_ERROR",
+            message: "Team konnte nicht eingeteilt werden",
+          })
       }
       if (vehicleIds.length) {
         const { error } = await svc.from("job_vehicles").insert(
@@ -403,7 +449,7 @@ export const jobsRouter = createTRPCRouter({
         if (error)
           throw new TRPCError({
             code: "INTERNAL_SERVER_ERROR",
-            message: "Failed to assign vehicles",
+            message: "Fahrzeuge konnten nicht eingeteilt werden",
           })
       }
 

@@ -101,9 +101,9 @@ function AssignmentCard({ job, canAssign }: { job: Job; canAssign: boolean }) {
       }
       setPending(null)
       await utils.jobs.invalidate()
-      toast.success(force ? "Assigned despite conflicts" : "Crew and vehicles assigned")
+      toast.success(force ? "Trotz Konflikten eingeteilt" : "Team und Fahrzeuge eingeteilt")
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Failed to assign")
+      toast.error(err instanceof Error ? err.message : "Einteilen fehlgeschlagen")
     }
   }
 
@@ -117,7 +117,7 @@ function AssignmentCard({ job, canAssign }: { job: Job; canAssign: boolean }) {
   return (
     <Card>
       <CardHeader>
-        Crew & vehicles{" "}
+        Team und Fahrzeuge{" "}
         {job.crewSizeRequired ? (
           <span
             className={crew.length < job.crewSizeRequired ? "text-warning-700" : "text-text-muted"}
@@ -129,12 +129,12 @@ function AssignmentCard({ job, canAssign }: { job: Job; canAssign: boolean }) {
       <CardContent className="space-y-4">
         <div className="grid gap-4 md:grid-cols-2">
           <div>
-            <p className="text-text-muted mb-2 text-xs font-semibold uppercase">Crew</p>
+            <p className="text-text-muted mb-2 text-xs font-semibold uppercase">Team</p>
             {activeEmployees.length === 0 && (
               <p className="text-text-muted text-sm">
-                No employees yet — add them under{" "}
+                Noch keine Mitarbeitenden — erfassen unter{" "}
                 <Link href="/employees" className="underline">
-                  Employees
+                  Mitarbeitende
                 </Link>
                 .
               </p>
@@ -144,7 +144,7 @@ function AssignmentCard({ job, canAssign }: { job: Job; canAssign: boolean }) {
                 <li key={e.id} className="flex items-center gap-2 text-sm">
                   <input
                     type="checkbox"
-                    aria-label={`Assign ${e.name}`}
+                    aria-label={`${e.name} einteilen`}
                     disabled={!editable}
                     checked={crew.includes(e.id)}
                     onChange={() => setCrew((c) => toggle(c, e.id))}
@@ -158,12 +158,12 @@ function AssignmentCard({ job, canAssign }: { job: Job; canAssign: boolean }) {
                       <input
                         type="radio"
                         name="lead"
-                        aria-label={`${e.name} is crew lead`}
+                        aria-label={`${e.name} ist Teamleiter`}
                         disabled={!editable}
                         checked={lead === e.id}
                         onChange={() => setLead(e.id)}
                       />
-                      Lead
+                      Leitung
                     </label>
                   )}
                 </li>
@@ -171,12 +171,12 @@ function AssignmentCard({ job, canAssign }: { job: Job; canAssign: boolean }) {
             </ul>
           </div>
           <div>
-            <p className="text-text-muted mb-2 text-xs font-semibold uppercase">Vehicles</p>
+            <p className="text-text-muted mb-2 text-xs font-semibold uppercase">Fahrzeuge</p>
             {usableVehicles.length === 0 && (
               <p className="text-text-muted text-sm">
-                No vehicles yet — add them under{" "}
+                Noch keine Fahrzeuge — erfassen unter{" "}
                 <Link href="/vehicles" className="underline">
-                  Vehicles
+                  Fahrzeuge
                 </Link>
                 .
               </p>
@@ -186,7 +186,7 @@ function AssignmentCard({ job, canAssign }: { job: Job; canAssign: boolean }) {
                 <li key={v.id} className="flex items-center gap-2 text-sm">
                   <input
                     type="checkbox"
-                    aria-label={`Assign ${v.name}`}
+                    aria-label={`${v.name} einteilen`}
                     disabled={!editable}
                     checked={cars.includes(v.id)}
                     onChange={() => setCars((c) => toggle(c, v.id))}
@@ -198,7 +198,7 @@ function AssignmentCard({ job, canAssign }: { job: Job; canAssign: boolean }) {
                       {v.capacityM3 ? ` · ${v.capacityM3} m³` : ""}
                     </span>
                   </span>
-                  {v.status === "maintenance" && <Badge variant="warning">Maintenance</Badge>}
+                  {v.status === "maintenance" && <Badge variant="warning">Wartung</Badge>}
                 </li>
               ))}
             </ul>
@@ -207,7 +207,9 @@ function AssignmentCard({ job, canAssign }: { job: Job; canAssign: boolean }) {
 
         {pending && pending.length > 0 && (
           <div className="border-danger-600/30 bg-danger-100/50 space-y-2 rounded-[var(--radius-md)] border p-3">
-            <p className="text-text-primary text-sm font-semibold">Not saved — conflicts:</p>
+            <p className="text-text-primary text-sm font-semibold">
+              Nicht gespeichert — Konflikte:
+            </p>
             <ConflictList conflicts={pending} />
             <div className="flex gap-2">
               <Button
@@ -216,10 +218,10 @@ function AssignmentCard({ job, canAssign }: { job: Job; canAssign: boolean }) {
                 onClick={() => save(true)}
                 disabled={assign.isPending}
               >
-                Assign anyway
+                Trotzdem einteilen
               </Button>
               <Button size="sm" variant="secondary" onClick={() => setPending(null)}>
-                Change selection
+                Auswahl ändern
               </Button>
             </div>
           </div>
@@ -228,7 +230,7 @@ function AssignmentCard({ job, canAssign }: { job: Job; canAssign: boolean }) {
         {editable && !pending && (
           <div className="flex justify-end">
             <Button onClick={() => save(false)} disabled={assign.isPending}>
-              {assign.isPending ? "Checking..." : "Save assignment"}
+              {assign.isPending ? "Wird geprüft …" : "Einteilung speichern"}
             </Button>
           </div>
         )}
@@ -267,19 +269,19 @@ function ScheduleCard({ job, canEdit }: { job: Job; canEdit: boolean }) {
       })
       await utils.jobs.invalidate()
       if (result.conflicts.length)
-        toast.error("Saved — but the new time causes conflicts", "See the conflicts above.")
-      else toast.success("Schedule saved")
+        toast.error("Gespeichert — die neue Zeit verursacht Konflikte", "Siehe Konflikte oben.")
+      else toast.success("Termin gespeichert")
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Failed to save")
+      toast.error(err instanceof Error ? err.message : "Speichern fehlgeschlagen")
     }
   }
 
   return (
     <Card>
-      <CardHeader>Schedule</CardHeader>
+      <CardHeader>Termin</CardHeader>
       <CardContent className="grid gap-3 sm:grid-cols-4">
         <div>
-          <FieldLabel htmlFor="js-date">Date</FieldLabel>
+          <FieldLabel htmlFor="js-date">Datum</FieldLabel>
           <Input
             id="js-date"
             type="date"
@@ -289,7 +291,7 @@ function ScheduleCard({ job, canEdit }: { job: Job; canEdit: boolean }) {
           />
         </div>
         <div>
-          <FieldLabel htmlFor="js-time">Start</FieldLabel>
+          <FieldLabel htmlFor="js-time">Beginn</FieldLabel>
           <Input
             id="js-time"
             type="time"
@@ -299,7 +301,7 @@ function ScheduleCard({ job, canEdit }: { job: Job; canEdit: boolean }) {
           />
         </div>
         <div>
-          <FieldLabel htmlFor="js-hours">Hours</FieldLabel>
+          <FieldLabel htmlFor="js-hours">Stunden</FieldLabel>
           <Input
             id="js-hours"
             inputMode="decimal"
@@ -309,7 +311,7 @@ function ScheduleCard({ job, canEdit }: { job: Job; canEdit: boolean }) {
           />
         </div>
         <div>
-          <FieldLabel htmlFor="js-crew">Crew needed</FieldLabel>
+          <FieldLabel htmlFor="js-crew">Personen benötigt</FieldLabel>
           <Input
             id="js-crew"
             inputMode="numeric"
@@ -319,7 +321,7 @@ function ScheduleCard({ job, canEdit }: { job: Job; canEdit: boolean }) {
           />
         </div>
         <div className="sm:col-span-2">
-          <FieldLabel htmlFor="js-instructions">Instructions for the crew</FieldLabel>
+          <FieldLabel htmlFor="js-instructions">Hinweise für das Team</FieldLabel>
           <Textarea
             id="js-instructions"
             rows={3}
@@ -329,7 +331,7 @@ function ScheduleCard({ job, canEdit }: { job: Job; canEdit: boolean }) {
           />
         </div>
         <div className="sm:col-span-2">
-          <FieldLabel htmlFor="js-notes">Internal notes</FieldLabel>
+          <FieldLabel htmlFor="js-notes">Interne Notiz</FieldLabel>
           <Textarea
             id="js-notes"
             rows={3}
@@ -341,7 +343,7 @@ function ScheduleCard({ job, canEdit }: { job: Job; canEdit: boolean }) {
         {editable && (
           <div className="flex justify-end sm:col-span-4">
             <Button variant="secondary" onClick={save} disabled={schedule.isPending}>
-              {schedule.isPending ? "Saving..." : "Save schedule"}
+              {schedule.isPending ? "Speichern …" : "Termin speichern"}
             </Button>
           </div>
         )}
@@ -371,13 +373,13 @@ export default function JobPage({ params }: { params: Promise<{ id: string }> })
       <div>
         <Button variant="ghost" size="sm" onClick={() => router.push("/jobs")}>
           <ArrowLeft className="h-4 w-4" />
-          Back to dispatch
+          Zurück zu den Aufträgen
         </Button>
         <div className="mt-8">
           <WrongCompanyNotice entity="job" id={id}>
             <ErrorState
-              title="Job not found"
-              message="It may have been removed or belong to another company."
+              title="Auftrag nicht gefunden"
+              message="Er wurde entfernt oder gehört zu einer anderen Firma."
             />
           </WrongCompanyNotice>
         </div>
@@ -393,11 +395,11 @@ export default function JobPage({ params }: { params: Promise<{ id: string }> })
     try {
       await transition.mutateAsync({ id: job.id, to, ...extra })
       await utils.jobs.invalidate()
-      toast.success(`Job ${JOB_STATUS_LABELS[to]?.toLowerCase()}`)
+      toast.success(`Status: ${JOB_STATUS_LABELS[to]}`)
       setDialog(null)
       setText("")
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Status change failed")
+      toast.error(err instanceof Error ? err.message : "Statuswechsel fehlgeschlagen")
     }
   }
 
@@ -405,7 +407,7 @@ export default function JobPage({ params }: { params: Promise<{ id: string }> })
     <div>
       <Button variant="ghost" size="sm" onClick={() => router.push("/jobs")}>
         <ArrowLeft className="h-4 w-4" />
-        Back to dispatch
+        Zurück zu den Aufträgen
       </Button>
       <div className="mt-2 mb-6 flex flex-wrap items-center gap-3">
         <h1 className="text-text-primary text-[length:var(--text-display-md)] font-semibold">
@@ -422,43 +424,43 @@ export default function JobPage({ params }: { params: Promise<{ id: string }> })
         </Link>
         {job.quoteId && (
           <Link href={`/quotes/${job.quoteId}`} className="text-text-muted text-sm hover:underline">
-            Quote {job.quoteNumber}
+            Offerte {job.quoteNumber}
           </Link>
         )}
         <div className="ml-auto flex flex-wrap gap-2">
           {canEdit && job.status === "scheduled" && (
             <Button size="sm" onClick={() => move("confirmed")}>
               <ThumbsUp className="h-4 w-4" />
-              Confirm
+              Bestätigen
             </Button>
           )}
           {canEdit && job.status === "confirmed" && (
             <Button size="sm" onClick={() => move("in_progress")}>
               <PlayCircle className="h-4 w-4" />
-              Start
+              Umzug starten
             </Button>
           )}
           {canComplete && job.status === "in_progress" && (
             <Button size="sm" onClick={() => setDialog("complete")}>
               <CheckCircle2 className="h-4 w-4" />
-              Complete
+              Abschliessen
             </Button>
           )}
           {canEdit && ["scheduled", "confirmed", "in_progress"].includes(job.status) && (
             <Button size="sm" variant="secondary" onClick={() => move("on_hold")}>
               <PauseCircle className="h-4 w-4" />
-              On hold
+              Pausieren
             </Button>
           )}
           {canEdit && job.status === "on_hold" && (
             <Button size="sm" variant="secondary" onClick={() => move("scheduled")}>
-              Resume
+              Fortsetzen
             </Button>
           )}
           {canCancel && ["scheduled", "confirmed", "on_hold"].includes(job.status) && (
             <Button size="sm" variant="dangerGhost" onClick={() => setDialog("cancel")}>
               <XCircle className="h-4 w-4" />
-              Cancel job
+              Absagen
             </Button>
           )}
         </div>
@@ -467,13 +469,13 @@ export default function JobPage({ params }: { params: Promise<{ id: string }> })
       {job.conflicts.length > 0 && (
         <Card className="border-danger-600/40 mb-6">
           <CardContent className="space-y-2 py-4">
-            <p className="text-text-primary text-sm font-semibold">Conflicts</p>
+            <p className="text-text-primary text-sm font-semibold">Konflikte</p>
             <ConflictList conflicts={job.conflicts} />
           </CardContent>
         </Card>
       )}
 
-      <div className="grid gap-6 xl:grid-cols-[1fr_320px]">
+      <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_280px]">
         <div className="min-w-0 space-y-6">
           <AssignmentCard
             key={`${job.id}-${job.crew.length}-${job.vehicles.length}`}
@@ -489,53 +491,53 @@ export default function JobPage({ params }: { params: Promise<{ id: string }> })
         <div className="space-y-4">
           {canViewInvoices && <JobBillingCard jobId={job.id} />}
           <Card>
-            <CardHeader>Move</CardHeader>
+            <CardHeader>Umzug</CardHeader>
             <CardContent className="space-y-3 text-sm">
               <div>
-                <p className="text-text-muted text-xs font-medium uppercase">From</p>
+                <p className="text-text-muted text-xs font-medium uppercase">Von</p>
                 <p className="text-text-primary">
                   {job.originAddress}, {job.originPostalCode} {job.originCity}
                 </p>
                 <p className="text-text-muted text-xs">
-                  {job.originFloor !== null ? `Floor ${job.originFloor}` : ""}
-                  {job.originFloor ? (job.originHasElevator ? " · lift" : " · no lift") : ""}
+                  {job.originFloor !== null ? `${job.originFloor}. Stock` : ""}
+                  {job.originFloor ? (job.originHasElevator ? " · Lift" : " · kein Lift") : ""}
                 </p>
               </div>
               <div>
-                <p className="text-text-muted text-xs font-medium uppercase">To</p>
+                <p className="text-text-muted text-xs font-medium uppercase">Nach</p>
                 <p className="text-text-primary">
                   {job.destAddress}, {job.destPostalCode} {job.destCity}
                 </p>
                 <p className="text-text-muted text-xs">
-                  {job.destFloor !== null ? `Floor ${job.destFloor}` : ""}
-                  {job.destFloor ? (job.destHasElevator ? " · lift" : " · no lift") : ""}
+                  {job.destFloor !== null ? `${job.destFloor}. Stock` : ""}
+                  {job.destFloor ? (job.destHasElevator ? " · Lift" : " · kein Lift") : ""}
                 </p>
               </div>
               <div className="border-surface-divider space-y-1 border-t pt-3">
                 <div className="flex justify-between">
-                  <span className="text-text-muted">Date</span>
+                  <span className="text-text-muted">Datum</span>
                   <span>{formatDate(job.scheduledDate)}</span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-text-muted">Quote total</span>
+                  <span className="text-text-muted">Offertbetrag</span>
                   <span className="tabular-nums">{formatChf(job.totalAmountCents)}</span>
                 </div>
                 {job.depositAmountCents > 0 && (
                   <div className="flex justify-between">
-                    <span className="text-text-muted">Deposit</span>
+                    <span className="text-text-muted">Anzahlung</span>
                     <span className="tabular-nums">{formatChf(job.depositAmountCents)}</span>
                   </div>
                 )}
               </div>
               {job.completionNotes && (
                 <div className="border-surface-divider border-t pt-3">
-                  <p className="text-text-muted text-xs font-medium uppercase">Completion notes</p>
+                  <p className="text-text-muted text-xs font-medium uppercase">Abschlussnotiz</p>
                   <p className="text-text-secondary whitespace-pre-wrap">{job.completionNotes}</p>
                 </div>
               )}
               {job.cancellationReason && (
                 <div className="border-surface-divider border-t pt-3">
-                  <p className="text-text-muted text-xs font-medium uppercase">Cancelled because</p>
+                  <p className="text-text-muted text-xs font-medium uppercase">Abgesagt, weil</p>
                   <p className="text-text-secondary">{job.cancellationReason}</p>
                 </div>
               )}
@@ -547,11 +549,13 @@ export default function JobPage({ params }: { params: Promise<{ id: string }> })
       <Dialog open={dialog !== null} onOpenChange={(o) => !o && setDialog(null)}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>{dialog === "complete" ? "Complete job" : "Cancel job"}</DialogTitle>
+            <DialogTitle>
+              {dialog === "complete" ? "Auftrag abschliessen" : "Auftrag absagen"}
+            </DialogTitle>
           </DialogHeader>
           <div className="py-2">
             <FieldLabel htmlFor="job-dialog-text" required={dialog === "cancel"}>
-              {dialog === "complete" ? "Notes (damage, extra work, remarks)" : "Reason"}
+              {dialog === "complete" ? "Notiz (Schäden, Mehraufwand, Bemerkungen)" : "Grund"}
             </FieldLabel>
             <Textarea
               id="job-dialog-text"
@@ -562,7 +566,7 @@ export default function JobPage({ params }: { params: Promise<{ id: string }> })
           </div>
           <DialogFooter>
             <Button variant="secondary" onClick={() => setDialog(null)}>
-              Back
+              Zurück
             </Button>
             <Button
               variant={dialog === "cancel" ? "danger" : "primary"}
@@ -573,7 +577,7 @@ export default function JobPage({ params }: { params: Promise<{ id: string }> })
                   : move("cancelled", { reason: text })
               }
             >
-              {dialog === "complete" ? "Complete" : "Cancel job"}
+              {dialog === "complete" ? "Abschliessen" : "Absagen"}
             </Button>
           </DialogFooter>
         </DialogContent>

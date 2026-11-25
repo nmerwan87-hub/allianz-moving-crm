@@ -15,7 +15,7 @@ export default function EditCustomerPage({ params }: { params: Promise<{ id: str
   if (query.isLoading) {
     return (
       <div>
-        <PageHeader title="Edit customer" />
+        <PageHeader title="Kunde bearbeiten" />
         <Skeleton className="h-96 w-full rounded-[var(--radius-lg)]" />
       </div>
     )
@@ -24,11 +24,11 @@ export default function EditCustomerPage({ params }: { params: Promise<{ id: str
   if (query.isError || !query.data) {
     return (
       <div>
-        <PageHeader title="Edit customer" />
+        <PageHeader title="Kunde bearbeiten" />
         <WrongCompanyNotice entity="customer" id={id}>
           <ErrorState
-            title="Customer not found"
-            message="This customer may have been removed or you may not have access to it."
+            title="Kunde nicht gefunden"
+            message="Er wurde entfernt oder du hast keinen Zugriff."
           />
         </WrongCompanyNotice>
       </div>
@@ -37,7 +37,7 @@ export default function EditCustomerPage({ params }: { params: Promise<{ id: str
 
   return (
     <div>
-      <PageHeader title="Edit customer" description={query.data.customer.displayName} />
+      <PageHeader title="Kunde bearbeiten" description={query.data.customer.displayName} />
       <CustomerForm mode="edit" customer={query.data.customer} />
     </div>
   )

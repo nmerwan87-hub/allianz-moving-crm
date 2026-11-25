@@ -78,7 +78,7 @@ export const fleetRouter = createTRPCRouter({
         .select("id")
         .single()
       if (error || !data)
-        throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Failed to save" })
+        throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Speichern fehlgeschlagen" })
       await writeActivityLog(ctx, {
         action: "vehicle.created",
         entityType: "vehicle",
@@ -98,8 +98,10 @@ export const fleetRouter = createTRPCRouter({
         .eq("id", id)
         .is("deleted_at", null)
         .select("id")
-      if (error) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Failed to save" })
-      if (!data?.length) throw new TRPCError({ code: "NOT_FOUND", message: "Vehicle not found" })
+      if (error)
+        throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Speichern fehlgeschlagen" })
+      if (!data?.length)
+        throw new TRPCError({ code: "NOT_FOUND", message: "Fahrzeug nicht gefunden" })
       await writeActivityLog(ctx, {
         action: "vehicle.updated",
         entityType: "vehicle",
@@ -119,7 +121,8 @@ export const fleetRouter = createTRPCRouter({
         .is("deleted_at", null)
         .select("name")
       if (error) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR" })
-      if (!data?.length) throw new TRPCError({ code: "NOT_FOUND", message: "Vehicle not found" })
+      if (!data?.length)
+        throw new TRPCError({ code: "NOT_FOUND", message: "Fahrzeug nicht gefunden" })
       await writeActivityLog(ctx, {
         action: "vehicle.archived",
         entityType: "vehicle",

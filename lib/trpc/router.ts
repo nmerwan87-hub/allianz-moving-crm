@@ -10,6 +10,8 @@ import { crewRouter } from "@/modules/crew/router"
 import { fleetRouter } from "@/modules/fleet/router"
 import { jobsRouter } from "@/modules/jobs/router"
 import { invoicesRouter } from "@/modules/invoices/router"
+import { calendarRouter } from "@/modules/calendar/router"
+import { attachmentsRouter } from "@/modules/attachments/router"
 import { workflowRouter } from "@/modules/workflow/router"
 
 export const appRouter = createTRPCRouter({
@@ -24,6 +26,8 @@ export const appRouter = createTRPCRouter({
   fleet: fleetRouter,
   jobs: jobsRouter,
   invoices: invoicesRouter,
+  calendar: calendarRouter,
+  attachments: attachmentsRouter,
   workflow: workflowRouter,
 })
 

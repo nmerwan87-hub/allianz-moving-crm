@@ -41,7 +41,7 @@ const columns: Column<Customer>[] = [
   },
   {
     key: "contact",
-    header: "Contact",
+    header: "Kontakt",
     className: "hidden md:table-cell",
     render: (c) => (
       <div className="text-text-secondary">
@@ -52,13 +52,13 @@ const columns: Column<Customer>[] = [
   },
   {
     key: "address",
-    header: "Address",
+    header: "Adresse",
     className: "hidden lg:table-cell",
     render: (c) => <span className="text-text-secondary">{formatAddress(c) ?? "—"}</span>,
   },
   {
     key: "type",
-    header: "Type",
+    header: "Art",
     className: "hidden sm:table-cell",
     render: (c) => (
       <Badge variant={c.customerType === "business" ? "info" : "neutral"}>
@@ -68,7 +68,7 @@ const columns: Column<Customer>[] = [
   },
   {
     key: "created",
-    header: "Created",
+    header: "Erfasst",
     render: (c) => <span className="text-text-muted">{formatDate(c.createdAt)}</span>,
   },
 ]
@@ -96,12 +96,12 @@ export default function CustomersListPage() {
   return (
     <div>
       <PageHeader
-        title="Customers"
-        description="Everyone you have moved or quoted for."
+        title="Kunden"
+        description="Alle, für die ihr offeriert oder gezügelt habt."
         actions={
           <Button onClick={() => router.push("/customers/new")}>
             <Plus className="h-4 w-4" />
-            New customer
+            Neuer Kunde
           </Button>
         }
       />
@@ -110,7 +110,7 @@ export default function CustomersListPage() {
         <div className="relative min-w-64 flex-1">
           <Search className="text-text-muted absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2" />
           <Input
-            placeholder="Search by name, company, e-mail or phone..."
+            placeholder="Name, Firma, E-Mail oder Telefon …"
             value={search}
             onChange={(e) => {
               setSearch(e.target.value)
@@ -127,9 +127,9 @@ export default function CustomersListPage() {
           }}
           className="w-auto"
         >
-          <option value="">All types</option>
-          <option value="private">Private</option>
-          <option value="business">Business</option>
+          <option value="">Alle</option>
+          <option value="private">Privat</option>
+          <option value="business">Firma</option>
         </Select>
         <Select
           value={sortBy}
@@ -139,7 +139,7 @@ export default function CustomersListPage() {
           }}
           className="w-auto"
         >
-          <option value="created_at">Newest first</option>
+          <option value="created_at">Neueste zuerst</option>
           <option value="last_name">Name A–Z</option>
         </Select>
         <Select
@@ -150,8 +150,8 @@ export default function CustomersListPage() {
           }}
           className="w-auto"
         >
-          <option value="active">Active</option>
-          <option value="archived">Archived</option>
+          <option value="active">Aktiv</option>
+          <option value="archived">Archiviert</option>
         </Select>
       </div>
 
@@ -164,10 +164,7 @@ export default function CustomersListPage() {
           </div>
         </Card>
       ) : query.isError ? (
-        <ErrorState
-          title="Couldn't load customers"
-          message="There was a problem fetching your customers. Please try again."
-        />
+        <ErrorState title="Kunden konnten nicht geladen werden" message="Versuche es nochmals." />
       ) : query.data && query.data.items.length > 0 ? (
         <>
           <Card className="overflow-hidden p-0">
@@ -189,7 +186,7 @@ export default function CustomersListPage() {
                   disabled={page === 1}
                   onClick={() => setPage((p) => Math.max(1, p - 1))}
                 >
-                  Previous
+                  Zurück
                 </Button>
                 <Button
                   variant="secondary"
@@ -197,7 +194,7 @@ export default function CustomersListPage() {
                   disabled={page >= query.data.totalPages}
                   onClick={() => setPage((p) => p + 1)}
                 >
-                  Next
+                  Weiter
                 </Button>
               </div>
             </div>
@@ -206,18 +203,18 @@ export default function CustomersListPage() {
       ) : search || customerType || archived ? (
         <EmptyState
           icon={Users}
-          title="No matching customers"
-          description="Try a different search or filter."
+          title="Keine passenden Kunden"
+          description="Andere Suche oder anderen Filter versuchen."
         />
       ) : (
         <EmptyState
           icon={Users}
-          title="No customers yet"
-          description="Add your first customer to start quoting and planning moves."
+          title="Noch keine Kunden"
+          description="Erfasse deinen ersten Kunden, um zu offerieren und Umzüge zu planen."
           action={
             <Button onClick={() => router.push("/customers/new")}>
               <Plus className="h-4 w-4" />
-              New customer
+              Neuer Kunde
             </Button>
           }
         />

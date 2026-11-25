@@ -67,10 +67,10 @@ function isComplete(p: QrParty | null): p is QrParty {
 export function missingQrBillData(input: Pick<QrBillInput, "iban" | "creditor">): string[] {
   const missing: string[] = []
   if (!normalizeIban(input.iban)) missing.push("IBAN")
-  if (!input.creditor.name.trim()) missing.push("company name")
-  if (!input.creditor.street?.trim()) missing.push("company street")
-  if (!input.creditor.postalCode?.trim()) missing.push("company postal code")
-  if (!input.creditor.city?.trim()) missing.push("company city")
+  if (!input.creditor.name.trim()) missing.push("Firmenname")
+  if (!input.creditor.street?.trim()) missing.push("Strasse")
+  if (!input.creditor.postalCode?.trim()) missing.push("PLZ")
+  if (!input.creditor.city?.trim()) missing.push("Ort")
   return missing
 }
 

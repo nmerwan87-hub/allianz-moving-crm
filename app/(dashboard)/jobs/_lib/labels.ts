@@ -1,10 +1,10 @@
 export const JOB_STATUS_LABELS: Record<string, string> = {
-  scheduled: "Planned",
-  confirmed: "Confirmed",
-  in_progress: "In progress",
-  completed: "Completed",
-  cancelled: "Cancelled",
-  on_hold: "On hold",
+  scheduled: "Geplant",
+  confirmed: "Bestätigt",
+  in_progress: "Unterwegs",
+  completed: "Erledigt",
+  cancelled: "Abgesagt",
+  on_hold: "Pausiert",
 }
 
 export const JOB_STATUS_BADGE: Record<
@@ -20,28 +20,28 @@ export const JOB_STATUS_BADGE: Record<
 }
 
 export const CONFLICT_LABELS: Record<string, string> = {
-  employee_double_booked: "already on another job",
-  employee_absent: "absent",
-  employee_inactive: "not active",
-  vehicle_double_booked: "already on another job",
-  vehicle_unavailable: "in maintenance / not available",
-  vehicle_inspection_due: "inspection (MFK) overdue",
+  employee_double_booked: "bereits auf einem anderen Auftrag",
+  employee_absent: "abwesend",
+  employee_inactive: "nicht aktiv",
+  vehicle_double_booked: "bereits auf einem anderen Auftrag",
+  vehicle_unavailable: "in Wartung / nicht verfügbar",
+  vehicle_inspection_due: "MFK überfällig",
 }
 
 export const EMPLOYEE_ROLE_LABELS: Record<string, string> = {
-  foreman: "Foreman",
-  mover: "Mover",
-  driver: "Driver",
-  specialist: "Specialist",
+  foreman: "Teamleiter",
+  mover: "Zügelmann",
+  driver: "Chauffeur",
+  specialist: "Spezialist",
 }
 
 export const VEHICLE_TYPE_LABELS: Record<string, string> = {
-  cargo_van: "Delivery van",
+  cargo_van: "Lieferwagen",
   pickup_truck: "Pickup",
-  box_truck_16ft: "Truck 3.5 t",
-  box_truck_24ft: "Truck 7.5 t",
-  box_truck_26ft: "Truck 12 t",
-  semi_truck: "Truck 18 t+",
+  box_truck_16ft: "LKW 3.5 t",
+  box_truck_24ft: "LKW 7.5 t",
+  box_truck_26ft: "LKW 12 t",
+  semi_truck: "LKW 18 t+",
 }
 
 /** Local calendar date as YYYY-MM-DD (no UTC shift). */
@@ -65,7 +65,7 @@ export function addDays(date: Date, days: number): Date {
   return d
 }
 
-const WEEKDAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]
+const WEEKDAYS = ["Mo", "Di", "Mi", "Do", "Fr", "Sa", "So"]
 
 export function dayHeading(date: Date): string {
   return `${WEEKDAYS[(date.getDay() + 6) % 7]} ${String(date.getDate()).padStart(2, "0")}.${String(date.getMonth() + 1).padStart(2, "0")}.`

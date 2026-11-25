@@ -84,7 +84,7 @@ const employeesRouter = createTRPCRouter({
         .select("id")
         .single()
       if (error || !data)
-        throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Failed to save" })
+        throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Speichern fehlgeschlagen" })
       await writeActivityLog(ctx, {
         action: "employee.created",
         entityType: "employee",
@@ -108,8 +108,10 @@ const employeesRouter = createTRPCRouter({
         .eq("id", id)
         .is("deleted_at", null)
         .select("id")
-      if (error) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Failed to save" })
-      if (!data?.length) throw new TRPCError({ code: "NOT_FOUND", message: "Employee not found" })
+      if (error)
+        throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Speichern fehlgeschlagen" })
+      if (!data?.length)
+        throw new TRPCError({ code: "NOT_FOUND", message: "Mitarbeiter nicht gefunden" })
 
       await writeActivityLog(ctx, {
         action: "employee.updated",
@@ -130,7 +132,8 @@ const employeesRouter = createTRPCRouter({
         .is("deleted_at", null)
         .select("first_name, last_name")
       if (error) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR" })
-      if (!data?.length) throw new TRPCError({ code: "NOT_FOUND", message: "Employee not found" })
+      if (!data?.length)
+        throw new TRPCError({ code: "NOT_FOUND", message: "Mitarbeiter nicht gefunden" })
       await writeActivityLog(ctx, {
         action: "employee.archived",
         entityType: "employee",
@@ -178,7 +181,8 @@ const absencesRouter = createTRPCRouter({
         .eq("id", input.employeeId)
         .is("deleted_at", null)
         .maybeSingle()
-      if (!employee) throw new TRPCError({ code: "NOT_FOUND", message: "Employee not found" })
+      if (!employee)
+        throw new TRPCError({ code: "NOT_FOUND", message: "Mitarbeiter nicht gefunden" })
 
       const { data, error } = await createServiceRoleClient()
         .from("employee_absences")
@@ -208,7 +212,8 @@ const absencesRouter = createTRPCRouter({
         .eq("company_id", ctx.companyId)
         .select("id")
       if (error) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR" })
-      if (!data?.length) throw new TRPCError({ code: "NOT_FOUND", message: "Absence not found" })
+      if (!data?.length)
+        throw new TRPCError({ code: "NOT_FOUND", message: "Abwesenheit nicht gefunden" })
       return { id: input.id }
     }),
 })

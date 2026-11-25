@@ -1,13 +1,15 @@
 "use client"
 
 import { use, useState } from "react"
+import Link from "next/link"
 import { useRouter } from "next/navigation"
-import { ArrowLeft, Edit, Trash2, Mail, Phone, MapPin, Calendar, Tag, User } from "lucide-react"
+import { ArrowLeft, CalendarPlus, CheckCircle2, FileText, Home } from "lucide-react"
 import { trpc } from "@/lib/trpc/client"
-import { PageHeader } from "@/app/(dashboard)/_components/ui/page-header"
+import { formatPhone } from "@/lib/format/phone"
+import { formatChf } from "@/lib/format/money"
+import { labelOf } from "@/app/(dashboard)/_lib/labels"
 import { Button } from "@/app/(dashboard)/_components/ui/button"
 import { Badge } from "@/app/(dashboard)/_components/ui/badge"
-import { Card, CardContent, CardHeader } from "@/app/(dashboard)/_components/ui/card"
 import { Skeleton } from "@/app/(dashboard)/_components/ui/skeleton"
 import { ErrorState } from "@/app/(dashboard)/_components/ui/error-state"
 import { WrongCompanyNotice } from "@/app/(dashboard)/_components/wrong-company-notice"
@@ -19,72 +21,86 @@ import {
   DialogTitle,
   DialogFooter,
 } from "@/app/(dashboard)/_components/ui/dialog"
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/app/(dashboard)/_components/ui/dropdown-menu"
 import { useToast } from "@/app/(dashboard)/_components/ui/toast"
+import { useHasPermission } from "@/app/(dashboard)/_lib/permissions"
+import { AttachmentsBlock } from "@/app/(dashboard)/_components/attachments-block"
+import { AppointmentDialog } from "@/app/(dashboard)/_components/appointment-dialog"
+import type { CalendarEvent } from "@/modules/calendar/interface"
 import type { leadStatusEnum } from "@/modules/leads/interface"
+import { QUOTE_STATUS_BADGE, QUOTE_STATUS_LABELS } from "../../quotes/_lib/labels"
+import {
+  Block,
+  InventoryBlock,
+  NotesBlock,
+  QuestionnaireBlock,
+  ServicesBlock,
+} from "../_components/inquiry-blocks"
 
 const STATUS_BADGE: Record<
   string,
   "default" | "success" | "warning" | "danger" | "info" | "neutral"
 > = {
   new: "info",
-  contacted: "default",
-  surveyed: "default",
+  contacted: "neutral",
+  surveyed: "neutral",
   quoted: "warning",
   booked: "success",
   lost: "danger",
   duplicate: "neutral",
 }
 
-function formatLabel(s: string | null): string {
-  if (!s) return "—"
-  return s.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase())
+function formatDate(value: string | null | undefined): string {
+  if (!value) return "—"
+  const [y, m, d] = value.slice(0, 10).split("-")
+  return `${d}.${m}.${y}`
 }
 
-function formatDate(dateStr: string | null): string {
-  if (!dateStr) return "—"
-  const d = new Date(dateStr)
-  return d.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })
+function address(street: string | null, postal: string | null, city: string | null): string {
+  return [street, [postal, city].filter(Boolean).join(" ")].filter(Boolean).join(", ") || "—"
 }
 
-function formatDateTime(dateStr: string | null): string {
-  if (!dateStr) return "—"
-  const d = new Date(dateStr)
-  return d.toLocaleString("en-US", {
-    month: "short",
-    day: "numeric",
-    year: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
-  })
-}
-
-interface DetailRowProps {
-  label: string
-  value: string | null | undefined
-}
-
-function DetailRow({ label, value }: DetailRowProps) {
+function Field({ label, children }: { label: string; children: React.ReactNode }) {
   return (
-    <div className="flex flex-col gap-0.5">
-      <dt className="text-text-muted text-xs font-medium tracking-wide uppercase">{label}</dt>
-      <dd className="text-text-primary text-sm whitespace-pre-line">{value || "—"}</dd>
+    <div>
+      <dt className="text-text-muted text-xs">{label}</dt>
+      <dd className="text-text-primary text-sm">{children || "—"}</dd>
     </div>
   )
 }
 
+/**
+ * The inquiry is the centre of a move (Bixin structure): contact, move,
+ * quotes, questionnaire, inventory, wished services, media, private notes and
+ * the home visit — each a block that is filled when needed.
+ */
 export default function LeadDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params)
   const router = useRouter()
   const toast = useToast()
+  const utils = trpc.useUtils()
 
   const query = trpc.leads.getById.useQuery({ id })
+  const quotes = trpc.quotes.list.useQuery({ leadId: id, pageSize: 20 })
+  const visits = trpc.calendar.forLead.useQuery({ leadId: id })
   const updateStatusMutation = trpc.leads.updateStatus.useMutation()
+  const createQuote = trpc.quotes.create.useMutation()
   const deleteMutation = trpc.leads.delete.useMutation()
+  const setConfirmed = trpc.calendar.setConfirmed.useMutation()
+  const canCreateQuote = useHasPermission("quotes.create")
+  const canEdit = useHasPermission("leads.edit")
 
   const [statusDialogOpen, setStatusDialogOpen] = useState(false)
   const [newStatus, setNewStatus] = useState("")
   const [lostReason, setLostReason] = useState("")
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
+  const [appointment, setAppointment] = useState<CalendarEvent | "new" | null>(null)
 
   const lead = query.data
   const allowedQuery = trpc.workflow.allowedTransitions.useQuery(
@@ -94,7 +110,7 @@ export default function LeadDetailPage({ params }: { params: Promise<{ id: strin
   const allowedTransitions = allowedQuery.data ?? []
   const selectedTransition = allowedTransitions.find((t) => t.toStatus === newStatus)
 
-  const handleStatusChange = async () => {
+  async function handleStatusChange() {
     if (!newStatus) return
     try {
       await updateStatusMutation.mutateAsync({
@@ -102,37 +118,31 @@ export default function LeadDetailPage({ params }: { params: Promise<{ id: strin
         status: newStatus as (typeof leadStatusEnum)["options"][number],
         lostReason: selectedTransition?.requiresReason ? lostReason : undefined,
       })
-      toast.success("Status updated")
+      toast.success("Status geändert")
       setStatusDialogOpen(false)
       setNewStatus("")
       setLostReason("")
-      query.refetch()
+      void query.refetch()
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Failed to update status")
+      toast.error(err instanceof Error ? err.message : "Statuswechsel fehlgeschlagen")
     }
   }
 
-  const handleDelete = async () => {
+  async function startQuote() {
     try {
-      await deleteMutation.mutateAsync({ id })
-      toast.success("Lead archived")
-      router.push("/leads")
+      const { id: quoteId } = await createQuote.mutateAsync({ leadId: id })
+      router.push(`/quotes/${quoteId}`)
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Failed to archive lead")
+      toast.error(err instanceof Error ? err.message : "Offerte konnte nicht erstellt werden")
     }
   }
 
   if (query.isLoading) {
     return (
-      <div>
-        <PageHeader title="Loading lead..." />
-        <div className="grid gap-4 lg:grid-cols-3">
-          <div className="space-y-4 lg:col-span-2">
-            <Skeleton className="h-64 w-full rounded-[var(--radius-lg)]" />
-            <Skeleton className="h-48 w-full rounded-[var(--radius-lg)]" />
-          </div>
-          <Skeleton className="h-64 w-full rounded-[var(--radius-lg)]" />
-        </div>
+      <div className="mx-auto max-w-4xl space-y-3">
+        <Skeleton className="h-8 w-64" />
+        <Skeleton className="h-32 w-full" />
+        <Skeleton className="h-32 w-full" />
       </div>
     )
   }
@@ -142,13 +152,13 @@ export default function LeadDetailPage({ params }: { params: Promise<{ id: strin
       <div>
         <Button variant="ghost" size="sm" onClick={() => router.push("/leads")}>
           <ArrowLeft className="h-4 w-4" />
-          Back to leads
+          Zurück zu den Anfragen
         </Button>
         <div className="mt-8">
           <WrongCompanyNotice entity="lead" id={id}>
             <ErrorState
-              title="Lead not found"
-              message="This lead may have been archived or you may not have access to it."
+              title="Anfrage nicht gefunden"
+              message="Sie wurde archiviert oder du hast keinen Zugriff."
             />
           </WrongCompanyNotice>
         </div>
@@ -156,265 +166,272 @@ export default function LeadDetailPage({ params }: { params: Promise<{ id: strin
     )
   }
 
+  const name = `${lead.firstName} ${lead.lastName}`
+  const leadQuotes = (quotes.data?.items ?? []).filter((q) => q.status !== "cancelled")
+
   return (
-    <div>
-      <div className="mb-4 flex items-center justify-between">
-        <Button variant="ghost" size="sm" onClick={() => router.push("/leads")}>
+    <div className="mx-auto max-w-4xl space-y-4">
+      {/* Header */}
+      <div className="flex flex-wrap items-center gap-3">
+        <Button
+          variant="ghost"
+          size="icon"
+          aria-label="Zurück"
+          onClick={() => router.push("/leads")}
+        >
           <ArrowLeft className="h-4 w-4" />
-          Back to leads
         </Button>
-        <div className="flex gap-2">
-          <Button variant="secondary" size="sm" onClick={() => router.push(`/leads/${id}/edit`)}>
-            <Edit className="h-4 w-4" />
-            Edit
-          </Button>
-          <Button variant="dangerGhost" size="sm" onClick={() => setDeleteDialogOpen(true)}>
-            <Trash2 className="h-4 w-4" />
-            Archive
-          </Button>
-        </div>
-      </div>
-
-      <PageHeader
-        title={`${lead.firstName} ${lead.lastName}`}
-        description={`Lead created ${formatDate(lead.createdAt)}`}
-        actions={
-          <Badge variant={STATUS_BADGE[lead.status] ?? "neutral"}>{formatLabel(lead.status)}</Badge>
-        }
-      />
-
-      <div className="grid gap-4 lg:grid-cols-3">
-        {/* Left column — main info */}
-        <div className="space-y-4 lg:col-span-2">
-          {/* Contact */}
-          <Card>
-            <CardHeader>Contact Information</CardHeader>
-            <CardContent className="grid gap-4 sm:grid-cols-2">
-              <div className="text-text-primary flex items-center gap-2 text-sm">
-                <Mail className="text-text-muted h-4 w-4" />
-                {lead.email ?? "—"}
-              </div>
-              <div className="text-text-primary flex items-center gap-2 text-sm">
-                <Phone className="text-text-muted h-4 w-4" />
-                {lead.phone ?? "—"}
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Move details */}
-          <Card>
-            <CardHeader>Move Details</CardHeader>
-            <CardContent className="grid gap-4 sm:grid-cols-2">
-              <DetailRow label="Move type" value={formatLabel(lead.moveType)} />
-              <DetailRow label="Property size" value={formatLabel(lead.propertySize)} />
-              <DetailRow
-                label="Requested date"
-                value={lead.requestedDate ? formatDate(lead.requestedDate) : "—"}
-              />
-              <DetailRow label="Date flexible" value={lead.dateFlexible ? "Yes" : "No"} />
-              <DetailRow
-                label="Estimated volume"
-                value={lead.estimatedVolumeCuft ? `${lead.estimatedVolumeCuft} cu ft` : null}
-              />
-              <DetailRow
-                label="Estimated distance"
-                value={lead.estimatedDistanceMiles ? `${lead.estimatedDistanceMiles} miles` : null}
-              />
-            </CardContent>
-          </Card>
-
-          {/* Origin address */}
-          <Card>
-            <CardHeader>
-              <span className="flex items-center gap-2">
-                <MapPin className="text-text-muted h-4 w-4" />
-                Origin Address
-              </span>
-            </CardHeader>
-            <CardContent className="grid gap-4 sm:grid-cols-2">
-              <DetailRow label="Street" value={lead.originAddress} />
-              <DetailRow label="City" value={lead.originCity} />
-              <DetailRow label="State / Province" value={lead.originState} />
-              <DetailRow label="Postal code" value={lead.originPostalCode} />
-              <DetailRow label="Country" value={lead.originCountry} />
-              <DetailRow label="Floor" value={lead.originFloor?.toString() ?? null} />
-              <DetailRow label="Elevator" value={lead.originHasElevator ? "Yes" : "No"} />
-              <DetailRow label="Stairs" value={lead.originHasStairs ? "Yes" : "No"} />
-              <div className="sm:col-span-2">
-                <DetailRow label="Parking notes" value={lead.originParkingNotes} />
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Destination address */}
-          <Card>
-            <CardHeader>
-              <span className="flex items-center gap-2">
-                <MapPin className="text-text-muted h-4 w-4" />
-                Destination Address
-              </span>
-            </CardHeader>
-            <CardContent className="grid gap-4 sm:grid-cols-2">
-              <DetailRow label="Street" value={lead.destAddress} />
-              <DetailRow label="City" value={lead.destCity} />
-              <DetailRow label="State / Province" value={lead.destState} />
-              <DetailRow label="Postal code" value={lead.destPostalCode} />
-              <DetailRow label="Country" value={lead.destCountry} />
-              <DetailRow label="Floor" value={lead.destFloor?.toString() ?? null} />
-              <DetailRow label="Elevator" value={lead.destHasElevator ? "Yes" : "No"} />
-              <DetailRow label="Stairs" value={lead.destHasStairs ? "Yes" : "No"} />
-              <div className="sm:col-span-2">
-                <DetailRow label="Parking notes" value={lead.destParkingNotes} />
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Notes */}
-          {lead.internalNotes && (
-            <Card>
-              <CardHeader>Internal Notes</CardHeader>
-              <CardContent>
-                <p className="text-text-secondary text-sm whitespace-pre-line">
-                  {lead.internalNotes}
-                </p>
-              </CardContent>
-            </Card>
-          )}
-        </div>
-
-        {/* Right column — sidebar info */}
-        <div className="space-y-4">
-          {/* Status control */}
-          <Card>
-            <CardHeader>
-              <span className="flex items-center gap-2">
-                <Tag className="text-text-muted h-4 w-4" />
-                Lead Status
-              </span>
-            </CardHeader>
-            <CardContent className="space-y-3">
-              <div className="flex items-center justify-between">
-                <Badge variant={STATUS_BADGE[lead.status] ?? "neutral"}>
-                  {formatLabel(lead.status)}
-                </Badge>
-                <Button
-                  variant="secondary"
-                  size="sm"
-                  onClick={() => {
+        <h1 className="text-text-primary text-[length:var(--text-display-md)] font-semibold">
+          Anfrage {name}
+        </h1>
+        <Badge variant={STATUS_BADGE[lead.status] ?? "neutral"}>{labelOf(lead.status)}</Badge>
+        <span className="text-text-muted text-sm">vom {formatDate(lead.createdAt)}</span>
+        {canEdit && (
+          <div className="ml-auto">
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="secondary" size="sm">
+                  ···
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem
+                  onSelect={() => {
                     setNewStatus("")
                     setStatusDialogOpen(true)
                   }}
                 >
-                  Change
-                </Button>
-              </div>
-              {lead.lostReason && (
-                <div>
-                  <p className="text-text-muted text-xs font-medium tracking-wide uppercase">
-                    Lost reason
-                  </p>
-                  <p className="text-text-secondary mt-1 text-sm">{lead.lostReason}</p>
-                </div>
-              )}
-              {lead.convertedAt && (
-                <div>
-                  <p className="text-text-muted text-xs font-medium tracking-wide uppercase">
-                    Converted at
-                  </p>
-                  <p className="text-text-secondary mt-1 text-sm">
-                    {formatDateTime(lead.convertedAt)}
-                  </p>
-                </div>
-              )}
-            </CardContent>
-          </Card>
-
-          {/* Acquisition */}
-          <Card>
-            <CardHeader>
-              <span className="flex items-center gap-2">
-                <Tag className="text-text-muted h-4 w-4" />
-                Acquisition
-              </span>
-            </CardHeader>
-            <CardContent className="space-y-3">
-              <DetailRow label="Source" value={formatLabel(lead.source)} />
-              <DetailRow label="UTM source" value={lead.utmSource} />
-              <DetailRow label="UTM medium" value={lead.utmMedium} />
-              <DetailRow label="UTM campaign" value={lead.utmCampaign} />
-              <DetailRow label="Referrer URL" value={lead.referrerUrl} />
-            </CardContent>
-          </Card>
-
-          {/* Assignment */}
-          <Card>
-            <CardHeader>
-              <span className="flex items-center gap-2">
-                <User className="text-text-muted h-4 w-4" />
-                Assignment
-              </span>
-            </CardHeader>
-            <CardContent>
-              <DetailRow label="Assigned to" value={lead.assignedToName} />
-            </CardContent>
-          </Card>
-
-          {/* Timestamps */}
-          <Card>
-            <CardHeader>
-              <span className="flex items-center gap-2">
-                <Calendar className="text-text-muted h-4 w-4" />
-                Timestamps
-              </span>
-            </CardHeader>
-            <CardContent className="space-y-3">
-              <DetailRow label="Created" value={formatDateTime(lead.createdAt)} />
-              <DetailRow label="Updated" value={formatDateTime(lead.updatedAt)} />
-            </CardContent>
-          </Card>
-        </div>
+                  Status ändern
+                </DropdownMenuItem>
+                <DropdownMenuItem onSelect={() => router.push(`/leads/${id}/edit`)}>
+                  Kontakt und Umzug bearbeiten
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem
+                  onSelect={() => setDeleteDialogOpen(true)}
+                  className="text-danger-700"
+                >
+                  Archivieren
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
+        )}
       </div>
+
+      {/* Kontakt */}
+      <Block
+        title={name}
+        action={
+          canEdit ? (
+            <Link href={`/leads/${id}/edit`} className="text-signal-600 text-sm hover:underline">
+              Bearbeiten
+            </Link>
+          ) : undefined
+        }
+      >
+        <dl className="grid gap-3 sm:grid-cols-3">
+          <Field label="E-Mail">
+            {lead.email && (
+              <a href={`mailto:${lead.email}`} className="hover:underline">
+                {lead.email}
+              </a>
+            )}
+          </Field>
+          <Field label="Telefon">
+            {lead.phone && (
+              <a href={`tel:${lead.phone}`} className="text-signal-600 hover:underline">
+                {formatPhone(lead.phone)}
+              </a>
+            )}
+          </Field>
+          <Field label="Quelle">{labelOf(lead.source)}</Field>
+        </dl>
+      </Block>
+
+      {/* Umzug */}
+      <Block
+        title="Umzug"
+        action={
+          canEdit ? (
+            <Link href={`/leads/${id}/edit`} className="text-signal-600 text-sm hover:underline">
+              Bearbeiten
+            </Link>
+          ) : undefined
+        }
+      >
+        <dl className="grid gap-3 sm:grid-cols-3">
+          <Field label="Aktuelle Adresse">
+            {address(lead.originAddress, lead.originPostalCode, lead.originCity)}
+          </Field>
+          <Field label="Neue Adresse">
+            {address(lead.destAddress, lead.destPostalCode, lead.destCity)}
+          </Field>
+          <Field label="Umzugsdatum">
+            {formatDate(lead.requestedDate)}
+            {lead.dateFlexible && <span className="text-text-muted"> (flexibel)</span>}
+          </Field>
+          <Field label="Anzahl Zimmer">
+            {lead.rooms ?? (lead.propertySize ? labelOf(lead.propertySize) : null)}
+          </Field>
+          <Field label="Art">{lead.moveType ? labelOf(lead.moveType) : null}</Field>
+        </dl>
+      </Block>
+
+      {/* Offerten */}
+      <Block
+        title="Umzug — Offerte"
+        highlight
+        action={
+          canCreateQuote ? (
+            <Button size="sm" disabled={createQuote.isPending} onClick={startQuote}>
+              <FileText className="h-4 w-4" />
+              {createQuote.isPending ? "Wird erstellt …" : "Offerte erstellen"}
+            </Button>
+          ) : undefined
+        }
+      >
+        {leadQuotes.length > 0 && (
+          <ul className="divide-surface-divider divide-y">
+            {leadQuotes.map((q) => (
+              <li key={q.id}>
+                <Link
+                  href={`/quotes/${q.id}`}
+                  className="hover:bg-surface-sunken -mx-2 flex items-center gap-3 rounded-[var(--radius-md)] px-2 py-2"
+                >
+                  <span className="text-text-primary text-sm font-medium">{q.quoteNumber}</span>
+                  <span className="text-text-muted min-w-0 flex-1 truncate text-sm">
+                    {q.title ?? ""}
+                  </span>
+                  <span className="text-sm whitespace-nowrap tabular-nums">
+                    {formatChf(q.totalAmountCents)}
+                  </span>
+                  <Badge variant={QUOTE_STATUS_BADGE[q.status] ?? "neutral"}>
+                    {QUOTE_STATUS_LABELS[q.status] ?? q.status}
+                  </Badge>
+                </Link>
+              </li>
+            ))}
+          </ul>
+        )}
+      </Block>
+
+      <QuestionnaireBlock key={`q-${lead.updatedAt}`} lead={lead} canEdit={canEdit} />
+      <InventoryBlock key={`i-${lead.updatedAt}`} lead={lead} canEdit={canEdit} />
+      <ServicesBlock key={`s-${lead.updatedAt}`} lead={lead} canEdit={canEdit} />
+
+      <Block title="Medien">
+        <AttachmentsBlock entityType="lead" entityId={id} canEdit={canEdit} />
+      </Block>
+
+      <NotesBlock key={`n-${lead.updatedAt}`} lead={lead} canEdit={canEdit} />
+
+      {/* Hausbesuch */}
+      <Block
+        title="Hausbesuch abmachen"
+        action={
+          canEdit ? (
+            <Button size="sm" variant="secondary" onClick={() => setAppointment("new")}>
+              <CalendarPlus className="h-4 w-4" />
+              Neu
+            </Button>
+          ) : undefined
+        }
+      >
+        {(visits.data ?? []).length > 0 && (
+          <ul className="divide-surface-divider divide-y">
+            {(visits.data ?? []).map((v) => (
+              <li key={v.id} className="flex items-center gap-3 py-2 text-sm">
+                <Home className="text-text-muted h-4 w-4" />
+                <button
+                  type="button"
+                  className="min-w-0 flex-1 text-left hover:underline"
+                  onClick={() => setAppointment(v)}
+                >
+                  <span className="text-text-primary">{v.title}</span>
+                  <span className="text-text-muted">
+                    {" "}
+                    · {formatDate(v.date)} {v.startTime}–{v.endTime}
+                  </span>
+                </button>
+                {v.confirmed ? (
+                  <Badge variant="success">
+                    <CheckCircle2 className="h-3 w-3" />
+                    bestätigt
+                  </Badge>
+                ) : (
+                  canEdit && (
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      onClick={async () => {
+                        await setConfirmed.mutateAsync({ id: v.id, confirmed: true })
+                        await utils.calendar.invalidate()
+                      }}
+                    >
+                      Bestätigen
+                    </Button>
+                  )
+                )}
+              </li>
+            ))}
+          </ul>
+        )}
+      </Block>
+
+      {appointment && (
+        <AppointmentDialog
+          event={appointment === "new" ? undefined : appointment}
+          defaults={{
+            title: `Hausbesuch ${lead.lastName}`,
+            kind: "site_visit",
+            leadId: id,
+            leadLabel: name,
+          }}
+          onClose={() => setAppointment(null)}
+        />
+      )}
 
       {/* Status change dialog */}
       <Dialog open={statusDialogOpen} onOpenChange={setStatusDialogOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Change lead status</DialogTitle>
+            <DialogTitle>Status ändern</DialogTitle>
           </DialogHeader>
           <div className="space-y-4 py-2">
             <div>
-              <FieldLabel htmlFor="newStatus">New status</FieldLabel>
+              <FieldLabel htmlFor="newStatus">Neuer Status</FieldLabel>
               <Select
                 id="newStatus"
                 value={newStatus}
                 onChange={(e) => setNewStatus(e.target.value)}
               >
                 <option value="" disabled>
-                  {allowedTransitions.length === 0 ? "No further status available" : "Select…"}
+                  {allowedTransitions.length === 0 ? "Kein weiterer Status möglich" : "Wählen …"}
                 </option>
                 {allowedTransitions.map((t) => (
                   <option key={t.toStatus} value={t.toStatus}>
-                    {formatLabel(t.toStatus)}
+                    {labelOf(t.toStatus)}
                   </option>
                 ))}
               </Select>
             </div>
             {selectedTransition?.requiresReason && (
               <div>
-                <FieldLabel htmlFor="lostReason">Reason (required)</FieldLabel>
+                <FieldLabel htmlFor="lostReason">Grund (Pflicht)</FieldLabel>
                 <Textarea
                   id="lostReason"
                   rows={3}
                   value={lostReason}
                   onChange={(e) => setLostReason(e.target.value)}
-                  placeholder="Why was this lead lost?"
+                  placeholder="Warum ist die Anfrage verloren?"
                 />
               </div>
             )}
           </div>
           <DialogFooter>
             <Button variant="secondary" onClick={() => setStatusDialogOpen(false)}>
-              Cancel
+              Abbrechen
             </Button>
             <Button
               onClick={handleStatusChange}
@@ -424,29 +441,39 @@ export default function LeadDetailPage({ params }: { params: Promise<{ id: strin
                 updateStatusMutation.isPending
               }
             >
-              {updateStatusMutation.isPending ? "Saving..." : "Update Status"}
+              {updateStatusMutation.isPending ? "Speichern …" : "Status ändern"}
             </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
 
-      {/* Delete confirmation dialog */}
+      {/* Archive confirmation */}
       <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Archive this lead?</DialogTitle>
+            <DialogTitle>Anfrage archivieren?</DialogTitle>
           </DialogHeader>
           <p className="text-text-secondary py-2 text-sm">
-            Are you sure you want to archive the lead for {lead.firstName} {lead.lastName}? This
-            will remove it from your active pipeline. The data is preserved and can be restored
-            later.
+            Die Anfrage von {name} verschwindet aus der Liste. Die Daten bleiben erhalten.
           </p>
           <DialogFooter>
             <Button variant="secondary" onClick={() => setDeleteDialogOpen(false)}>
-              Cancel
+              Abbrechen
             </Button>
-            <Button variant="danger" onClick={handleDelete} disabled={deleteMutation.isPending}>
-              {deleteMutation.isPending ? "Archiving..." : "Archive Lead"}
+            <Button
+              variant="danger"
+              disabled={deleteMutation.isPending}
+              onClick={async () => {
+                try {
+                  await deleteMutation.mutateAsync({ id })
+                  toast.success("Anfrage archiviert")
+                  router.push("/leads")
+                } catch (err) {
+                  toast.error(err instanceof Error ? err.message : "Archivieren fehlgeschlagen")
+                }
+              }}
+            >
+              {deleteMutation.isPending ? "Wird archiviert …" : "Archivieren"}
             </Button>
           </DialogFooter>
         </DialogContent>

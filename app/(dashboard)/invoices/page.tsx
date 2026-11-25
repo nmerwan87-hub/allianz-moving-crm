@@ -8,12 +8,13 @@ import { formatChf } from "@/lib/format/money"
 import { PageHeader } from "@/app/(dashboard)/_components/ui/page-header"
 import { Button } from "@/app/(dashboard)/_components/ui/button"
 import { Badge } from "@/app/(dashboard)/_components/ui/badge"
-import { Card, CardContent } from "@/app/(dashboard)/_components/ui/card"
-import { Input, Select } from "@/app/(dashboard)/_components/ui/field"
+import { Card } from "@/app/(dashboard)/_components/ui/card"
+import { Input } from "@/app/(dashboard)/_components/ui/field"
 import { Skeleton } from "@/app/(dashboard)/_components/ui/skeleton"
 import { ErrorState } from "@/app/(dashboard)/_components/ui/error-state"
 import { EmptyState } from "@/app/(dashboard)/_components/ui/empty-state"
 import { DataTable, type Column } from "@/app/(dashboard)/_components/ui/data-table"
+import { cn } from "@/app/(dashboard)/_lib/cn"
 import type { InvoiceSummary } from "@/modules/invoices/interface"
 import { formatDate } from "../quotes/_lib/labels"
 import {
@@ -26,11 +27,11 @@ import {
 const columns: Column<InvoiceSummary>[] = [
   {
     key: "number",
-    header: "Invoice",
+    header: "Rechnung",
     render: (i) => (
       <div>
         <div className="text-text-primary font-medium whitespace-nowrap">
-          {i.invoiceNumber ?? "Draft"}
+          {i.invoiceNumber ?? "Entwurf"}
         </div>
         <div className="text-text-muted text-xs">
           {i.jobNumber}
@@ -41,18 +42,18 @@ const columns: Column<InvoiceSummary>[] = [
   },
   {
     key: "customer",
-    header: "Customer",
+    header: "Kunde",
     render: (i) => <span className="text-text-secondary">{i.customerName}</span>,
   },
   {
     key: "issued",
-    header: "Issued",
+    header: "Datum",
     className: "hidden md:table-cell",
     render: (i) => <span className="text-text-secondary">{formatDate(swissDay(i.issuedAt))}</span>,
   },
   {
     key: "due",
-    header: "Due",
+    header: "Fällig",
     className: "hidden lg:table-cell",
     render: (i) => (
       <div>
@@ -77,7 +78,7 @@ const columns: Column<InvoiceSummary>[] = [
   },
   {
     key: "open",
-    header: "Open",
+    header: "Offen",
     className: "text-right hidden sm:table-cell",
     render: (i) => (
       <span className="text-text-secondary block text-right whitespace-nowrap tabular-nums">
@@ -97,13 +98,13 @@ const columns: Column<InvoiceSummary>[] = [
 ]
 
 const FILTERS: Array<[string, string]> = [
-  ["", "All"],
-  ["open", "Open"],
-  ["overdue", "Overdue"],
-  ["draft", "Settlement drafts"],
-  ["paid", "Paid"],
-  ["void", "Void"],
-  ["write_off", "Written off"],
+  ["", "Alle"],
+  ["open", "Offen"],
+  ["overdue", "Überfällig"],
+  ["draft", "Entwürfe"],
+  ["paid", "Bezahlt"],
+  ["void", "Storniert"],
+  ["write_off", "Abgeschrieben"],
 ]
 
 export default function InvoicesPage() {
@@ -121,39 +122,68 @@ export default function InvoicesPage() {
   return (
     <div>
       <PageHeader
-        title="Invoices"
-        description="Final settlements, invoices with QR-bill, payments and reminders. Settle a job from its page."
+        title="Zahlungsübersicht"
+        description="Abgerechnet wird im Auftrag oder in der angenommenen Offerte."
       />
 
-      {query.data && (
-        <div className="mb-4 grid gap-3 sm:grid-cols-2 lg:max-w-xl">
-          <Card>
-            <CardContent className="py-3">
-              <p className="text-text-muted text-xs font-medium uppercase">Open</p>
-              <p className="text-text-primary text-lg font-semibold tabular-nums">
-                {formatChf(query.data.openBalanceCents)}
-              </p>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardContent className="py-3">
-              <p className="text-text-muted text-xs font-medium uppercase">Overdue</p>
-              <p
-                className={`text-lg font-semibold tabular-nums ${query.data.overdueBalanceCents > 0 ? "text-danger-700" : "text-text-primary"}`}
-              >
-                {formatChf(query.data.overdueBalanceCents)}
-              </p>
-            </CardContent>
-          </Card>
-        </div>
-      )}
+      <div className="mb-4 grid gap-3 sm:grid-cols-2 lg:max-w-xl">
+        {(
+          [
+            ["Offen", query.data?.openBalanceCents, "open", false],
+            ["Überfällig", query.data?.overdueBalanceCents, "overdue", true],
+          ] as const
+        ).map(([label, cents, filter, danger]) => (
+          <button
+            key={label}
+            type="button"
+            onClick={() => {
+              setStatus(status === filter ? "" : filter)
+              setPage(1)
+            }}
+            className={cn(
+              "border-surface-divider bg-surface-raised rounded-[var(--radius-lg)] border px-4 py-3 text-left",
+              status === filter && "border-text-primary",
+            )}
+          >
+            <p className="text-text-muted text-xs">{label}</p>
+            <p
+              className={cn(
+                "text-lg font-semibold tabular-nums",
+                danger && (cents ?? 0) > 0 ? "text-danger-700" : "text-text-primary",
+              )}
+            >
+              {cents === undefined ? "…" : formatChf(cents)}
+            </p>
+          </button>
+        ))}
+      </div>
 
-      <div className="mb-4 flex flex-wrap gap-3">
-        <div className="relative min-w-64 flex-1">
+      <div className="mb-4 flex flex-wrap items-center gap-3">
+        <div className="flex flex-wrap gap-1">
+          {FILTERS.map(([value, label]) => (
+            <button
+              key={value}
+              type="button"
+              onClick={() => {
+                setStatus(value)
+                setPage(1)
+              }}
+              className={cn(
+                "rounded-full px-3 py-1 text-sm",
+                status === value
+                  ? "bg-signal-600 text-text-inverse font-medium"
+                  : "text-text-secondary hover:bg-surface-sunken",
+              )}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
+        <div className="relative ml-auto w-full sm:w-64">
           <Search className="text-text-muted absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2" />
           <Input
             className="pl-9"
-            placeholder="Search by number or title..."
+            placeholder="Nummer, Titel …"
             value={search}
             onChange={(e) => {
               setSearch(e.target.value)
@@ -161,27 +191,15 @@ export default function InvoicesPage() {
             }}
           />
         </div>
-        <Select
-          className="w-auto"
-          aria-label="Filter by status"
-          value={status}
-          onChange={(e) => {
-            setStatus(e.target.value)
-            setPage(1)
-          }}
-        >
-          {FILTERS.map(([value, label]) => (
-            <option key={value} value={value}>
-              {label}
-            </option>
-          ))}
-        </Select>
       </div>
 
       {query.isLoading ? (
         <Skeleton className="h-96 w-full rounded-[var(--radius-lg)]" />
       ) : query.isError ? (
-        <ErrorState title="Couldn't load invoices" message="Please try again." />
+        <ErrorState
+          title="Rechnungen konnten nicht geladen werden"
+          message="Versuche es nochmals."
+        />
       ) : query.data && query.data.items.length > 0 ? (
         <>
           <Card className="overflow-hidden p-0">
@@ -194,7 +212,7 @@ export default function InvoicesPage() {
           {query.data.totalPages > 1 && (
             <div className="mt-4 flex items-center justify-between">
               <p className="text-text-muted text-sm">
-                {query.data.total} invoices — page {query.data.page} of {query.data.totalPages}
+                {query.data.total} Rechnungen — Seite {query.data.page} von {query.data.totalPages}
               </p>
               <div className="flex gap-2">
                 <Button
@@ -203,7 +221,7 @@ export default function InvoicesPage() {
                   disabled={page === 1}
                   onClick={() => setPage((p) => p - 1)}
                 >
-                  Previous
+                  Zurück
                 </Button>
                 <Button
                   variant="secondary"
@@ -211,7 +229,7 @@ export default function InvoicesPage() {
                   disabled={page >= query.data.totalPages}
                   onClick={() => setPage((p) => p + 1)}
                 >
-                  Next
+                  Weiter
                 </Button>
               </div>
             </div>
@@ -220,11 +238,11 @@ export default function InvoicesPage() {
       ) : (
         <EmptyState
           icon={Receipt}
-          title={search || status ? "No matching invoices" : "No invoices yet"}
+          title={search || status ? "Keine passenden Rechnungen" : "Noch keine Rechnungen"}
           description={
             search || status
-              ? "Try a different search or filter."
-              : "Open a started or completed job and create its final settlement."
+              ? "Andere Suche oder anderen Filter versuchen."
+              : "Öffne einen erledigten Auftrag und erstelle dort die Schlussabrechnung."
           }
         />
       )}

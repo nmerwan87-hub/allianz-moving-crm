@@ -10,6 +10,10 @@ import {
   updateLeadStatusInput,
   listLeadsInput,
   deleteLeadInput,
+  updateLeadDetailsInput,
+  leadQuestionnaire,
+  inventoryRow,
+  wishedService,
   type Lead,
   type LeadListResult,
 } from "./schema"
@@ -76,6 +80,10 @@ function mapLead(row: Record<string, unknown>): Lead {
     createdAt: row["created_at"] as string,
     updatedAt: row["updated_at"] as string,
     assignedToName: (row["assigned_to_name"] as string | null) ?? null,
+    rooms: row["rooms"] === null || row["rooms"] === undefined ? null : Number(row["rooms"]),
+    questionnaire: leadQuestionnaire.safeParse(row["questionnaire"] ?? {}).data ?? {},
+    inventory: z.array(inventoryRow).safeParse(row["inventory"] ?? []).data ?? [],
+    wishedServices: z.array(wishedService).safeParse(row["wished_services"] ?? []).data ?? [],
   }
 }
 
@@ -92,7 +100,7 @@ export const leadsRouter = createTRPCRouter({
       let query = sb
         .from("leads")
         .select(
-          "id, company_id, customer_id, assigned_to, first_name, last_name, email, phone, move_type, requested_date, date_flexible, property_size, origin_address, origin_city, origin_state, origin_postal_code, origin_country, origin_floor, origin_has_elevator, origin_has_stairs, origin_parking_notes, dest_address, dest_city, dest_state, dest_postal_code, dest_country, dest_floor, dest_has_elevator, dest_has_stairs, dest_parking_notes, estimated_volume_cuft, estimated_distance_miles, status, lost_reason, converted_at, source, utm_source, utm_medium, utm_campaign, referrer_url, internal_notes, created_at, updated_at",
+          "id, company_id, customer_id, assigned_to, first_name, last_name, email, phone, move_type, requested_date, date_flexible, property_size, origin_address, origin_city, origin_state, origin_postal_code, origin_country, origin_floor, origin_has_elevator, origin_has_stairs, origin_parking_notes, dest_address, dest_city, dest_state, dest_postal_code, dest_country, dest_floor, dest_has_elevator, dest_has_stairs, dest_parking_notes, estimated_volume_cuft, estimated_distance_miles, status, lost_reason, converted_at, source, utm_source, utm_medium, utm_campaign, referrer_url, internal_notes, rooms, questionnaire, inventory, wished_services, created_at, updated_at",
           { count: "exact" },
         )
         .is("deleted_at", null)
@@ -121,7 +129,7 @@ export const leadsRouter = createTRPCRouter({
       if (error) {
         throw new TRPCError({
           code: "INTERNAL_SERVER_ERROR",
-          message: "Failed to fetch leads",
+          message: "Anfragen konnten nicht geladen werden",
         })
       }
 
@@ -170,18 +178,21 @@ export const leadsRouter = createTRPCRouter({
       const { data, error } = await sb
         .from("leads")
         .select(
-          "id, company_id, customer_id, assigned_to, first_name, last_name, email, phone, move_type, requested_date, date_flexible, property_size, origin_address, origin_city, origin_state, origin_postal_code, origin_country, origin_floor, origin_has_elevator, origin_has_stairs, origin_parking_notes, dest_address, dest_city, dest_state, dest_postal_code, dest_country, dest_floor, dest_has_elevator, dest_has_stairs, dest_parking_notes, estimated_volume_cuft, estimated_distance_miles, status, lost_reason, converted_at, source, utm_source, utm_medium, utm_campaign, referrer_url, internal_notes, created_at, updated_at",
+          "id, company_id, customer_id, assigned_to, first_name, last_name, email, phone, move_type, requested_date, date_flexible, property_size, origin_address, origin_city, origin_state, origin_postal_code, origin_country, origin_floor, origin_has_elevator, origin_has_stairs, origin_parking_notes, dest_address, dest_city, dest_state, dest_postal_code, dest_country, dest_floor, dest_has_elevator, dest_has_stairs, dest_parking_notes, estimated_volume_cuft, estimated_distance_miles, status, lost_reason, converted_at, source, utm_source, utm_medium, utm_campaign, referrer_url, internal_notes, rooms, questionnaire, inventory, wished_services, created_at, updated_at",
         )
         .eq("id", input.id)
         .is("deleted_at", null)
         .maybeSingle()
 
       if (error) {
-        throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Failed to fetch lead" })
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: "Anfrage konnte nicht geladen werden",
+        })
       }
 
       if (!data) {
-        throw new TRPCError({ code: "NOT_FOUND", message: "Lead not found" })
+        throw new TRPCError({ code: "NOT_FOUND", message: "Anfrage nicht gefunden" })
       }
 
       const lead = mapLead(data as Record<string, unknown>)
@@ -217,11 +228,12 @@ export const leadsRouter = createTRPCRouter({
         requested_date: nullIfEmptyDate(input.requestedDate),
         date_flexible: input.dateFlexible,
         property_size: input.propertySize ?? null,
+        rooms: input.rooms ?? null,
         origin_address: nullIfEmpty(input.originAddress),
         origin_city: nullIfEmpty(input.originCity),
         origin_state: nullIfEmpty(input.originState),
         origin_postal_code: nullIfEmpty(input.originPostalCode),
-        origin_country: nullIfEmpty(input.originCountry) ?? "US",
+        origin_country: nullIfEmpty(input.originCountry) ?? "CH",
         origin_floor: input.originFloor ?? null,
         origin_has_elevator: input.originHasElevator,
         origin_has_stairs: input.originHasStairs,
@@ -230,7 +242,7 @@ export const leadsRouter = createTRPCRouter({
         dest_city: nullIfEmpty(input.destCity),
         dest_state: nullIfEmpty(input.destState),
         dest_postal_code: nullIfEmpty(input.destPostalCode),
-        dest_country: nullIfEmpty(input.destCountry) ?? "US",
+        dest_country: nullIfEmpty(input.destCountry) ?? "CH",
         dest_floor: input.destFloor ?? null,
         dest_has_elevator: input.destHasElevator,
         dest_has_stairs: input.destHasStairs,
@@ -281,11 +293,14 @@ export const leadsRouter = createTRPCRouter({
         .maybeSingle()
 
       if (fetchError) {
-        throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Failed to verify lead" })
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: "Anfrage konnte nicht geprüft werden",
+        })
       }
 
       if (!existing) {
-        throw new TRPCError({ code: "NOT_FOUND", message: "Lead not found" })
+        throw new TRPCError({ code: "NOT_FOUND", message: "Anfrage nicht gefunden" })
       }
 
       const updateData: Record<string, unknown> = {}
@@ -300,6 +315,7 @@ export const leadsRouter = createTRPCRouter({
         updateData["requested_date"] = nullIfEmptyDate(rest.requestedDate)
       if (rest.dateFlexible !== undefined) updateData["date_flexible"] = rest.dateFlexible
       if (rest.propertySize !== undefined) updateData["property_size"] = rest.propertySize
+      if (rest.rooms !== undefined) updateData["rooms"] = rest.rooms
       if (rest.originAddress !== undefined)
         updateData["origin_address"] = nullIfEmpty(rest.originAddress)
       if (rest.originCity !== undefined) updateData["origin_city"] = nullIfEmpty(rest.originCity)
@@ -307,7 +323,7 @@ export const leadsRouter = createTRPCRouter({
       if (rest.originPostalCode !== undefined)
         updateData["origin_postal_code"] = nullIfEmpty(rest.originPostalCode)
       if (rest.originCountry !== undefined)
-        updateData["origin_country"] = nullIfEmpty(rest.originCountry) ?? "US"
+        updateData["origin_country"] = nullIfEmpty(rest.originCountry) ?? "CH"
       if (rest.originFloor !== undefined) updateData["origin_floor"] = rest.originFloor
       if (rest.originHasElevator !== undefined)
         updateData["origin_has_elevator"] = rest.originHasElevator
@@ -320,7 +336,7 @@ export const leadsRouter = createTRPCRouter({
       if (rest.destPostalCode !== undefined)
         updateData["dest_postal_code"] = nullIfEmpty(rest.destPostalCode)
       if (rest.destCountry !== undefined)
-        updateData["dest_country"] = nullIfEmpty(rest.destCountry) ?? "US"
+        updateData["dest_country"] = nullIfEmpty(rest.destCountry) ?? "CH"
       if (rest.destFloor !== undefined) updateData["dest_floor"] = rest.destFloor
       if (rest.destHasElevator !== undefined) updateData["dest_has_elevator"] = rest.destHasElevator
       if (rest.destHasStairs !== undefined) updateData["dest_has_stairs"] = rest.destHasStairs
@@ -376,11 +392,14 @@ export const leadsRouter = createTRPCRouter({
         .maybeSingle()
 
       if (fetchError) {
-        throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Failed to verify lead" })
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: "Anfrage konnte nicht geprüft werden",
+        })
       }
 
       if (!existing) {
-        throw new TRPCError({ code: "NOT_FOUND", message: "Lead not found" })
+        throw new TRPCError({ code: "NOT_FOUND", message: "Anfrage nicht gefunden" })
       }
 
       const oldStatus = existing["status"] as string
@@ -402,6 +421,38 @@ export const leadsRouter = createTRPCRouter({
     }),
 
   /** Soft-delete a lead by setting deleted_at. */
+  /** Inquiry hub blocks: rooms, questionnaire, inventory, wished services, private notes. */
+  updateDetails: permissionProcedure("leads.edit")
+    .input(updateLeadDetailsInput)
+    .mutation(async ({ ctx, input }) => {
+      const row: Record<string, unknown> = {}
+      if (input.rooms !== undefined) row["rooms"] = input.rooms
+      if (input.questionnaire !== undefined) row["questionnaire"] = input.questionnaire
+      if (input.inventory !== undefined) row["inventory"] = input.inventory
+      if (input.wishedServices !== undefined) row["wished_services"] = input.wishedServices
+      if (input.internalNotes !== undefined)
+        row["internal_notes"] = input.internalNotes?.trim() ? input.internalNotes.trim() : null
+      if (Object.keys(row).length === 0) return { id: input.id }
+
+      const { data, error } = await ctx.supabase
+        .from("leads")
+        .update(row)
+        .eq("id", input.id)
+        .is("deleted_at", null)
+        .select("id")
+        .maybeSingle()
+      if (error)
+        throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Speichern fehlgeschlagen" })
+      if (!data) throw new TRPCError({ code: "NOT_FOUND", message: "Anfrage nicht gefunden" })
+      await writeActivityLog(ctx, {
+        action: "lead.details_updated",
+        entityType: "lead",
+        entityId: input.id,
+        metadata: { fields: Object.keys(row) },
+      })
+      return { id: input.id }
+    }),
+
   delete: permissionProcedure("leads.delete")
     .input(deleteLeadInput)
     .mutation(async ({ ctx, input }): Promise<{ id: string }> => {
@@ -415,11 +466,14 @@ export const leadsRouter = createTRPCRouter({
         .maybeSingle()
 
       if (fetchError) {
-        throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Failed to verify lead" })
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: "Anfrage konnte nicht geprüft werden",
+        })
       }
 
       if (!existing) {
-        throw new TRPCError({ code: "NOT_FOUND", message: "Lead not found" })
+        throw new TRPCError({ code: "NOT_FOUND", message: "Anfrage nicht gefunden" })
       }
 
       const { error: updateError } = await sb
@@ -430,7 +484,7 @@ export const leadsRouter = createTRPCRouter({
       if (updateError) {
         throw new TRPCError({
           code: "INTERNAL_SERVER_ERROR",
-          message: "Failed to archive lead",
+          message: "Archivieren fehlgeschlagen",
         })
       }
 

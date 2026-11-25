@@ -102,7 +102,7 @@ describeWithDb("Customers module", () => {
   it("requires a company name for business customers", async () => {
     await expect(
       owner.customers.create({ customerType: "business", firstName: "Max", lastName: "Firma" }),
-    ).rejects.toThrow(/Company name is required/)
+    ).rejects.toThrow(/Firmenname fehlt/)
 
     const { error } = await svc.from("customers").insert({
       company_id: companyA,
@@ -175,7 +175,7 @@ describeWithDb("Customers module", () => {
 
     await expect(
       owner.customers.update({ id: customerId, firstName: "A", lastName: "B" } as never),
-    ).rejects.toThrow(/Restore the customer/)
+    ).rejects.toThrow(/Stelle den Kunden zuerst wieder her/)
 
     await owner.customers.restore({ id: customerId })
     const restored = await owner.customers.list({})
@@ -188,16 +188,20 @@ describeWithDb("Customers module", () => {
     expect(list.items.map((c) => c.id)).toContain(customerId)
     await expect(
       viewer.customers.create({ firstName: "No", lastName: "Access" } as never),
-    ).rejects.toThrow(/Missing permission: customers.create/)
+    ).rejects.toThrow(/Fehlendes Recht: customers.create/)
 
     const none = await callerFor(noAccessA)
-    await expect(none.customers.list({})).rejects.toThrow(/Missing permission: customers.view/)
+    await expect(none.customers.list({})).rejects.toThrow(/Fehlendes Recht: customers.view/)
   })
 
   it("isolates companies", async () => {
     const other = await callerFor(ownerB)
-    await expect(other.customers.getById({ id: customerId })).rejects.toThrow(/Customer not found/)
-    await expect(other.customers.archive({ id: customerId })).rejects.toThrow(/Customer not found/)
+    await expect(other.customers.getById({ id: customerId })).rejects.toThrow(
+      /Kunde nicht gefunden/,
+    )
+    await expect(other.customers.archive({ id: customerId })).rejects.toThrow(
+      /Kunde nicht gefunden/,
+    )
 
     const list = await other.customers.list({ search: "muster" })
     expect(list.items).toEqual([])

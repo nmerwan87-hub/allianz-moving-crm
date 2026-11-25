@@ -53,7 +53,7 @@ function JobTile({ job }: { job: JobCard }) {
         >
           <Users className="h-3 w-3 shrink-0" />
           <span className="truncate">
-            {job.crew.length ? job.crew.map((c) => c.name.split(" ")[0]).join(", ") : "No crew"}
+            {job.crew.length ? job.crew.map((c) => c.name.split(" ")[0]).join(", ") : "Kein Team"}
             {job.crewSizeRequired ? ` (${job.crew.length}/${job.crewSizeRequired})` : ""}
           </span>
         </div>
@@ -103,13 +103,13 @@ export default function DispatchBoardPage() {
   return (
     <div>
       <PageHeader
-        title="Jobs & dispatch"
-        description="Plan crews and vehicles. Conflicts are checked automatically."
+        title="Aufträge"
+        description="Wochenplan mit Team und Fahrzeugen. Konflikte werden automatisch geprüft."
         actions={
           canCreate ? (
             <Button onClick={() => setNewOpen(true)}>
               <Plus className="h-4 w-4" />
-              New job
+              Neuer Auftrag
             </Button>
           ) : undefined
         }
@@ -119,18 +119,18 @@ export default function DispatchBoardPage() {
         <Button
           variant="secondary"
           size="sm"
-          aria-label="Previous week"
+          aria-label="Vorherige Woche"
           onClick={() => setWeekStart((w) => addDays(w, -7))}
         >
           <ChevronLeft className="h-4 w-4" />
         </Button>
         <Button variant="secondary" size="sm" onClick={() => setWeekStart(mondayOf(new Date()))}>
-          This week
+          Diese Woche
         </Button>
         <Button
           variant="secondary"
           size="sm"
-          aria-label="Next week"
+          aria-label="Nächste Woche"
           onClick={() => setWeekStart((w) => addDays(w, 7))}
         >
           <ChevronRight className="h-4 w-4" />
@@ -139,7 +139,7 @@ export default function DispatchBoardPage() {
       </div>
 
       {jobs.isError ? (
-        <ErrorState title="Couldn't load jobs" message="Please try again." />
+        <ErrorState title="Aufträge konnten nicht geladen werden" message="Versuche es nochmals." />
       ) : (
         <div className="grid grid-cols-1 gap-3 overflow-x-auto pb-2 md:grid-cols-[repeat(7,minmax(168px,1fr))]">
           {days.map((date) => {
@@ -175,8 +175,8 @@ export default function DispatchBoardPage() {
                   )}
                 </div>
                 {away.length > 0 && (
-                  <p className="text-text-muted mt-2 text-[11px]" title="Absent">
-                    Away: {away.map((a) => a.employeeName.split(" ")[0]).join(", ")}
+                  <p className="text-text-muted mt-2 text-[11px]" title="Abwesend">
+                    Abwesend: {away.map((a) => a.employeeName.split(" ")[0]).join(", ")}
                   </p>
                 )}
               </div>

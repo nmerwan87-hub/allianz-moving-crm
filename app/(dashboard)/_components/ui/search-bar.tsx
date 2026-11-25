@@ -7,7 +7,7 @@ import { cn } from "@/app/(dashboard)/_lib/cn"
 export function SearchBar({
   value,
   onChange,
-  placeholder = "Search...",
+  placeholder = "Suchen …",
   className,
 }: {
   value: string

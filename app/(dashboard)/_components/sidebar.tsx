@@ -1,8 +1,11 @@
 "use client"
 
 import Link from "next/link"
-import { usePathname } from "next/navigation"
+import { usePathname, useRouter } from "next/navigation"
 import { useMemo } from "react"
+import { LogOut } from "lucide-react"
+import { createClient } from "@/lib/supabase/client"
+import { Button } from "@/app/(dashboard)/_components/ui/button"
 import { navSections, type NavItem } from "@/app/(dashboard)/_lib/nav-config"
 import { cn } from "@/app/(dashboard)/_lib/cn"
 import { CompanySwitcher, type SwitcherCompany } from "./company-switcher"
@@ -29,6 +32,12 @@ export function Sidebar({
   onNavigate,
 }: SidebarProps) {
   const pathname = usePathname()
+  const router = useRouter()
+
+  async function signOut() {
+    await createClient().auth.signOut()
+    router.push("/login")
+  }
 
   const sections = useMemo(
     () =>
@@ -46,7 +55,7 @@ export function Sidebar({
     : {}
 
   return (
-    <aside className="border-surface-divider bg-surface-raised flex h-full w-60 shrink-0 flex-col border-r shadow-[var(--shadow-elevation-1)]">
+    <aside className="border-surface-divider bg-surface-raised flex h-full w-60 shrink-0 flex-col border-r">
       {/* Company identity */}
       <div className="border-surface-divider flex h-14 items-center gap-2 border-b px-4">
         <CompanySwitcher active={activeCompany} companies={companies} />
@@ -55,10 +64,12 @@ export function Sidebar({
       {/* Navigation */}
       <nav className="flex-1 overflow-y-auto px-3 py-4">
         {sections.map((section) => (
-          <div key={section.label} className="mb-5">
-            <p className="text-text-muted mb-2 px-2 text-[length:var(--text-caption)] font-medium tracking-wide uppercase">
-              {section.label}
-            </p>
+          <div key={section.label || "main"} className="mb-6">
+            {section.label && (
+              <p className="text-text-muted mb-2 px-2 text-[length:var(--text-caption)] font-medium tracking-wide uppercase">
+                {section.label}
+              </p>
+            )}
             <ul className="space-y-0.5">
               {section.items.map((item) => {
                 const isActive =
@@ -73,14 +84,14 @@ export function Sidebar({
                       className={cn(
                         "flex items-center gap-2.5 rounded-[var(--radius-md)] px-2.5 py-2 text-sm transition-colors duration-[var(--duration-quick)]",
                         isActive
-                          ? "bg-ink-100 text-ink-900 font-medium"
+                          ? "bg-signal-100 text-signal-700 font-medium"
                           : "text-text-secondary hover:bg-surface-sunken hover:text-text-primary",
                       )}
                     >
                       <Icon
                         className={cn(
                           "h-4 w-4 shrink-0",
-                          isActive ? "text-ink-900" : "text-text-muted",
+                          isActive ? "text-signal-600" : "text-text-muted",
                         )}
                         strokeWidth={2}
                       />
@@ -96,7 +107,10 @@ export function Sidebar({
 
       {/* Footer */}
       <div className="border-surface-divider border-t px-4 py-3">
-        <p className="text-text-muted text-[length:var(--text-caption)]">&copy; 2026 Bivro</p>
+        <Button variant="secondary" size="sm" className="w-full" onClick={signOut}>
+          <LogOut className="h-4 w-4" />
+          Logout
+        </Button>
       </div>
     </aside>
   )

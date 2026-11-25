@@ -1,7 +1,7 @@
 import type { Metadata } from "next"
 
 export const metadata: Metadata = {
-  title: "Application Not Approved — Bivro",
+  title: "Anmeldung abgelehnt — Bivro",
 }
 
 export default function RejectedPage() {
@@ -20,14 +20,14 @@ export default function RejectedPage() {
           </svg>
         </div>
 
-        <h1 className="text-2xl font-bold text-slate-900">Application not approved</h1>
+        <h1 className="text-2xl font-bold text-slate-900">Anmeldung nicht bestätigt</h1>
         <p className="mt-3 text-sm text-slate-500">
-          Unfortunately, your application was not approved. You should have received an email with
-          more details.
+          Deine Anmeldung wurde leider nicht bestätigt. Details findest du in der E-Mail, die wir
+          dir gesendet haben.
         </p>
 
         <p className="mt-6 text-sm text-slate-500">
-          If you believe this decision was made in error or have questions, please contact{" "}
+          Bei Fragen melde dich bei{" "}
           <a
             href="mailto:support@bivro.io"
             className="font-medium text-violet-600 hover:text-violet-700"

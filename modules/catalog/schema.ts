@@ -16,8 +16,8 @@ const optionalText = (max: number) => z.string().max(max).nullable().or(z.litera
 // ─── Services ─────────────────────────────────────────────────────────────────
 
 const serviceFields = {
-  name: z.string().trim().min(1, "Name is required").max(120),
-  category: z.string().trim().min(1, "Category is required").max(60),
+  name: z.string().trim().min(1, "Name fehlt").max(120),
+  category: z.string().trim().min(1, "Kategorie fehlt").max(60),
   description: optionalText(1000),
   customerDescription: optionalText(1000),
   defaultPricingMode: pricingModeEnum,
@@ -62,7 +62,7 @@ export interface Service {
 // ─── Rate cards ───────────────────────────────────────────────────────────────
 
 const rateCardFields = {
-  name: z.string().trim().min(1, "Name is required").max(120),
+  name: z.string().trim().min(1, "Name fehlt").max(120),
   crewSize: z.number().int().min(1).max(20),
   vehicleType: vehicleTypeEnum.nullable(),
   hourlyRateCents: cents,

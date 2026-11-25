@@ -11,10 +11,10 @@ export const vehicleTypeEnum = z.enum([
 export const vehicleStatusEnum = z.enum(["available", "in_use", "maintenance", "retired"])
 
 const optionalText = (max: number) => z.string().max(max).nullable().or(z.literal("")).optional()
-const dateString = z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Use YYYY-MM-DD")
+const dateString = z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Format JJJJ-MM-TT")
 
 const vehicleFields = {
-  name: z.string().trim().min(1, "Name is required").max(80),
+  name: z.string().trim().min(1, "Name fehlt").max(80),
   type: vehicleTypeEnum,
   licensePlate: optionalText(20),
   make: optionalText(60),

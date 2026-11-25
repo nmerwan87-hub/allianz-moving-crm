@@ -24,7 +24,7 @@ export function UserMenu({ firstName, lastName, email, role }: UserMenuProps) {
   const router = useRouter()
   const initials = `${firstName.charAt(0)}${lastName.charAt(0)}`.toUpperCase()
   const displayName = `${firstName} ${lastName}`
-  const roleLabel = role === "owner" ? "Owner" : "Office"
+  const roleLabel = role === "owner" ? "Inhaber" : "Büro"
 
   async function handleSignOut() {
     const supabase = createClient()
@@ -48,16 +48,16 @@ export function UserMenu({ firstName, lastName, email, role }: UserMenuProps) {
         <DropdownMenuSeparator />
         <DropdownMenuItem onSelect={() => router.push("/settings")}>
           <Settings className="text-text-muted h-4 w-4" />
-          Settings
+          Einstellungen
         </DropdownMenuItem>
         <DropdownMenuItem onSelect={() => router.push("/settings/team")}>
           <UserIcon className="text-text-muted h-4 w-4" />
-          Team &amp; Permissions
+          Team und Rechte
         </DropdownMenuItem>
         <DropdownMenuSeparator />
         <DropdownMenuItem onSelect={handleSignOut} className="text-danger-700 focus:bg-danger-100">
           <LogOut className="h-4 w-4" />
-          Sign out
+          Abmelden
         </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>

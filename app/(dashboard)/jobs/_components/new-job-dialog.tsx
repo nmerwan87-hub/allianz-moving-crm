@@ -15,6 +15,7 @@ import {
 } from "@/app/(dashboard)/_components/ui/dialog"
 import { createJobInput } from "@/modules/jobs/interface"
 import { moveTypeEnum } from "@/modules/leads/interface"
+import { MOVE_TYPE_LABELS } from "../../quotes/_lib/labels"
 
 /** A job without a quote — small jobs agreed by phone. Jobs from quotes are created automatically. */
 export function NewJobDialog({
@@ -61,9 +62,7 @@ export function NewJobDialog({
     if (!parsed.success) {
       const issue = parsed.error.issues[0]
       return setError(
-        issue?.path[0] === "customerId"
-          ? "Choose a customer."
-          : (issue?.message ?? "Check the form"),
+        issue?.path[0] === "customerId" ? "Kunde wählen." : (issue?.message ?? "Angaben prüfen"),
       )
     }
     try {
@@ -71,7 +70,7 @@ export function NewJobDialog({
       onOpenChange(false)
       router.push(`/jobs/${id}`)
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to create job")
+      setError(err instanceof Error ? err.message : "Auftrag konnte nicht erstellt werden")
     }
   }
 
@@ -79,8 +78,10 @@ export function NewJobDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>New job</DialogTitle>
-          <DialogDescription>Accepted quotes become jobs automatically.</DialogDescription>
+          <DialogTitle>Neuer Auftrag</DialogTitle>
+          <DialogDescription>
+            Für kleine Aufträge ohne Offerte. Angenommene Offerten werden automatisch zu Aufträgen.
+          </DialogDescription>
         </DialogHeader>
         <div className="grid max-h-[65vh] gap-3 overflow-y-auto py-1 sm:grid-cols-6">
           <div className="sm:col-span-6">
@@ -89,17 +90,17 @@ export function NewJobDialog({
             </FieldLabel>
             <Input
               id="nj-search"
-              placeholder="Search customers..."
+              placeholder="Kunde suchen …"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
             />
             <Select
-              aria-label="Customer"
+              aria-label="Kunde"
               className="mt-2"
               value={form.customerId}
               onChange={set("customerId")}
             >
-              <option value="">Choose…</option>
+              <option value="">Wählen …</option>
               {(customers.data?.items ?? []).map((c) => (
                 <option key={c.id} value={c.id}>
                   {c.displayName}
@@ -109,7 +110,7 @@ export function NewJobDialog({
             </Select>
           </div>
           <div className="sm:col-span-2">
-            <FieldLabel htmlFor="nj-date">Date</FieldLabel>
+            <FieldLabel htmlFor="nj-date">Datum</FieldLabel>
             <Input
               id="nj-date"
               type="date"
@@ -118,11 +119,11 @@ export function NewJobDialog({
             />
           </div>
           <div className="sm:col-span-2">
-            <FieldLabel htmlFor="nj-time">Start</FieldLabel>
+            <FieldLabel htmlFor="nj-time">Beginn</FieldLabel>
             <Input id="nj-time" type="time" value={form.startTime} onChange={set("startTime")} />
           </div>
           <div className="sm:col-span-1">
-            <FieldLabel htmlFor="nj-hours">Hours</FieldLabel>
+            <FieldLabel htmlFor="nj-hours">Stunden</FieldLabel>
             <Input
               id="nj-hours"
               inputMode="decimal"
@@ -131,7 +132,7 @@ export function NewJobDialog({
             />
           </div>
           <div className="sm:col-span-1">
-            <FieldLabel htmlFor="nj-crew">Crew</FieldLabel>
+            <FieldLabel htmlFor="nj-crew">Personen</FieldLabel>
             <Input
               id="nj-crew"
               inputMode="numeric"
@@ -140,11 +141,11 @@ export function NewJobDialog({
             />
           </div>
           <div className="sm:col-span-6">
-            <FieldLabel htmlFor="nj-type">Type</FieldLabel>
+            <FieldLabel htmlFor="nj-type">Art</FieldLabel>
             <Select id="nj-type" value={form.moveType} onChange={set("moveType")}>
               {moveTypeEnum.options.map((v) => (
                 <option key={v} value={v}>
-                  {v.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase())}
+                  {MOVE_TYPE_LABELS[v] ?? v}
                 </option>
               ))}
             </Select>
@@ -152,26 +153,26 @@ export function NewJobDialog({
           {(["origin", "dest"] as const).map((side) => (
             <div key={side} className="grid gap-2 sm:col-span-6 sm:grid-cols-6">
               <p className="text-text-primary text-sm font-semibold sm:col-span-6">
-                {side === "origin" ? "From" : "To"}
+                {side === "origin" ? "Von" : "Nach"}
               </p>
               <Input
                 aria-label={`${side} street`}
                 className="sm:col-span-6"
-                placeholder="Street and number"
+                placeholder="Strasse und Nr."
                 value={form[`${side}Address`]}
                 onChange={set(`${side}Address`)}
               />
               <Input
                 aria-label={`${side} postal code`}
                 className="sm:col-span-2"
-                placeholder="Postal code"
+                placeholder="PLZ"
                 value={form[`${side}PostalCode`]}
                 onChange={set(`${side}PostalCode`)}
               />
               <Input
                 aria-label={`${side} city`}
                 className="sm:col-span-4"
-                placeholder="City"
+                placeholder="Ort"
                 value={form[`${side}City`]}
                 onChange={set(`${side}City`)}
               />
@@ -185,10 +186,10 @@ export function NewJobDialog({
         </div>
         <DialogFooter>
           <Button variant="secondary" onClick={() => onOpenChange(false)}>
-            Cancel
+            Abbrechen
           </Button>
           <Button onClick={submit} disabled={create.isPending}>
-            {create.isPending ? "Creating..." : "Create job"}
+            {create.isPending ? "Wird erstellt …" : "Auftrag erstellen"}
           </Button>
         </DialogFooter>
       </DialogContent>

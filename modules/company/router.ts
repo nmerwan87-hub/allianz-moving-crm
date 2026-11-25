@@ -93,7 +93,7 @@ export const companyRouter = createTRPCRouter({
       .select(COLUMNS)
       .eq("id", companyId)
       .maybeSingle()
-    if (error || !data) throw new TRPCError({ code: "NOT_FOUND", message: "Company not found." })
+    if (error || !data) throw new TRPCError({ code: "NOT_FOUND", message: "Firma nicht gefunden." })
     return mapProfile(data as unknown as Record<string, unknown>)
   }),
 
@@ -130,7 +130,10 @@ export const companyRouter = createTRPCRouter({
         .update(row)
         .eq("id", companyId)
       if (error)
-        throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Failed to save profile." })
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: "Firmendaten konnten nicht gespeichert werden.",
+        })
 
       await writeActivityLog(ctx, {
         action: "company.profile_updated",
@@ -151,7 +154,7 @@ export const companyRouter = createTRPCRouter({
       if (iban && !isValidIban(iban)) {
         throw new TRPCError({
           code: "BAD_REQUEST",
-          message: "This IBAN is not valid. Please check it.",
+          message: "Diese IBAN ist ungültig. Bitte prüfen.",
         })
       }
 
@@ -172,7 +175,7 @@ export const companyRouter = createTRPCRouter({
       if (error)
         throw new TRPCError({
           code: "INTERNAL_SERVER_ERROR",
-          message: "Failed to save bank details.",
+          message: "Bankverbindung konnte nicht gespeichert werden.",
         })
 
       await writeActivityLog(ctx, {
@@ -190,15 +193,22 @@ export const companyRouter = createTRPCRouter({
     .mutation(async ({ ctx, input }) => {
       const companyId = requireCompany(ctx.companyId)
       const match = /^data:[^;,]+;base64,([A-Za-z0-9+/=]+)$/.exec(input.dataUrl)
-      if (!match) throw new TRPCError({ code: "BAD_REQUEST", message: "Unsupported file." })
+      if (!match)
+        throw new TRPCError({ code: "BAD_REQUEST", message: "Dateityp nicht unterstützt." })
 
       const bytes = Buffer.from(match[1]!, "base64")
       if (bytes.length > MAX_LOGO_BYTES) {
-        throw new TRPCError({ code: "BAD_REQUEST", message: "Logo must be 1 MB or smaller." })
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: "Das Logo darf höchstens 1 MB gross sein.",
+        })
       }
       const image = detectImage(bytes)
       if (!image) {
-        throw new TRPCError({ code: "BAD_REQUEST", message: "Use a PNG, JPEG or WebP image." })
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: "Bitte PNG, JPEG oder WebP verwenden.",
+        })
       }
 
       const svc = createServiceRoleClient()
@@ -213,7 +223,7 @@ export const companyRouter = createTRPCRouter({
         .from(LOGO_BUCKET)
         .upload(path, bytes, { contentType: image.mime, upsert: false })
       if (uploadError)
-        throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Upload failed." })
+        throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Hochladen fehlgeschlagen." })
 
       const logoUrl = svc.storage.from(LOGO_BUCKET).getPublicUrl(path).data.publicUrl
       const { error } = await svc
@@ -222,7 +232,10 @@ export const companyRouter = createTRPCRouter({
         .eq("id", companyId)
       if (error) {
         await svc.storage.from(LOGO_BUCKET).remove([path])
-        throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Failed to save logo." })
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: "Logo konnte nicht gespeichert werden.",
+        })
       }
 
       const previous = logoPath(current?.logo_url as string | null)

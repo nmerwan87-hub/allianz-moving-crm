@@ -10,10 +10,10 @@ function passwordStrength(pwd: string): { score: number; label: string; color: s
   if (/\d/.test(pwd)) score++
   if (/[!@#$%^&*()_+\-=[\]{}|;':",.<>?/]/.test(pwd)) score++
   if (pwd.length >= 20) score++
-  if (score <= 1) return { score, label: "Weak", color: "bg-red-500" }
-  if (score === 2) return { score, label: "Fair", color: "bg-yellow-500" }
-  if (score === 3) return { score, label: "Strong", color: "bg-green-500" }
-  return { score, label: "Very Strong", color: "bg-emerald-600" }
+  if (score <= 1) return { score, label: "Schwach", color: "bg-red-500" }
+  if (score === 2) return { score, label: "Mittel", color: "bg-yellow-500" }
+  if (score === 3) return { score, label: "Stark", color: "bg-green-500" }
+  return { score, label: "Sehr stark", color: "bg-emerald-600" }
 }
 
 const PASSWORD_REGEX = /^(?=.*\d)(?=.*[!@#$%^&*()_+\-=[\]{}|;':",.<>?/]).{12,128}$/
@@ -37,7 +37,7 @@ function ResetPasswordForm() {
     supabase.auth.exchangeCodeForSession(code).then(({ error }) => {
       if (cancelled) return
       if (error) {
-        setError("This reset link is invalid or has expired. Please request a new one.")
+        setError("Dieser Link ist ungültig oder abgelaufen. Fordere einen neuen an.")
       } else {
         setSessionReady(true)
       }
@@ -54,13 +54,11 @@ function ResetPasswordForm() {
     setError(null)
 
     if (!PASSWORD_REGEX.test(password)) {
-      setError(
-        "Password must be at least 12 characters and contain at least one number and one special character.",
-      )
+      setError("Das Passwort braucht mindestens 12 Zeichen, eine Zahl und ein Sonderzeichen.")
       return
     }
     if (password !== confirm) {
-      setError("Passwords do not match.")
+      setError("Die Passwörter stimmen nicht überein.")
       return
     }
 
@@ -81,9 +79,9 @@ function ResetPasswordForm() {
     return (
       <div className="rounded-lg border border-red-200 bg-red-50 p-6 text-center">
         <p className="text-sm text-red-700">
-          Invalid reset link.{" "}
+          Ungültiger Link.{" "}
           <a href="/forgot-password" className="font-medium underline">
-            Request a new one
+            Neuen anfordern
           </a>
         </p>
       </div>
@@ -93,8 +91,8 @@ function ResetPasswordForm() {
   if (success) {
     return (
       <div className="rounded-lg border border-green-200 bg-green-50 p-6 text-center">
-        <p className="text-sm font-medium text-green-800">Password updated!</p>
-        <p className="mt-1 text-sm text-green-700">Signing you in…</p>
+        <p className="text-sm font-medium text-green-800">Passwort geändert</p>
+        <p className="mt-1 text-sm text-green-700">Du wirst angemeldet …</p>
       </div>
     )
   }
@@ -110,13 +108,13 @@ function ResetPasswordForm() {
       ) : null}
 
       <div>
-        <label className="mb-1 block text-sm font-medium text-slate-700">New password</label>
+        <label className="mb-1 block text-sm font-medium text-slate-700">Neues Passwort</label>
         <input
           type="password"
           required
           value={password}
           onChange={(e) => setPassword(e.target.value)}
-          placeholder="Minimum 12 characters"
+          placeholder="Mindestens 12 Zeichen"
           autoComplete="new-password"
           disabled={!sessionReady}
           className="block w-full rounded-md border border-slate-300 bg-slate-50 px-3 py-2 text-sm placeholder:text-slate-400 focus:border-violet-600 focus:ring-2 focus:ring-violet-600/20 focus:outline-none disabled:opacity-50"
@@ -137,13 +135,13 @@ function ResetPasswordForm() {
       </div>
 
       <div>
-        <label className="mb-1 block text-sm font-medium text-slate-700">Confirm password</label>
+        <label className="mb-1 block text-sm font-medium text-slate-700">Passwort bestätigen</label>
         <input
           type="password"
           required
           value={confirm}
           onChange={(e) => setConfirm(e.target.value)}
-          placeholder="Repeat your new password"
+          placeholder="Neues Passwort wiederholen"
           autoComplete="new-password"
           disabled={!sessionReady}
           className="block w-full rounded-md border border-slate-300 bg-slate-50 px-3 py-2 text-sm placeholder:text-slate-400 focus:border-violet-600 focus:ring-2 focus:ring-violet-600/20 focus:outline-none disabled:opacity-50"
@@ -155,7 +153,7 @@ function ResetPasswordForm() {
         disabled={loading || !sessionReady}
         className="w-full rounded-md bg-slate-900 px-4 py-2.5 text-sm font-semibold text-white hover:bg-slate-800 focus:ring-2 focus:ring-violet-600/30 focus:ring-offset-2 focus:outline-none disabled:cursor-not-allowed disabled:opacity-50"
       >
-        {loading ? "Updating…" : "Set new password"}
+        {loading ? "Wird gespeichert …" : "Passwort speichern"}
       </button>
     </form>
   )
@@ -166,10 +164,10 @@ export default function ResetPasswordPage() {
     <div className="flex min-h-screen items-center justify-center bg-slate-50 px-6 py-12">
       <div className="w-full max-w-sm">
         <div className="mb-8">
-          <h1 className="text-2xl font-bold text-slate-900">Set new password</h1>
-          <p className="mt-1 text-sm text-slate-500">Choose a strong password for your account.</p>
+          <h1 className="text-2xl font-bold text-slate-900">Neues Passwort</h1>
+          <p className="mt-1 text-sm text-slate-500">Wähle ein sicheres Passwort.</p>
         </div>
-        <Suspense fallback={<p className="text-sm text-slate-500">Loading…</p>}>
+        <Suspense fallback={<p className="text-sm text-slate-500">Wird geladen …</p>}>
           <ResetPasswordForm />
         </Suspense>
       </div>

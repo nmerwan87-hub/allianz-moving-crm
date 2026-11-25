@@ -275,13 +275,15 @@ describeWithDb("Quotes", () => {
 
   it("refuses to send above the cost cap", async () => {
     await header(quoteId, { costCapCents: 200000 })
-    await expect(owner.quotes.send({ id: quoteId, sendEmail: false })).rejects.toThrow(/cost cap/)
+    await expect(owner.quotes.send({ id: quoteId, sendEmail: false })).rejects.toThrow(/Kostendach/)
     await header(quoteId, { costCapCents: 250000 })
   })
 
   it("refuses to send without lines", async () => {
     const empty = (await owner.quotes.create({ customerId })).id
-    await expect(owner.quotes.send({ id: empty, sendEmail: false })).rejects.toThrow(/priced line/)
+    await expect(owner.quotes.send({ id: empty, sendEmail: false })).rejects.toThrow(
+      /Position mit Preis/,
+    )
     await owner.quotes.cancel({ id: empty })
   })
 
@@ -314,9 +316,9 @@ describeWithDb("Quotes", () => {
   })
 
   it("locks a sent quote", async () => {
-    await expect(header(quoteId)).rejects.toThrow(/already sent/)
+    await expect(header(quoteId)).rejects.toThrow(/ist gesendet/)
     await expect(owner.quotes.saveLines({ id: quoteId, lines: LINES })).rejects.toThrow(
-      /already sent/,
+      /ist gesendet/,
     )
 
     const client = await signIn(ownerA.email)
@@ -372,11 +374,66 @@ describeWithDb("Quotes", () => {
     expect(lead?.status).toBe("booked")
   })
 
+  it("creates a quote from a lead and creates its customer", async () => {
+    const { data: lead } = await svc
+      .from("leads")
+      .insert({
+        company_id: companyA,
+        first_name: "Lea",
+        last_name: "Neu",
+        email: "lea.neu@example.com",
+        phone: "+41791110000",
+        status: "new",
+        source: "phone_call",
+        move_type: "local",
+        origin_address: "Seefeldstrasse 9",
+        origin_postal_code: "8008",
+        origin_city: "Zürich",
+        dest_city: "Basel",
+        date_flexible: false,
+        origin_has_elevator: false,
+        origin_has_stairs: false,
+        dest_has_elevator: false,
+        dest_has_stairs: false,
+      })
+      .select("id")
+      .single()
+    const { id } = await owner.quotes.create({ leadId: lead!.id as string })
+
+    const { data: linked } = await svc
+      .from("leads")
+      .select("customer_id")
+      .eq("id", lead!.id)
+      .single()
+    expect(linked?.customer_id).toBeTruthy()
+    const { data: customer } = await svc
+      .from("customers")
+      .select("first_name, last_name, email, billing_city")
+      .eq("id", linked!.customer_id)
+      .single()
+    expect(customer).toMatchObject({ first_name: "Lea", last_name: "Neu", billing_city: "Zürich" })
+
+    // A second quote from the same lead reuses the customer
+    const second = await owner.quotes.create({ leadId: lead!.id as string })
+    const [a, b] = await Promise.all([
+      owner.quotes.get({ id }),
+      owner.quotes.get({ id: second.id }),
+    ])
+    expect(a.quote.customerId).toBe(b.quote.customerId)
+  })
+
+  it("keeps the simple form fields (flat price, crew, rooms)", async () => {
+    const { id } = await owner.quotes.create({ customerId })
+    await header(id, { pricingKind: "flat", crewSize: 4, rooms: 3.5, costCapCents: null })
+    const { quote } = await owner.quotes.get({ id })
+    expect(quote).toMatchObject({ pricingKind: "flat", crewSize: 4, rooms: 3.5 })
+  })
+
   it("isolates companies", async () => {
     const other = await callerFor(ownerB)
-    await expect(other.quotes.get({ id: quoteId })).rejects.toThrow(/Quote not found/)
+    await expect(other.quotes.get({ id: quoteId })).rejects.toThrow(/Offerte nicht gefunden/)
     await expect(other.quotes.send({ id: quoteId, sendEmail: false })).rejects.toThrow(
-      /Quote not found/,
+      /Offerte nicht gefunden/,
     )
     await expect(other.quotes.createRevision({ id: quoteId })).rejects.toThrow()
     expect((await other.quotes.list({})).items).toEqual([])

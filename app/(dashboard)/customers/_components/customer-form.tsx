@@ -1,5 +1,6 @@
 "use client"
 
+import { labelOf } from "@/app/(dashboard)/_lib/labels"
 import { useEffect, useState } from "react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
@@ -79,10 +80,6 @@ function useDebounced<T>(value: T, delayMs: number): T {
   return debounced
 }
 
-function formatLabel(value: string): string {
-  return value.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase())
-}
-
 export function CustomerForm({ mode, customer }: { mode: "create" | "edit"; customer?: Customer }) {
   const router = useRouter()
   const toast = useToast()
@@ -114,15 +111,15 @@ export function CustomerForm({ mode, customer }: { mode: "create" | "edit"; cust
     try {
       if (mode === "create") {
         const result = await createMutation.mutateAsync(input)
-        toast.success("Customer created")
+        toast.success("Kunde erfasst")
         router.push(`/customers/${result.id}`)
       } else if (customer) {
         await updateMutation.mutateAsync({ id: customer.id, ...input })
-        toast.success("Customer updated")
+        toast.success("Kunde gespeichert")
         router.push(`/customers/${customer.id}`)
       }
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Failed to save customer")
+      toast.error(err instanceof Error ? err.message : "Speichern fehlgeschlagen")
     }
   })
 
@@ -131,19 +128,19 @@ export function CustomerForm({ mode, customer }: { mode: "create" | "edit"; cust
   return (
     <form onSubmit={onSubmit} className="space-y-6">
       <Card>
-        <CardHeader>Customer</CardHeader>
+        <CardHeader>Kunde</CardHeader>
         <CardContent className="grid gap-4 sm:grid-cols-2">
           <div>
-            <FieldLabel htmlFor="customerType">Type</FieldLabel>
+            <FieldLabel htmlFor="customerType">Art</FieldLabel>
             <Select id="customerType" {...register("customerType")}>
-              <option value="private">Private</option>
-              <option value="business">Business</option>
+              <option value="private">Privat</option>
+              <option value="business">Firma</option>
             </Select>
           </div>
           {customerType === "business" ? (
             <div>
               <FieldLabel required htmlFor="companyName">
-                Company name
+                Firmenname
               </FieldLabel>
               <Input
                 id="companyName"
@@ -156,7 +153,7 @@ export function CustomerForm({ mode, customer }: { mode: "create" | "edit"; cust
             <div className="hidden sm:block" />
           )}
           <div>
-            <FieldLabel htmlFor="salutation">Salutation</FieldLabel>
+            <FieldLabel htmlFor="salutation">Anrede</FieldLabel>
             <Controller
               control={control}
               name="salutation"
@@ -177,7 +174,7 @@ export function CustomerForm({ mode, customer }: { mode: "create" | "edit"; cust
             />
           </div>
           <div>
-            <FieldLabel htmlFor="preferredLanguage">Correspondence language</FieldLabel>
+            <FieldLabel htmlFor="preferredLanguage">Korrespondenzsprache</FieldLabel>
             <Select id="preferredLanguage" {...register("preferredLanguage")}>
               {customerLanguageEnum.options.map((lang) => (
                 <option key={lang} value={lang}>
@@ -185,18 +182,18 @@ export function CustomerForm({ mode, customer }: { mode: "create" | "edit"; cust
                 </option>
               ))}
             </Select>
-            <FieldHint>Used for offers, invoices and e-mails</FieldHint>
+            <FieldHint>Für Offerten, Rechnungen und E-Mails</FieldHint>
           </div>
           <div>
             <FieldLabel required htmlFor="firstName">
-              {customerType === "business" ? "Contact first name" : "First name"}
+              {customerType === "business" ? "Vorname Kontaktperson" : "Vorname"}
             </FieldLabel>
             <Input id="firstName" hasError={!!errors.firstName} {...register("firstName")} />
             <FieldError message={errors.firstName?.message} />
           </div>
           <div>
             <FieldLabel required htmlFor="lastName">
-              {customerType === "business" ? "Contact last name" : "Last name"}
+              {customerType === "business" ? "Nachname Kontaktperson" : "Nachname"}
             </FieldLabel>
             <Input id="lastName" hasError={!!errors.lastName} {...register("lastName")} />
             <FieldError message={errors.lastName?.message} />
@@ -205,10 +202,10 @@ export function CustomerForm({ mode, customer }: { mode: "create" | "edit"; cust
       </Card>
 
       <Card>
-        <CardHeader>Contact</CardHeader>
+        <CardHeader>Kontakt</CardHeader>
         <CardContent className="grid gap-4 sm:grid-cols-2">
           <div className="sm:col-span-2">
-            <FieldLabel htmlFor="email">E-mail</FieldLabel>
+            <FieldLabel htmlFor="email">E-Mail</FieldLabel>
             <Input id="email" type="email" hasError={!!errors.email} {...register("email")} />
             <FieldError message={errors.email?.message} />
           </div>
@@ -217,7 +214,7 @@ export function CustomerForm({ mode, customer }: { mode: "create" | "edit"; cust
             <Input id="phone" type="tel" placeholder="079 123 45 67" {...register("phone")} />
           </div>
           <div>
-            <FieldLabel htmlFor="secondaryPhone">Landline</FieldLabel>
+            <FieldLabel htmlFor="secondaryPhone">Festnetz</FieldLabel>
             <Input id="secondaryPhone" type="tel" {...register("secondaryPhone")} />
           </div>
           {matches.length > 0 && (
@@ -227,18 +224,23 @@ export function CustomerForm({ mode, customer }: { mode: "create" | "edit"; cust
             >
               <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
               <div>
-                <p className="font-semibold">Possible duplicate</p>
+                <p className="font-semibold">Möglicherweise doppelt</p>
                 <ul className="mt-1 space-y-1">
                   {matches.map((d) => (
                     <li key={d.id}>
                       <Link href={`/customers/${d.id}`} target="_blank" className="underline">
                         {d.displayName}
                       </Link>{" "}
-                      — same {d.matchedOn.join(" and ")}
+                      — gleiche{" "}
+                      {d.matchedOn
+                        .map((m) => (m === "email" ? "E-Mail" : "Telefonnummer"))
+                        .join(" und ")}
                     </li>
                   ))}
                 </ul>
-                <p className="mt-1">You can still save if this is a different person.</p>
+                <p className="mt-1">
+                  Speichern ist trotzdem möglich, wenn es eine andere Person ist.
+                </p>
               </div>
             </div>
           )}
@@ -246,22 +248,22 @@ export function CustomerForm({ mode, customer }: { mode: "create" | "edit"; cust
       </Card>
 
       <Card>
-        <CardHeader>Billing address</CardHeader>
+        <CardHeader>Rechnungsadresse</CardHeader>
         <CardContent className="grid gap-4 sm:grid-cols-6">
           <div className="sm:col-span-6">
-            <FieldLabel htmlFor="billingStreet">Street and number</FieldLabel>
+            <FieldLabel htmlFor="billingStreet">Strasse und Nr.</FieldLabel>
             <Input id="billingStreet" {...register("billingStreet")} />
           </div>
           <div className="sm:col-span-2">
-            <FieldLabel htmlFor="billingPostalCode">Postal code</FieldLabel>
+            <FieldLabel htmlFor="billingPostalCode">PLZ</FieldLabel>
             <Input id="billingPostalCode" {...register("billingPostalCode")} />
           </div>
           <div className="sm:col-span-3">
-            <FieldLabel htmlFor="billingCity">City</FieldLabel>
+            <FieldLabel htmlFor="billingCity">Ort</FieldLabel>
             <Input id="billingCity" {...register("billingCity")} />
           </div>
           <div className="sm:col-span-1">
-            <FieldLabel htmlFor="billingCountry">Country</FieldLabel>
+            <FieldLabel htmlFor="billingCountry">Land</FieldLabel>
             <Select id="billingCountry" {...register("billingCountry")}>
               {["CH", "LI", "DE", "AT", "FR", "IT"].map((code) => (
                 <option key={code} value={code}>
@@ -271,16 +273,16 @@ export function CustomerForm({ mode, customer }: { mode: "create" | "edit"; cust
             </Select>
           </div>
           <div className="sm:col-span-6">
-            <FieldHint>Required on invoices (QR-bill)</FieldHint>
+            <FieldHint>Nötig für Rechnungen mit QR-Zahlteil</FieldHint>
           </div>
         </CardContent>
       </Card>
 
       <Card>
-        <CardHeader>Additional information</CardHeader>
+        <CardHeader>Weitere Angaben</CardHeader>
         <CardContent className="grid gap-4 sm:grid-cols-2">
           <div>
-            <FieldLabel htmlFor="source">How did they find you?</FieldLabel>
+            <FieldLabel htmlFor="source">Wie auf euch aufmerksam geworden?</FieldLabel>
             <Controller
               control={control}
               name="source"
@@ -293,7 +295,7 @@ export function CustomerForm({ mode, customer }: { mode: "create" | "edit"; cust
                   <option value="">—</option>
                   {acquisitionSourceEnum.options.map((opt) => (
                     <option key={opt} value={opt}>
-                      {formatLabel(opt)}
+                      {labelOf(opt)}
                     </option>
                   ))}
                 </Select>
@@ -301,13 +303,13 @@ export function CustomerForm({ mode, customer }: { mode: "create" | "edit"; cust
             />
           </div>
           <div>
-            <FieldLabel htmlFor="referralSource">Referred by</FieldLabel>
+            <FieldLabel htmlFor="referralSource">Empfohlen von</FieldLabel>
             <Input id="referralSource" {...register("referralSource")} />
           </div>
           <div className="sm:col-span-2">
-            <FieldLabel htmlFor="internalNotes">Internal notes</FieldLabel>
+            <FieldLabel htmlFor="internalNotes">Interne Notiz</FieldLabel>
             <Textarea id="internalNotes" rows={4} {...register("internalNotes")} />
-            <FieldHint>Visible to your team only, never shown to the customer</FieldHint>
+            <FieldHint>Nur für euer Team sichtbar, nie für den Kunden</FieldHint>
           </div>
         </CardContent>
       </Card>
@@ -320,10 +322,14 @@ export function CustomerForm({ mode, customer }: { mode: "create" | "edit"; cust
           disabled={isSubmitting}
         >
           <ArrowLeft className="h-4 w-4" />
-          Cancel
+          Abbrechen
         </Button>
         <Button type="submit" disabled={isSubmitting}>
-          {isSubmitting ? "Saving..." : mode === "create" ? "Create customer" : "Save changes"}
+          {isSubmitting
+            ? "Speichern …"
+            : mode === "create"
+              ? "Kunde erfassen"
+              : "Änderungen speichern"}
         </Button>
       </div>
     </form>

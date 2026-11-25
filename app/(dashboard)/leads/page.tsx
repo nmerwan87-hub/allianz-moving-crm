@@ -1,5 +1,7 @@
 "use client"
 
+import { formatPhone } from "@/lib/format/phone"
+import { labelOf } from "@/app/(dashboard)/_lib/labels"
 import { useRouter } from "next/navigation"
 import { useState, useCallback } from "react"
 import { Plus, Search, Funnel } from "lucide-react"
@@ -27,19 +29,10 @@ const STATUS_BADGE: Record<
   duplicate: "neutral",
 }
 
-function formatStatusLabel(status: string): string {
-  return status.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase())
-}
-
-function formatSourceLabel(source: string | null): string {
-  if (!source) return "—"
-  return source.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase())
-}
-
-function formatDate(dateStr: string | null): string {
-  if (!dateStr) return "—"
-  const d = new Date(dateStr)
-  return d.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })
+function formatDate(value: string | null): string {
+  if (!value) return "—"
+  const [y, m, d] = value.slice(0, 10).split("-")
+  return `${d}.${m}.${y}`
 }
 
 function formatLocation(city: string | null, state: string | null): string {
@@ -54,8 +47,8 @@ export default function LeadsListPage() {
   const [search, setSearch] = useState("")
   const [statusFilter, setStatusFilter] = useState<string>("")
   const [sourceFilter, setSourceFilter] = useState<string>("")
-  const [sortBy, setSortBy] = useState<string>("created_at")
-  const [sortOrder, setSortOrder] = useState<string>("desc")
+  const sortBy = "created_at"
+  const sortOrder = "desc"
   const [page, setPage] = useState(1)
   const pageSize = 25
 
@@ -87,25 +80,15 @@ export default function LeadsListPage() {
     setPage(1)
   }, [])
 
-  const handleSortByChange = useCallback((e: React.ChangeEvent<HTMLSelectElement>) => {
-    setSortBy(e.target.value)
-    setPage(1)
-  }, [])
-
-  const handleSortOrderChange = useCallback((e: React.ChangeEvent<HTMLSelectElement>) => {
-    setSortOrder(e.target.value)
-    setPage(1)
-  }, [])
-
   return (
     <div>
       <PageHeader
-        title="Leads"
-        description="Track incoming potential customers and manage your sales pipeline."
+        title="Anfragen"
+        description="Neue Anfragen erfassen und daraus Offerten machen."
         actions={
           <Button onClick={() => router.push("/leads/new")}>
             <Plus className="h-4 w-4" />
-            New Lead
+            Neue Anfrage
           </Button>
         }
       />
@@ -115,37 +98,27 @@ export default function LeadsListPage() {
         <div className="relative min-w-64 flex-1">
           <Search className="text-text-muted absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2" />
           <Input
-            placeholder="Search by name, email, or phone..."
+            placeholder="Name, E-Mail oder Telefon …"
             value={search}
             onChange={handleSearch}
             className="pl-9"
           />
         </div>
         <Select value={statusFilter} onChange={handleStatusChange} className="w-auto">
-          <option value="">All statuses</option>
+          <option value="">Alle Status</option>
           {leadStatusEnum.options.map((s) => (
             <option key={s} value={s}>
-              {formatStatusLabel(s)}
+              {labelOf(s)}
             </option>
           ))}
         </Select>
         <Select value={sourceFilter} onChange={handleSourceChange} className="w-auto">
-          <option value="">All sources</option>
+          <option value="">Alle Quellen</option>
           {acquisitionSourceEnum.options.map((s) => (
             <option key={s} value={s}>
-              {formatSourceLabel(s)}
+              {labelOf(s)}
             </option>
           ))}
-        </Select>
-        <Select value={sortBy} onChange={handleSortByChange} className="w-auto">
-          <option value="created_at">Sort: Created</option>
-          <option value="requested_date">Sort: Move date</option>
-          <option value="first_name">Sort: Name</option>
-          <option value="status">Sort: Status</option>
-        </Select>
-        <Select value={sortOrder} onChange={handleSortOrderChange} className="w-auto">
-          <option value="desc">Descending</option>
-          <option value="asc">Ascending</option>
         </Select>
       </div>
 
@@ -159,10 +132,7 @@ export default function LeadsListPage() {
           </div>
         </Card>
       ) : query.isError ? (
-        <ErrorState
-          title="Couldn't load leads"
-          message="There was a problem fetching your leads. Please try again."
-        />
+        <ErrorState title="Anfragen konnten nicht geladen werden" message="Versuche es nochmals." />
       ) : query.data && query.data.items.length > 0 ? (
         <>
           <Card className="overflow-hidden p-0">
@@ -170,32 +140,29 @@ export default function LeadsListPage() {
               <table className="w-full border-collapse">
                 <thead>
                   <tr className="border-surface-divider border-b">
-                    <th className="text-text-muted px-4 py-2.5 text-left text-xs font-semibold tracking-wide uppercase">
+                    <th className="text-text-muted px-4 py-2.5 text-left text-xs font-medium">
                       Name
                     </th>
-                    <th className="text-text-muted hidden px-4 py-2.5 text-left text-xs font-semibold tracking-wide uppercase md:table-cell">
-                      Contact
+                    <th className="text-text-muted hidden px-4 py-2.5 text-left text-xs font-medium md:table-cell">
+                      Kontakt
                     </th>
-                    <th className="text-text-muted hidden px-4 py-2.5 text-left text-xs font-semibold tracking-wide uppercase lg:table-cell">
-                      From
+                    <th className="text-text-muted hidden px-4 py-2.5 text-left text-xs font-medium lg:table-cell">
+                      Von
                     </th>
-                    <th className="text-text-muted hidden px-4 py-2.5 text-left text-xs font-semibold tracking-wide uppercase lg:table-cell">
-                      To
+                    <th className="text-text-muted hidden px-4 py-2.5 text-left text-xs font-medium lg:table-cell">
+                      Nach
                     </th>
-                    <th className="text-text-muted hidden px-4 py-2.5 text-left text-xs font-semibold tracking-wide uppercase sm:table-cell">
-                      Move Date
+                    <th className="text-text-muted hidden px-4 py-2.5 text-left text-xs font-medium sm:table-cell">
+                      Umzug
                     </th>
-                    <th className="text-text-muted hidden px-4 py-2.5 text-left text-xs font-semibold tracking-wide uppercase md:table-cell">
-                      Source
+                    <th className="text-text-muted hidden px-4 py-2.5 text-left text-xs font-medium xl:table-cell">
+                      Quelle
                     </th>
-                    <th className="text-text-muted px-4 py-2.5 text-left text-xs font-semibold tracking-wide uppercase">
+                    <th className="text-text-muted px-4 py-2.5 text-left text-xs font-medium">
                       Status
                     </th>
-                    <th className="text-text-muted hidden px-4 py-2.5 text-left text-xs font-semibold tracking-wide uppercase lg:table-cell">
-                      Assigned
-                    </th>
-                    <th className="text-text-muted px-4 py-2.5 text-left text-xs font-semibold tracking-wide uppercase">
-                      Created
+                    <th className="text-text-muted px-4 py-2.5 text-left text-xs font-medium">
+                      Erfasst
                     </th>
                   </tr>
                 </thead>
@@ -207,16 +174,18 @@ export default function LeadsListPage() {
                       className="border-surface-divider hover:bg-surface-sunken cursor-pointer border-b transition-colors duration-[var(--duration-quick)] last:border-0"
                     >
                       <td className="px-4 py-3 text-sm">
-                        <div className="text-text-primary font-medium">
+                        <div className="text-text-primary font-medium whitespace-nowrap">
                           {lead.firstName} {lead.lastName}
                         </div>
                         <div className="text-text-muted text-xs md:hidden">
-                          {lead.email ?? lead.phone ?? "—"}
+                          {lead.email ?? (formatPhone(lead.phone) || "—")}
                         </div>
                       </td>
                       <td className="text-text-secondary hidden px-4 py-3 text-sm md:table-cell">
                         <div>{lead.email ?? "—"}</div>
-                        <div className="text-text-muted text-xs">{lead.phone ?? "—"}</div>
+                        <div className="text-text-muted text-xs">
+                          {formatPhone(lead.phone) || "—"}
+                        </div>
                       </td>
                       <td className="text-text-secondary hidden px-4 py-3 text-sm lg:table-cell">
                         {formatLocation(lead.originCity, lead.originState)}
@@ -227,16 +196,13 @@ export default function LeadsListPage() {
                       <td className="text-text-secondary hidden px-4 py-3 text-sm sm:table-cell">
                         {formatDate(lead.requestedDate)}
                       </td>
-                      <td className="text-text-secondary hidden px-4 py-3 text-sm md:table-cell">
-                        {formatSourceLabel(lead.source)}
+                      <td className="text-text-secondary hidden px-4 py-3 text-sm xl:table-cell">
+                        {labelOf(lead.source)}
                       </td>
                       <td className="px-4 py-3">
                         <Badge variant={STATUS_BADGE[lead.status] ?? "neutral"}>
-                          {formatStatusLabel(lead.status)}
+                          {labelOf(lead.status)}
                         </Badge>
-                      </td>
-                      <td className="text-text-secondary hidden px-4 py-3 text-sm lg:table-cell">
-                        {lead.assignedToName ?? "—"}
                       </td>
                       <td className="text-text-muted px-4 py-3 text-sm">
                         {formatDate(lead.createdAt)}
@@ -252,7 +218,7 @@ export default function LeadsListPage() {
           {query.data.totalPages > 1 && (
             <div className="mt-4 flex items-center justify-between">
               <p className="text-text-muted text-sm">
-                {query.data.total} leads — page {query.data.page} of {query.data.totalPages}
+                {query.data.total} Anfragen — Seite {query.data.page} von {query.data.totalPages}
               </p>
               <div className="flex gap-2">
                 <Button
@@ -261,7 +227,7 @@ export default function LeadsListPage() {
                   disabled={page === 1}
                   onClick={() => setPage((p) => Math.max(1, p - 1))}
                 >
-                  Previous
+                  Zurück
                 </Button>
                 <Button
                   variant="secondary"
@@ -269,7 +235,7 @@ export default function LeadsListPage() {
                   disabled={page >= query.data.totalPages}
                   onClick={() => setPage((p) => p + 1)}
                 >
-                  Next
+                  Weiter
                 </Button>
               </div>
             </div>
@@ -278,12 +244,12 @@ export default function LeadsListPage() {
       ) : (
         <EmptyState
           icon={Funnel}
-          title="No leads yet"
-          description="Create your first lead to start tracking potential customers through your sales pipeline."
+          title="Noch keine Anfragen"
+          description="Erfasse eine Anfrage, z. B. nach einem Anruf, und erstelle daraus eine Offerte."
           action={
             <Button onClick={() => router.push("/leads/new")}>
               <Plus className="h-4 w-4" />
-              Create Lead
+              Anfrage erfassen
             </Button>
           }
         />

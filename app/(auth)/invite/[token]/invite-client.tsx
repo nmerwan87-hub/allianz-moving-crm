@@ -12,10 +12,10 @@ function passwordStrength(pwd: string): { score: number; label: string; color: s
   if (/\d/.test(pwd)) score++
   if (/[!@#$%^&*()_+\-=[\]{}|;':",.<>?/]/.test(pwd)) score++
   if (pwd.length >= 20) score++
-  if (score <= 1) return { score, label: "Weak", color: "bg-red-500" }
-  if (score === 2) return { score, label: "Fair", color: "bg-yellow-500" }
-  if (score === 3) return { score, label: "Strong", color: "bg-green-500" }
-  return { score, label: "Very Strong", color: "bg-emerald-600" }
+  if (score <= 1) return { score, label: "Schwach", color: "bg-red-500" }
+  if (score === 2) return { score, label: "Mittel", color: "bg-yellow-500" }
+  if (score === 3) return { score, label: "Stark", color: "bg-green-500" }
+  return { score, label: "Sehr stark", color: "bg-emerald-600" }
 }
 
 interface InviteAcceptanceClientProps {
@@ -46,7 +46,7 @@ export function InviteAcceptanceClient({ rawToken }: InviteAcceptanceClientProps
         password,
       })
       if (signInError) {
-        setError("Account created. Please sign in at the login page.")
+        setError("Konto erstellt. Bitte melde dich an.")
         router.push("/login")
         return
       }
@@ -56,20 +56,20 @@ export function InviteAcceptanceClient({ rawToken }: InviteAcceptanceClientProps
   })
 
   if (isLoading) {
-    return <p className="text-center text-sm text-slate-500">Verifying invitation…</p>
+    return <p className="text-center text-sm text-slate-500">Einladung wird geprüft …</p>
   }
 
   if (!lookup?.valid) {
     const reason = lookup?.reason
     return (
       <div className="text-center">
-        <h1 className="text-2xl font-bold text-slate-900">Invitation invalid</h1>
+        <h1 className="text-2xl font-bold text-slate-900">Einladung ungültig</h1>
         <p className="mt-3 text-sm text-slate-500">
           {reason === "expired"
-            ? "This invitation has expired. Please ask your administrator to send a new one."
+            ? "Diese Einladung ist abgelaufen. Bitte um eine neue."
             : reason === "accepted"
-              ? "This invitation has already been accepted."
-              : "This invitation link is not valid. Please check your email for the correct link."}
+              ? "Diese Einladung wurde schon angenommen."
+              : "Dieser Einladungslink ist ungültig. Prüfe den Link in deiner E-Mail."}
         </p>
         <a
           href="/login"
@@ -99,14 +99,14 @@ export function InviteAcceptanceClient({ rawToken }: InviteAcceptanceClientProps
   return (
     <div>
       <div className="mb-8 text-center">
-        <h1 className="text-2xl font-bold text-slate-900">You&apos;ve been invited</h1>
+        <h1 className="text-2xl font-bold text-slate-900">Du wurdest eingeladen</h1>
         <p className="mt-2 text-sm text-slate-500">
-          <strong>{invitation.inviterName}</strong> has invited you to join{" "}
-          <strong>{invitation.companyName}</strong> on Bivro as an Office member.
+          <strong>{invitation.inviterName}</strong> lädt dich ein zu{" "}
+          <strong>{invitation.companyName}</strong> in Bivro (Büro).
         </p>
         <p className="mt-1 text-xs text-slate-400">
-          Invitation expires:{" "}
-          {new Date(invitation.expiresAt as string).toLocaleDateString("en-GB", {
+          Gültig bis:{" "}
+          {new Date(invitation.expiresAt as string).toLocaleDateString("de-CH", {
             day: "numeric",
             month: "long",
             year: "numeric",
@@ -130,7 +130,7 @@ export function InviteAcceptanceClient({ rawToken }: InviteAcceptanceClientProps
       >
         <div>
           <label className="mb-1 block text-sm font-medium text-slate-700">
-            Email <span className="font-normal text-slate-400">(your invitation address)</span>
+            E-Mail <span className="font-normal text-slate-400">(Adresse der Einladung)</span>
           </label>
           <input
             type="email"
@@ -143,28 +143,28 @@ export function InviteAcceptanceClient({ rawToken }: InviteAcceptanceClientProps
         <div className="grid grid-cols-2 gap-4">
           <div>
             <label className="mb-1 block text-sm font-medium text-slate-700">
-              First name <span className="text-red-500">*</span>
+              Vorname <span className="text-red-500">*</span>
             </label>
             <input
               type="text"
               required
               value={firstName}
               onChange={(e) => setFirstName(e.target.value)}
-              placeholder="Jane"
+              placeholder="Vorname"
               autoComplete="given-name"
               className="block w-full rounded-md border border-slate-300 bg-slate-50 px-3 py-2 text-sm placeholder:text-slate-400 focus:border-violet-600 focus:ring-2 focus:ring-violet-600/20 focus:outline-none"
             />
           </div>
           <div>
             <label className="mb-1 block text-sm font-medium text-slate-700">
-              Last name <span className="text-red-500">*</span>
+              Nachname <span className="text-red-500">*</span>
             </label>
             <input
               type="text"
               required
               value={lastName}
               onChange={(e) => setLastName(e.target.value)}
-              placeholder="Smith"
+              placeholder="Nachname"
               autoComplete="family-name"
               className="block w-full rounded-md border border-slate-300 bg-slate-50 px-3 py-2 text-sm placeholder:text-slate-400 focus:border-violet-600 focus:ring-2 focus:ring-violet-600/20 focus:outline-none"
             />
@@ -173,14 +173,14 @@ export function InviteAcceptanceClient({ rawToken }: InviteAcceptanceClientProps
 
         <div>
           <label className="mb-1 block text-sm font-medium text-slate-700">
-            Create a password <span className="text-red-500">*</span>
+            Passwort festlegen <span className="text-red-500">*</span>
           </label>
           <input
             type="password"
             required
             value={password}
             onChange={(e) => setPassword(e.target.value)}
-            placeholder="Minimum 12 characters"
+            placeholder="Mindestens 12 Zeichen"
             autoComplete="new-password"
             className="block w-full rounded-md border border-slate-300 bg-slate-50 px-3 py-2 text-sm placeholder:text-slate-400 focus:border-violet-600 focus:ring-2 focus:ring-violet-600/20 focus:outline-none"
           />
@@ -208,10 +208,10 @@ export function InviteAcceptanceClient({ rawToken }: InviteAcceptanceClientProps
           className="w-full rounded-md bg-slate-900 px-4 py-2.5 text-sm font-semibold text-white hover:bg-slate-800 focus:ring-2 focus:ring-violet-600/30 focus:ring-offset-2 focus:outline-none disabled:cursor-not-allowed disabled:opacity-50"
         >
           {signingIn
-            ? "Signing you in…"
+            ? "Anmelden …"
             : acceptMutation.isPending
-              ? "Setting up your account…"
-              : "Accept invitation & set up account"}
+              ? "Konto wird eingerichtet …"
+              : "Einladung annehmen"}
         </button>
       </form>
     </div>
@@ -254,11 +254,11 @@ function JoinWithExistingAccount({
 
   return (
     <div className="text-center">
-      <h1 className="text-2xl font-bold text-slate-900">Join {companyName}</h1>
+      <h1 className="text-2xl font-bold text-slate-900">{companyName} beitreten</h1>
       <p className="mt-2 text-sm text-slate-500">
-        <strong>{inviterName}</strong> has invited <strong>{email}</strong> to join{" "}
-        <strong>{companyName}</strong>. You already have a Bivro account, so the company will be
-        added to your company switcher.
+        <strong>{inviterName}</strong> lädt <strong>{email}</strong> ein zu{" "}
+        <strong>{companyName}</strong>. Du hast schon ein Bivro-Konto; die Firma erscheint danach im
+        Firmen-Umschalter.
       </p>
 
       {error ? (
@@ -269,7 +269,7 @@ function JoinWithExistingAccount({
 
       <div className="mt-6">
         {signedInEmail === undefined ? (
-          <p className="text-sm text-slate-500">Checking your session…</p>
+          <p className="text-sm text-slate-500">Sitzung wird geprüft …</p>
         ) : isInvitedAccount ? (
           <button
             type="button"
@@ -280,13 +280,15 @@ function JoinWithExistingAccount({
             disabled={joinMutation.isPending || joinMutation.isSuccess}
             className="w-full rounded-md bg-slate-900 px-4 py-2.5 text-sm font-semibold text-white hover:bg-slate-800 focus:ring-2 focus:ring-violet-600/30 focus:ring-offset-2 focus:outline-none disabled:cursor-not-allowed disabled:opacity-50"
           >
-            {joinMutation.isPending || joinMutation.isSuccess ? "Joining…" : `Join ${companyName}`}
+            {joinMutation.isPending || joinMutation.isSuccess
+              ? "Wird beigetreten …"
+              : `${companyName} beitreten`}
           </button>
         ) : signedInEmail ? (
           <div className="space-y-3 text-sm text-slate-600">
             <p>
-              You are signed in as <strong>{signedInEmail}</strong>. Sign in as{" "}
-              <strong>{email}</strong> to accept this invitation.
+              Du bist angemeldet als <strong>{signedInEmail}</strong>. Melde dich als{" "}
+              <strong>{email}</strong> an, um die Einladung anzunehmen.
             </p>
             <button
               type="button"
@@ -296,7 +298,7 @@ function JoinWithExistingAccount({
               }}
               className="font-medium text-violet-600 hover:text-violet-700"
             >
-              Sign out and switch account →
+              Abmelden und Konto wechseln →
             </button>
           </div>
         ) : (
@@ -304,7 +306,7 @@ function JoinWithExistingAccount({
             href={loginHref}
             className="inline-block w-full rounded-md bg-slate-900 px-4 py-2.5 text-sm font-semibold text-white hover:bg-slate-800"
           >
-            Sign in to accept
+            Anmelden und annehmen
           </a>
         )}
       </div>

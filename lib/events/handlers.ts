@@ -96,9 +96,15 @@ const createJobFromQuote: EventHandler = {
     const { data: quote, error } = await svc
       .from("quotes")
       .select(
-        ["id", "company_id", "status", "created_by", "estimated_hours", ...JOB_COPY_COLUMNS].join(
-          ", ",
-        ),
+        [
+          "id",
+          "company_id",
+          "status",
+          "created_by",
+          "estimated_hours",
+          "crew_size",
+          ...JOB_COPY_COLUMNS,
+        ].join(", "),
       )
       .eq("id", event.aggregate_id)
       .is("deleted_at", null)
@@ -132,6 +138,7 @@ const createJobFromQuote: EventHandler = {
       job_number: jobNumber,
       status: "scheduled",
       estimated_duration_hours: q["estimated_hours"] ?? null,
+      ...(q["crew_size"] ? { crew_size_required: q["crew_size"] } : {}),
     }
     for (const column of JOB_COPY_COLUMNS) job[column] = q[column] ?? null
 

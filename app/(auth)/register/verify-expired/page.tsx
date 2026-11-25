@@ -1,7 +1,7 @@
 import type { Metadata } from "next"
 
 export const metadata: Metadata = {
-  title: "Verification Link Expired — Bivro",
+  title: "Link abgelaufen — Bivro",
 }
 
 export default function VerifyExpiredPage() {
@@ -24,10 +24,10 @@ export default function VerifyExpiredPage() {
           </svg>
         </div>
 
-        <h1 className="text-2xl font-bold text-slate-900">Link expired</h1>
+        <h1 className="text-2xl font-bold text-slate-900">Link abgelaufen</h1>
         <p className="mt-3 text-sm text-slate-500">
-          Your email verification link has expired or has already been used. Verification links are
-          valid for 24 hours.
+          Der Bestätigungslink ist abgelaufen oder wurde schon verwendet. Links sind 24 Stunden
+          gültig.
         </p>
 
         <div className="mt-8 space-y-3">
@@ -35,13 +35,13 @@ export default function VerifyExpiredPage() {
             href="/register/check-email"
             className="block w-full rounded-md bg-slate-900 px-4 py-2.5 text-center text-sm font-semibold text-white hover:bg-slate-800 focus:ring-2 focus:ring-violet-600/30 focus:ring-offset-2 focus:outline-none"
           >
-            Resend verification email
+            Bestätigung erneut senden
           </a>
           <a
             href="/register"
             className="block w-full rounded-md border border-slate-300 bg-white px-4 py-2.5 text-center text-sm font-medium text-slate-700 hover:bg-slate-50 focus:ring-2 focus:ring-violet-600/30 focus:ring-offset-2 focus:outline-none"
           >
-            Start over
+            Neu beginnen
           </a>
         </div>
       </div>

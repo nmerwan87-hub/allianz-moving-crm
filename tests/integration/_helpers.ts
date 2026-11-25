@@ -127,6 +127,8 @@ export async function callerFor(user: TestUser) {
 /** Removes a test company and everything the tests created in it. */
 export async function cleanupCompany(svc: Svc, companyId: string, userIds: string[]) {
   for (const table of [
+    "attachments",
+    "appointments",
     "tasks",
     "job_assignments",
     "jobs",

@@ -1,16 +1,15 @@
 import { describe, it, expect } from "vitest"
 import { navSections } from "@/app/(dashboard)/_lib/nav-config"
-import type { NavItem } from "@/app/(dashboard)/_lib/nav-config"
 
 describe("navigation config", () => {
   it("has all required sections", () => {
     const labels = navSections.map((s) => s.label)
-    expect(labels).toEqual(["Main", "Operations", "Finance", "Workspace", "Settings"])
+    expect(labels).toEqual(["", "Betrieb", "Account"])
   })
 
-  it("includes Dashboard as the first item in Main", () => {
+  it("starts with the overview", () => {
     const main = navSections[0]!
-    expect(main.items[0]!.label).toBe("Dashboard")
+    expect(main.items[0]!.label).toBe("Übersicht")
     expect(main.items[0]!.href).toBe("/dashboard")
     expect(main.items[0]!.permission).toBeUndefined()
   })
@@ -18,19 +17,20 @@ describe("navigation config", () => {
   it("includes all required navigation items", () => {
     const allItems = navSections.flatMap((s) => s.items)
     const labels = allItems.map((i) => i.label)
-    expect(labels).toContain("Leads")
-    expect(labels).toContain("Customers")
-    expect(labels).toContain("Calendar")
-    expect(labels).toContain("Quotes")
-    expect(labels).toContain("Jobs")
-    expect(labels).toContain("Employees")
-    expect(labels).toContain("Vehicles")
-    expect(labels).toContain("Invoices")
-    expect(labels).toContain("Documents")
-    expect(labels).toContain("Tasks")
-    expect(labels).toContain("Communications")
-    expect(labels).toContain("Settings")
-    expect(labels).toContain("Team & Permissions")
+    for (const label of [
+      "Anfragen",
+      "Kunden",
+      "Kalender",
+      "Offerten",
+      "Aufträge",
+      "Zahlungsübersicht",
+      "Mitarbeitende",
+      "Fahrzeuge",
+      "Profil & Einstellungen",
+      "Team und Rechte",
+    ]) {
+      expect(labels).toContain(label)
+    }
   })
 
   it("assigns permission keys to permission-gated items", () => {
@@ -49,15 +49,9 @@ describe("navigation config", () => {
     expect(permKeys).toContain("vehicles.view")
   })
 
-  it("marks future modules correctly", () => {
+  it("shows only pages that exist", () => {
     const allItems = navSections.flatMap((s) => s.items)
-    const leads = allItems.find((i) => i.label === "Leads") as NavItem
-    const dashboard = allItems.find((i) => i.label === "Dashboard") as NavItem
-    const team = allItems.find((i) => i.label === "Team & Permissions") as NavItem
-
-    expect(leads.future).toBeUndefined()
-    expect(dashboard.future).toBeUndefined()
-    expect(team.future).toBeUndefined()
+    expect(allItems.filter((i) => i.future)).toHaveLength(0)
   })
 
   it("Dashboard has no permission gate (always visible)", () => {
