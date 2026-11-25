@@ -1,7 +1,7 @@
 "use client"
 
 import Link from "next/link"
-import { Building2, ChevronRight, Package, Tags, UsersRound } from "lucide-react"
+import { Building2, ChevronRight, Mail, Package, Tags, UsersRound } from "lucide-react"
 import { trpc } from "@/lib/trpc/client"
 import { PageHeader } from "@/app/(dashboard)/_components/ui/page-header"
 import { Card } from "@/app/(dashboard)/_components/ui/card"
@@ -29,6 +29,13 @@ const SECTIONS = [
     title: "Ansätze und Bedingungen",
     description: "Stundenansätze der Teams, Zuschläge, Anzahlung, Gültigkeit und Zahlungsfrist.",
     permission: "settings.services",
+  },
+  {
+    href: "/settings/automations",
+    icon: Mail,
+    title: "E-Mail-Automatik",
+    description: "Automatische E-Mails an Kunden: nachfassen, Erinnerungen, Dank — Texte anpassen.",
+    permission: "communications.view",
   },
   {
     href: "/settings/team",

@@ -1,4 +1,5 @@
 import { createServiceRoleClient } from "@/lib/supabase/service-role"
+import { AUTOMATION_META, type AutomationSlug } from "@/lib/automations/defaults"
 
 // ─── Permission group definitions ────────────────────────────────────────────
 
@@ -769,11 +770,12 @@ export async function provisionCompany(companyId: string): Promise<void> {
   // 5. Email automations (12, all inactive)
   const { data: existingAutomations } = await svc
     .from("email_automations")
-    .select("name")
+    .select("template_id")
     .eq("company_id", companyId)
     .eq("is_system_default", true)
 
-  const existingAutoNames = new Set((existingAutomations ?? []).map((a) => a.name))
+  // By template, not name: the automations Bivro uses carry German names
+  const existingAutoTemplates = new Set((existingAutomations ?? []).map((a) => a.template_id))
 
   // Look up template IDs for automation references
   const { data: allTemplates } = await svc
@@ -792,22 +794,22 @@ export async function provisionCompany(companyId: string): Promise<void> {
     .maybeSingle()
 
   for (const auto of EMAIL_AUTOMATIONS) {
-    if (existingAutoNames.has(auto.name)) continue
-
     const templateId = templateIdBySlug.get(auto.template_slug)
-    if (!templateId) continue
+    if (!templateId || existingAutoTemplates.has(templateId)) continue
+    const meta = AUTOMATION_META[auto.template_slug as AutomationSlug] as
+      (typeof AUTOMATION_META)[AutomationSlug] | undefined
 
     await svc.from("email_automations").insert({
       company_id: companyId,
-      name: auto.name,
-      description: auto.description,
+      name: meta?.name ?? auto.name,
+      description: meta?.description ?? auto.description,
       trigger_event: auto.trigger_event,
-      trigger_delay_seconds: auto.trigger_delay_seconds,
+      trigger_delay_seconds: meta?.delaySeconds ?? auto.trigger_delay_seconds,
       conditions: [],
       template_id: templateId,
       template_language: "en",
       sender_identity_id: senderIdentity?.id ?? null,
-      mode: auto.mode,
+      mode: meta ? "auto_send" : auto.mode,
       max_retries: 3,
       retry_delay_minutes: 5,
       is_system_default: true,

@@ -5,7 +5,7 @@ export interface DocumentEmailProps {
   greeting: string
   body: string
   /** e.g. validity of a quote or due date of an invoice */
-  note: string
+  note?: string | null
   personalMessage: string | null
   closing: string
   companyName: string
@@ -16,8 +16,9 @@ export interface DocumentEmailProps {
 }
 
 /**
- * Sent in the name of the moving company (not Bivro), with the document PDF
- * (quote, invoice, reminder) attached.
+ * Sent in the name of the moving company (not Bivro): documents with the PDF
+ * attached (quote, invoice, reminder) and the automatic e-mails. Blank lines
+ * in the body start a new paragraph.
  */
 export function DocumentEmail(props: DocumentEmailProps) {
   return (
@@ -29,14 +30,18 @@ export function DocumentEmail(props: DocumentEmailProps) {
           <Text style={{ ...brand, color: props.accentColor }}>{props.companyName}</Text>
           <Hr style={divider} />
           <Text style={text}>{props.greeting}</Text>
-          <Text style={text}>{props.body}</Text>
+          {props.body.split(/\n\s*\n/).map((paragraph, i) => (
+            <Text key={`p${i}`} style={text}>
+              {paragraph}
+            </Text>
+          ))}
           {props.personalMessage &&
             props.personalMessage.split(/\r?\n/).map((line, i) => (
               <Text key={i} style={text}>
                 {line}
               </Text>
             ))}
-          <Text style={text}>{props.note}</Text>
+          {props.note && <Text style={text}>{props.note}</Text>}
           {props.action && (
             <Button
               href={props.action.url}
