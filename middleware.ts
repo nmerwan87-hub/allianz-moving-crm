@@ -15,7 +15,8 @@ const AUTH_ROUTES = new Set([
   "/archived",
 ])
 
-const PUBLIC_PREFIXES = ["/auth/", "/invite/", "/api/", "/_next/", "/onboarding/"]
+// "/p/" is the customer portal: access by secret link, no login
+const PUBLIC_PREFIXES = ["/auth/", "/invite/", "/api/", "/_next/", "/onboarding/", "/p/"]
 
 const STATUS_REDIRECT: Record<string, string> = {
   pending_email_verification: "/register/check-email",
@@ -105,6 +106,7 @@ export async function middleware(request: NextRequest) {
     if (targetPath !== undefined && pathname !== targetPath) {
       const isSystemPath =
         pathname.startsWith("/auth/") ||
+        pathname.startsWith("/p/") ||
         pathname.startsWith("/api/") ||
         pathname.startsWith("/_next/")
       if (!isSystemPath) {

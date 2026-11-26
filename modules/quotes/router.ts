@@ -12,6 +12,8 @@ import { getCachedPermissions } from "@/modules/iam/lib/permissions"
 import { transitionStatus, toWorkflowError } from "@/modules/workflow/transitions"
 import { generateQuoteDocument } from "@/lib/documents/quote-document"
 import { QUOTE_EMAIL_TEXT, formatDocumentDate, type DocumentLanguage } from "@/lib/documents/labels"
+import { issuePortalLink } from "@/lib/portal/service"
+import { portalUrl } from "@/lib/portal/token"
 import { sendTenantEmail } from "@/lib/email/tenant"
 import { DocumentEmail } from "@/emails/tenant/document-email"
 import { toRow as customerRow } from "@/modules/customers/router"
@@ -32,7 +34,7 @@ import {
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
 const QUOTE_COLUMNS =
-  "id, quote_number, version, status, title, customer_id, lead_id, language, move_type, scheduled_date, date_flexible, origin_address, origin_postal_code, origin_city, origin_floor, origin_has_elevator, dest_address, dest_postal_code, dest_city, dest_floor, dest_has_elevator, distance_km, estimated_hours, subtotal_cents, discount_cents, tax_cents, total_amount_cents, deposit_percent, deposit_amount_cents, cost_cap_cents, pricing_kind, crew_size, rooms, rate_card_id, customer_notes, internal_notes, expires_at, sent_at, accepted_at, declined_at, declined_reason, created_at, customers(first_name, last_name, company_name, customer_type, email)"
+  "id, quote_number, version, status, title, customer_id, lead_id, language, move_type, scheduled_date, date_flexible, origin_address, origin_postal_code, origin_city, origin_floor, origin_has_elevator, dest_address, dest_postal_code, dest_city, dest_floor, dest_has_elevator, distance_km, estimated_hours, subtotal_cents, discount_cents, tax_cents, total_amount_cents, deposit_percent, deposit_amount_cents, cost_cap_cents, pricing_kind, crew_size, rooms, rate_card_id, customer_notes, internal_notes, expires_at, sent_at, accepted_at, accepted_by_name, declined_at, declined_reason, created_at, customers(first_name, last_name, company_name, customer_type, email)"
 
 const LINE_COLUMNS =
   "id, service_catalog_id, item_type, name, description, pricing_mode, quantity, unit, unit_price_cents, cost_price_cents, discount_type, discount_value, discount_amount_cents, net_total_cents, vat_rate_percent, vat_amount_cents, gross_total_cents, internal_notes, customer_notes, sort_order"
@@ -108,6 +110,7 @@ function mapQuote(r: Record<string, unknown>, totalCostCents: number | null): Qu
     customerNotes: r["customer_notes"] as string | null,
     internalNotes: r["internal_notes"] as string | null,
     acceptedAt: r["accepted_at"] as string | null,
+    acceptedByName: (r["accepted_by_name"] as string | null) ?? null,
     declinedAt: r["declined_at"] as string | null,
     declinedReason: r["declined_reason"] as string | null,
     customerEmail:
@@ -603,6 +606,8 @@ export const quotesRouter = createTRPCRouter({
         throw err
       }
 
+      await issuePortalLink(svc, "quote", input.id, quote.expiresAt)
+
       await writeActivityLog(ctx, {
         action: "quote.sent",
         entityType: "quote",
@@ -662,6 +667,25 @@ export const quotesRouter = createTRPCRouter({
         pdf: Buffer.from(await file.arrayBuffer()),
       })
       return { emailDelivered: result.delivered, emailError: result.reason ?? null }
+    }),
+
+  /** Link to the customer portal of a sent quote (e.g. to send via WhatsApp). */
+  portalLink: permissionProcedure("quotes.send")
+    .input(quoteIdInput)
+    .mutation(async ({ ctx, input }) => {
+      const row = await loadQuoteRow(ctx.supabase, input.id)
+      if (["draft", "cancelled", "superseded"].includes(row["status"] as string))
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: "Den Kundenlink gibt es erst nach dem Senden.",
+        })
+      await issuePortalLink(
+        createServiceRoleClient(),
+        "quote",
+        input.id,
+        (row["expires_at"] as string | null) ?? null,
+      )
+      return { url: portalUrl("quote", input.id) }
     }),
 
   /** Customer accepted by phone, letter or e-mail. */
@@ -777,6 +801,7 @@ async function emailQuote(
     customers: { first_name: string; last_name: string } | null
     companies: Record<string, string | null>
   }
+  await issuePortalLink(svc, "quote", quoteId, row.expires_at)
   const text = QUOTE_EMAIL_TEXT[row.language]
   const company = row.companies
   const companyName = company["name"] ?? company["legal_name"] ?? "Bivro"
@@ -802,6 +827,7 @@ async function emailQuote(
       greeting: text.greeting(customer),
       body: text.body,
       note: text.valid(formatDocumentDate(row.expires_at, row.language)),
+      action: { url: portalUrl("quote", quoteId), label: text.action },
       personalMessage: textOrNull(message),
       closing: text.closing,
       companyName,

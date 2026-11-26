@@ -1,4 +1,4 @@
-import { Body, Container, Head, Hr, Html, Preview, Text } from "@react-email/components"
+import { Body, Button, Container, Head, Hr, Html, Preview, Text } from "@react-email/components"
 import * as React from "react"
 
 export interface DocumentEmailProps {
@@ -11,6 +11,8 @@ export interface DocumentEmailProps {
   companyName: string
   companyContact: string
   accentColor: string
+  /** Link to the customer portal (view, accept, pay) */
+  action?: { url: string; label: string } | null
 }
 
 /**
@@ -35,6 +37,14 @@ export function DocumentEmail(props: DocumentEmailProps) {
               </Text>
             ))}
           <Text style={text}>{props.note}</Text>
+          {props.action && (
+            <Button
+              href={props.action.url}
+              style={{ ...button, backgroundColor: props.accentColor }}
+            >
+              {props.action.label}
+            </Button>
+          )}
           <Text style={text}>
             {props.closing}
             <br />
@@ -53,4 +63,14 @@ const container = { backgroundColor: "#ffffff", margin: "24px auto", padding: "3
 const brand = { fontSize: "18px", fontWeight: 700, margin: 0 }
 const divider = { borderColor: "#e5e7eb", margin: "20px 0" }
 const text = { fontSize: "14px", lineHeight: "22px", color: "#1f2937", margin: "0 0 12px" }
+const button = {
+  display: "inline-block",
+  color: "#ffffff",
+  fontSize: "14px",
+  fontWeight: 600,
+  padding: "12px 20px",
+  borderRadius: "6px",
+  textDecoration: "none",
+  margin: "4px 0 20px",
+}
 const footer = { fontSize: "12px", color: "#6b7280", margin: 0 }

@@ -46,8 +46,13 @@ export const MOVE_TYPE_LABELS: Record<string, string> = {
   junk_removal: "Räumung / Entsorgung",
 }
 
+/** "2026-11-26" or a timestamp → "26.11.2026"; timestamps count in Swiss time. */
 export function formatDate(value: string | null | undefined): string {
   if (!value) return "—"
-  const [y, m, d] = value.slice(0, 10).split("-")
+  const day =
+    value.length > 10
+      ? new Intl.DateTimeFormat("en-CA", { timeZone: "Europe/Zurich" }).format(new Date(value))
+      : value
+  const [y, m, d] = day.split("-")
   return `${d}.${m}.${y}`
 }

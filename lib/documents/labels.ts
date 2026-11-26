@@ -194,6 +194,7 @@ export const QUOTE_EMAIL_TEXT = {
     body: "Vielen Dank für Ihre Anfrage. Im Anhang finden Sie unsere Offerte.",
     valid: (date: string) => `Die Offerte ist gültig bis ${date}.`,
     closing: "Freundliche Grüsse",
+    action: "Offerte online ansehen und annehmen",
   },
   fr: {
     subject: (company: string, number: string) => `Votre offre ${number} de ${company}`,
@@ -201,6 +202,7 @@ export const QUOTE_EMAIL_TEXT = {
     body: "Merci pour votre demande. Vous trouverez notre offre en pièce jointe.",
     valid: (date: string) => `L'offre est valable jusqu'au ${date}.`,
     closing: "Meilleures salutations",
+    action: "Voir et accepter l'offre en ligne",
   },
   it: {
     subject: (company: string, number: string) => `La vostra offerta ${number} di ${company}`,
@@ -208,6 +210,7 @@ export const QUOTE_EMAIL_TEXT = {
     body: "Grazie per la vostra richiesta. In allegato trovate la nostra offerta.",
     valid: (date: string) => `L'offerta è valida fino al ${date}.`,
     closing: "Cordiali saluti",
+    action: "Visualizzare e accettare l'offerta online",
   },
   en: {
     subject: (company: string, number: string) => `Your quote ${number} from ${company}`,
@@ -215,6 +218,7 @@ export const QUOTE_EMAIL_TEXT = {
     body: "Thank you for your enquiry. Please find our quote attached.",
     valid: (date: string) => `The quote is valid until ${date}.`,
     closing: "Kind regards",
+    action: "View and accept the quote online",
   },
 } as const
 
@@ -342,6 +346,7 @@ export const INVOICE_EMAIL_TEXT = {
     reminderBody: "Im Anhang finden Sie unser Schreiben zur noch offenen Rechnung.",
     due: (amount: string, date: string) => `Zu bezahlen: CHF ${amount} bis ${date}.`,
     closing: "Freundliche Grüsse",
+    action: "Rechnung online ansehen",
   },
   fr: {
     subject: (company: string, number: string) => `Votre facture ${number} de ${company}`,
@@ -351,6 +356,7 @@ export const INVOICE_EMAIL_TEXT = {
     reminderBody: "Vous trouverez en pièce jointe notre courrier concernant la facture ouverte.",
     due: (amount: string, date: string) => `À payer : CHF ${amount} jusqu'au ${date}.`,
     closing: "Meilleures salutations",
+    action: "Voir la facture en ligne",
   },
   it: {
     subject: (company: string, number: string) => `La vostra fattura ${number} di ${company}`,
@@ -360,6 +366,7 @@ export const INVOICE_EMAIL_TEXT = {
     reminderBody: "In allegato trovate la nostra lettera relativa alla fattura aperta.",
     due: (amount: string, date: string) => `Da pagare: CHF ${amount} entro il ${date}.`,
     closing: "Cordiali saluti",
+    action: "Visualizzare la fattura online",
   },
   en: {
     subject: (company: string, number: string) => `Your invoice ${number} from ${company}`,
@@ -369,6 +376,7 @@ export const INVOICE_EMAIL_TEXT = {
     reminderBody: "Please find attached our letter about the open invoice.",
     due: (amount: string, date: string) => `Amount due: CHF ${amount} by ${date}.`,
     closing: "Kind regards",
+    action: "View the invoice online",
   },
 } as const
 

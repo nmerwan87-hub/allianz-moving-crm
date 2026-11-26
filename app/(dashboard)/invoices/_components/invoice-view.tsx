@@ -2,7 +2,7 @@
 
 import { useState } from "react"
 import Link from "next/link"
-import { BellRing, Ban, Download, Mail, RefreshCw, Wallet, XCircle } from "lucide-react"
+import { BellRing, Ban, Download, Link2, Mail, RefreshCw, Wallet, XCircle } from "lucide-react"
 import { trpc } from "@/lib/trpc/client"
 import { formatChf, formatCents } from "@/lib/format/money"
 import { formatPaymentReference } from "@/lib/format/payment-reference"
@@ -51,6 +51,17 @@ export function InvoiceView({ data }: { data: InvoiceDetail }) {
   const writeOff = trpc.invoices.writeOff.useMutation()
   const cancelPayment = trpc.invoices.cancelPayment.useMutation()
   const regenerate = trpc.invoices.regenerateDocument.useMutation()
+  const portalLink = trpc.invoices.portalLink.useMutation()
+
+  async function copyPortalLink() {
+    try {
+      const { url } = await portalLink.mutateAsync({ id: invoice.id })
+      await navigator.clipboard.writeText(url)
+      toast.success("Link kopiert — der Kunde sieht Rechnung, Betrag und QR-Zahlteil")
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Link konnte nicht erstellt werden")
+    }
+  }
 
   const isOpen = OPEN.includes(invoice.status)
   const dueDay = swissDay(invoice.dueAt)
@@ -371,6 +382,12 @@ export function InvoiceView({ data }: { data: InvoiceDetail }) {
       </DetailCard>
 
       <div className="flex flex-wrap gap-2">
+        {permissions.edit && !["void", "write_off"].includes(invoice.status) && (
+          <Button variant="secondary" disabled={portalLink.isPending} onClick={copyPortalLink}>
+            <Link2 className="h-4 w-4" />
+            Kundenlink kopieren
+          </Button>
+        )}
         {permissions.edit && invoicePdf && invoice.status !== "void" && (
           <Button variant="secondary" onClick={() => setDialog({ kind: "resend" })}>
             <Mail className="h-4 w-4" />
