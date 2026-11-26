@@ -6,6 +6,10 @@ import { createServiceRoleClient } from "@/lib/supabase/service-role"
  * (process-events every minute, sync-tasks every 15 minutes), but every few
  * seconds, so effects like "quote accepted → job created" show up right away.
  * Disable with DEV_EVENT_LOOP=off.
+ *
+ * Automatic customer e-mails only run locally with DEV_AUTOMATIONS=on: with a
+ * real RESEND_API_KEY they would really be sent. Without it, use
+ * «Jetzt prüfen» in Einstellungen → E-Mail-Automatik.
  */
 
 const EVENTS_EVERY_MS = 3_000
@@ -47,6 +51,13 @@ export function startDevEventLoop(): void {
       const svc = createServiceRoleClient()
       await svc.rpc("apply_time_based_transitions")
       await svc.rpc("sync_system_tasks", { p_company_id: null })
+      if (process.env["DEV_AUTOMATIONS"] === "on") {
+        const { runAutomations } = await import("@/lib/automations/engine")
+        const result = await runAutomations(svc)
+        if (result.sent || result.failed || result.awaitingApproval) {
+          console.warn(`[dev-loop] automations ${JSON.stringify(result)}`)
+        }
+      }
     } catch (err) {
       report("tasks", err)
     }
