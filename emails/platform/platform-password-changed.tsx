@@ -19,28 +19,28 @@ export function PlatformPasswordChanged({ email, changedAt }: PlatformPasswordCh
   return (
     <Html>
       <Head />
-      <Preview>Your Bivro password has been changed</Preview>
+      <Preview>Ihr Bivro-Passwort wurde geändert</Preview>
       <Body style={main}>
         <Container style={container}>
           <Heading style={logo}>Bivro</Heading>
           <Hr style={divider} />
-          <Heading style={h1}>Password changed</Heading>
+          <Heading style={h1}>Passwort geändert</Heading>
           <Text style={text}>
-            The password for your Bivro account (<strong>{email}</strong>) was changed on{" "}
-            {changedAt}.
+            Das Passwort Ihres Bivro-Kontos (<strong>{email}</strong>) wurde am {changedAt}{" "}
+            geändert.
           </Text>
           <Text style={text}>
-            If you made this change, no further action is needed.
+            Wenn Sie das selbst waren, müssen Sie nichts tun.
           </Text>
           <Text style={text}>
-            If you did not make this change, please contact us immediately at{" "}
+            Wenn nicht, setzen Sie Ihr Passwort sofort zurück und melden Sie sich bei{" "}
             <a href="mailto:support@bivro.io" style={link}>
               support@bivro.io
-            </a>{" "}
-            or reset your password.
+            </a>
+            .
           </Text>
           <Hr style={divider} />
-          <Text style={footer}>© 2026 Bivro. All rights reserved.</Text>
+          <Text style={footer}>© 2026 Bivro</Text>
         </Container>
       </Body>
     </Html>

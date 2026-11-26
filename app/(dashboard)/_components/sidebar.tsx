@@ -50,6 +50,14 @@ export function Sidebar({
     [permissionKeys, isOwner],
   )
 
+  // The most specific match wins (/settings/team over /settings)
+  const activeHref = sections
+    .flatMap((section) => section.items.map((item) => item.href))
+    .filter(
+      (href) => pathname === href || (href !== "/dashboard" && pathname.startsWith(`${href}/`)),
+    )
+    .sort((a, b) => b.length - a.length)[0]
+
   const linkProps = onNavigate
     ? { onClick: onNavigate as React.MouseEventHandler<HTMLAnchorElement> }
     : {}
@@ -72,9 +80,7 @@ export function Sidebar({
             )}
             <ul className="space-y-0.5">
               {section.items.map((item) => {
-                const isActive =
-                  pathname === item.href ||
-                  (item.href !== "/dashboard" && pathname.startsWith(item.href))
+                const isActive = item.href === activeHref
                 const Icon = item.icon
                 return (
                   <li key={item.href}>

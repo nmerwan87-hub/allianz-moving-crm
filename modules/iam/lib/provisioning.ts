@@ -10,9 +10,9 @@ const PERMISSION_GROUPS: Array<{
   permissions: string[]
 }> = [
   {
-    name: "Dispatcher",
+    name: "Disposition",
     slug: "dispatcher",
-    description: "Manages crew assignments, schedules jobs, and coordinates daily operations.",
+    description: "Teilt Teams und Fahrzeuge ein, plant Aufträge und koordiniert den Tag.",
     permissions: [
       "jobs.view",
       "jobs.create",
@@ -33,9 +33,9 @@ const PERMISSION_GROUPS: Array<{
     ],
   },
   {
-    name: "Estimator",
+    name: "Offerten und Verkauf",
     slug: "estimator",
-    description: "Creates and sends quotes, manages leads, and handles customer pre-sales.",
+    description: "Bearbeitet Anfragen, erstellt und sendet Offerten.",
     permissions: [
       "leads.view",
       "leads.create",
@@ -55,9 +55,9 @@ const PERMISSION_GROUPS: Array<{
     ],
   },
   {
-    name: "Office Manager",
+    name: "Büroleitung",
     slug: "office-manager",
-    description: "Full operational access except banking details and financial exports.",
+    description: "Alles im Tagesgeschäft, ausser Bankverbindung und Finanzexporte.",
     permissions: [
       "customers.view",
       "customers.create",
@@ -121,9 +121,9 @@ const PERMISSION_GROUPS: Array<{
     ],
   },
   {
-    name: "Billing",
+    name: "Buchhaltung",
     slug: "billing",
-    description: "Manages invoices, records payments, and views financial reports.",
+    description: "Rechnungen, Zahlungen und Mahnungen.",
     permissions: [
       "invoices.view",
       "invoices.create",
