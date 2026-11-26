@@ -1,0 +1,35 @@
+<!-- Supabase Auth: «Reset password» (hosted project: Authentication → Emails → Reset Password, subject "Neues Passwort für Bivro") -->
+<div
+  style="
+    font-family: -apple-system, BlinkMacSystemFont, &quot;Segoe UI&quot;, sans-serif;
+    max-width: 520px;
+    margin: 0 auto;
+    padding: 32px;
+    color: #1c2733;
+  "
+>
+  <p style="font-size: 20px; font-weight: 600; margin: 0 0 24px">Bivro</p>
+  <p style="font-size: 15px; line-height: 22px">Guten Tag</p>
+  <p style="font-size: 15px; line-height: 22px">
+    Mit diesem Link legen Sie ein neues Passwort für Ihr Bivro-Konto fest:
+  </p>
+  <p style="margin: 24px 0">
+    <a
+      href="{{ .ConfirmationURL }}"
+      style="
+        background: #2b80c5;
+        color: #ffffff;
+        padding: 12px 20px;
+        border-radius: 6px;
+        text-decoration: none;
+        font-weight: 600;
+        font-size: 14px;
+      "
+      >Neues Passwort festlegen</a
+    >
+  </p>
+  <p style="font-size: 13px; line-height: 20px; color: #5d6b79">
+    Der Link gilt eine Stunde. Wenn Sie kein neues Passwort angefordert haben, können Sie diese
+    E-Mail ignorieren.
+  </p>
+</div>

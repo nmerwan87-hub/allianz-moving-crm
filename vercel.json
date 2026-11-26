@@ -1,4 +1,5 @@
 {
+  "regions": ["fra1"],
   "crons": [
     {
       "path": "/api/cron/process-events",
@@ -19,42 +20,6 @@
     {
       "path": "/api/cron/cleanup-unverified",
       "schedule": "0 1 * * *"
-    },
-    {
-      "path": "/api/cron/ceo-brief",
-      "schedule": "0 7 * * *"
-    },
-    {
-      "path": "/api/cron/analytics",
-      "schedule": "0 6 * * *"
-    },
-    {
-      "path": "/api/cron/lead-scoring",
-      "schedule": "0 2 * * *"
-    },
-    {
-      "path": "/api/cron/pattern-observation",
-      "schedule": "0 1 * * *"
-    },
-    {
-      "path": "/api/cron/profit-analysis",
-      "schedule": "0 6 * * 1"
-    },
-    {
-      "path": "/api/cron/fleet-maintenance",
-      "schedule": "0 9 * * 1"
-    },
-    {
-      "path": "/api/cron/learning-report",
-      "schedule": "0 7 1 * *"
-    },
-    {
-      "path": "/api/cron/domain-event-monitor",
-      "schedule": "*/15 * * * *"
-    },
-    {
-      "path": "/api/cron/notifications-cleanup",
-      "schedule": "0 3 */90 * *"
     }
   ]
 }
