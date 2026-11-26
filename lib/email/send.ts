@@ -15,12 +15,13 @@ export interface SendPlatformEmailOptions {
   react: ReactElement
 }
 
-export async function sendPlatformEmail(options: SendPlatformEmailOptions): Promise<void> {
+/** Returns false when no provider is configured (development); throws on provider errors. */
+export async function sendPlatformEmail(options: SendPlatformEmailOptions): Promise<boolean> {
   const resend = getResend()
 
   if (!resend) {
     console.warn("[email:dev]", { to: options.to, subject: options.subject })
-    return
+    return false
   }
 
   const { error } = await resend.emails.send({
@@ -34,4 +35,5 @@ export async function sendPlatformEmail(options: SendPlatformEmailOptions): Prom
     console.error("[email:send] Resend error:", error)
     throw new Error(`Failed to send email: ${error.message}`)
   }
+  return true
 }

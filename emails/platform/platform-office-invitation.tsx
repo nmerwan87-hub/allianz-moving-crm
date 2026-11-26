@@ -28,34 +28,33 @@ export function PlatformOfficeInvitation({
   return (
     <Html>
       <Head />
-      <Preview>You&apos;ve been invited to join {companyName} on Bivro</Preview>
+      <Preview>Einladung: {companyName} in Bivro</Preview>
       <Body style={main}>
         <Container style={container}>
           <Heading style={logo}>Bivro</Heading>
           <Hr style={divider} />
-          <Heading style={h1}>You&apos;ve been invited</Heading>
+          <Heading style={h1}>Sie sind eingeladen</Heading>
           <Text style={text}>
-            <strong>{inviterName}</strong> has invited you to join{" "}
-            <strong>{companyName}</strong> on Bivro as an Office member.
+            <strong>{inviterName}</strong> lädt Sie ein, bei <strong>{companyName}</strong> in
+            Bivro mitzuarbeiten.
           </Text>
           <Text style={text}>
-            Bivro is the operating platform {companyName} uses to manage quotes, jobs, invoices,
-            and customer communications.
+            In Bivro verwaltet {companyName} Anfragen, Offerten, Aufträge und Rechnungen.
           </Text>
           <Section style={buttonSection}>
             <Button href={inviteUrl} style={button}>
-              Accept invitation
+              Einladung annehmen
             </Button>
           </Section>
           <Text style={subtext}>
-            This invitation expires on <strong>{expiresAt}</strong>.
+            Die Einladung ist gültig bis <strong>{expiresAt}</strong>.
           </Text>
           <Text style={subtext}>
-            If you did not expect this invitation, you can safely ignore this email. Your account
-            will not be created unless you click the button above.
+            Falls Sie diese Einladung nicht erwartet haben, können Sie diese E-Mail ignorieren. Ohne
+            Klick auf den Knopf wird kein Konto erstellt.
           </Text>
           <Hr style={divider} />
-          <Text style={footer}>© 2026 Bivro. All rights reserved.</Text>
+          <Text style={footer}>© 2026 Bivro</Text>
         </Container>
       </Body>
     </Html>

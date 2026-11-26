@@ -6,6 +6,7 @@ import {
   joinInvitedCompany,
   inviteUser,
   revokeInvitation,
+  listInvitations,
 } from "./invitation"
 import { forgotPassword, changePassword } from "./password"
 import { teamRouter } from "./team"
@@ -22,6 +23,7 @@ export const iamRouter = createTRPCRouter({
   joinInvitedCompany,
   inviteUser,
   revokeInvitation,
+  listInvitations,
   forgotPassword,
   changePassword,
   team: teamRouter,

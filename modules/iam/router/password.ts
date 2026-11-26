@@ -86,10 +86,14 @@ export const changePassword = protectedProcedure
       const now = new Date()
       await sendPlatformEmail({
         to: ctx.user.email ?? "",
-        subject: "Your Bivro password has been changed",
+        subject: "Ihr Bivro-Passwort wurde geändert",
         react: createElement(PlatformPasswordChanged, {
           email: ctx.user.email ?? "",
-          changedAt: now.toUTCString(),
+          changedAt: now.toLocaleString("de-CH", {
+            timeZone: "Europe/Zurich",
+            dateStyle: "long",
+            timeStyle: "short",
+          }),
         }),
       })
     } catch {

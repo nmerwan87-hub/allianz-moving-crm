@@ -398,19 +398,21 @@ export const inviteUser = ownerProcedure
     const appUrl = process.env["NEXT_PUBLIC_APP_URL"] ?? "http://localhost:3000"
     const inviteUrl = `${appUrl}/invite/${rawToken}`
 
+    let emailSent = false
     try {
       const { PlatformOfficeInvitation } =
         await import("@/emails/platform/platform-office-invitation")
-      await sendPlatformEmail({
+      emailSent = await sendPlatformEmail({
         to: input.email,
-        subject: `You've been invited to join ${company?.name ?? "a company"} on Bivro`,
+        subject: `Einladung: ${company?.name ?? "Ihre Firma"} in Bivro`,
         react: createElement(PlatformOfficeInvitation, {
-          companyName: company?.name ?? "your company",
+          companyName: company?.name ?? "Ihre Firma",
           inviterName: inviterProfile
             ? `${inviterProfile.first_name} ${inviterProfile.last_name}`
-            : "your administrator",
+            : "Ihr Inhaber",
           inviteUrl,
-          expiresAt: expiresAt.toLocaleDateString("en-GB", {
+          expiresAt: expiresAt.toLocaleDateString("de-CH", {
+            timeZone: "Europe/Zurich",
             day: "numeric",
             month: "long",
             year: "numeric",
@@ -432,8 +434,28 @@ export const inviteUser = ownerProcedure
       metadata: { email: input.email, role: "office", permission_groups: input.permissionGroupIds },
     })
 
-    return { success: true, invitationId: invitation.id }
+    // The owner can also pass the link on directly (e.g. when the e-mail does not arrive)
+    return { success: true, invitationId: invitation.id, inviteUrl, emailSent }
   })
+
+// ─── Open invitations of the active company (owner only) ─────────────────────
+
+export const listInvitations = ownerProcedure.query(async ({ ctx }) => {
+  if (!ctx.companyId) throw new TRPCError({ code: "UNAUTHORIZED" })
+  const { data } = await createServiceRoleClient()
+    .from("user_invitations")
+    .select("id, email, created_at, expires_at")
+    .eq("company_id", ctx.companyId)
+    .eq("status", "pending")
+    .gt("expires_at", new Date().toISOString())
+    .order("created_at", { ascending: false })
+  return (data ?? []).map((i) => ({
+    id: i.id as string,
+    email: i.email as string,
+    createdAt: i.created_at as string,
+    expiresAt: i.expires_at as string,
+  }))
+})
 
 // ─── Revoke an invitation (owner only) ────────────────────────────────────────
 

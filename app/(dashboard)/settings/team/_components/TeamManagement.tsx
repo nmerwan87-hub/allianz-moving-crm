@@ -3,6 +3,7 @@
 import { actionLabel, resourceLabel } from "./permission-labels"
 import { useState, useTransition } from "react"
 import { trpc } from "@/lib/trpc/client"
+import { InvitePanel } from "./invite-panel"
 import type { AppRouter } from "@/lib/trpc/router"
 import type { inferRouterOutputs } from "@trpc/server"
 
@@ -212,7 +213,7 @@ function GroupModal({ group, definitions, onClose, onSaved }: GroupModalProps) {
               type="button"
               onClick={handleSave}
               disabled={isPending || !name.trim()}
-              className="rounded-md bg-slate-900 px-4 py-2 text-sm font-semibold text-white hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-50"
+              className="bg-signal-600 hover:bg-signal-700 rounded-md px-4 py-2 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-50"
             >
               {isPending ? "Speichern …" : isEdit ? "Änderungen speichern" : "Gruppe erstellen"}
             </button>
@@ -522,7 +523,7 @@ export default function TeamManagement({ initialMembers, initialGroups, definiti
             key={tab}
             type="button"
             onClick={() => setActiveSection(tab)}
-            className={`rounded-md px-4 py-1.5 text-sm font-medium capitalize transition-colors ${activeSection === tab ? "bg-slate-900 text-white" : "text-slate-600 hover:bg-slate-50"}`}
+            className={`rounded-md px-4 py-1.5 text-sm font-medium capitalize transition-colors ${activeSection === tab ? "bg-signal-600 text-white" : "text-slate-600 hover:bg-slate-50"}`}
           >
             {tab === "team" ? "Teammitglieder" : "Rechtegruppen"}
           </button>
@@ -532,6 +533,7 @@ export default function TeamManagement({ initialMembers, initialGroups, definiti
       {/* Team members section */}
       {activeSection === "team" && (
         <div>
+          <InvitePanel groups={groups.map((g) => ({ id: g.id, name: g.name }))} />
           {/* Owner rows */}
           {ownerMembers.length > 0 && (
             <div className="mb-4">
@@ -563,7 +565,7 @@ export default function TeamManagement({ initialMembers, initialGroups, definiti
             <div className="rounded-lg border border-dashed border-slate-300 bg-white px-6 py-8 text-center">
               <p className="text-sm text-slate-500">Noch keine Büro-Mitarbeitenden.</p>
               <p className="mt-1 text-xs text-slate-400">
-                Invite team members from Settings → Invitations.
+                Oben auf «Mitarbeitende einladen» klicken.
               </p>
             </div>
           ) : (
@@ -653,7 +655,7 @@ export default function TeamManagement({ initialMembers, initialGroups, definiti
             <button
               type="button"
               onClick={() => setGroupModal({ open: true, group: null })}
-              className="rounded-md bg-slate-900 px-4 py-2 text-sm font-semibold text-white hover:bg-slate-800"
+              className="bg-signal-600 hover:bg-signal-700 rounded-md px-4 py-2 text-sm font-semibold text-white"
             >
               Gruppe erstellen
             </button>
